@@ -1,4 +1,5 @@
 import express from 'express';
+import ejs from 'ejs';
 import cookieSession from 'cookie-session';
 import bcrypt from 'bcryptjs';
 import path from 'path';
@@ -15,6 +16,10 @@ export async function createApp() {
   await initDB();
 
   const app = express();
+  // Inregistram motorul explicit (in loc sa lasam Express sa faca un require
+  // dinamic dupa numele "ejs") - altfel esbuild nu detecteaza dependenta la bundling
+  // pe Netlify si arunca "Cannot find module 'ejs'" la runtime.
+  app.engine('ejs', ejs.renderFile);
   app.set('view engine', 'ejs');
   app.set('views', path.join(baseDir, 'views'));
   app.use(express.static(path.join(baseDir, 'public')));
