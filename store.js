@@ -2,23 +2,30 @@ import path from 'path';
 import fs from 'fs/promises';
 
 const LOCAL_FILE = path.join(process.cwd(), 'data', 'db.json');
-
 const DEFAULT_DATA = { users: [], articole: [], nextUserId: 1, nextArticolId: 1 };
+
+// "process.env.NETLIFY" NU e setat garantat in interiorul unei functii Netlify -
+// detectam mediul serverless prin variabilele standard AWS Lambda (Netlify Functions
+// ruleaza pe Lambda), care sunt intotdeauna prezente acolo si niciodata local.
+const ESTE_SERVERLESS = Boolean(
+  process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY
+);
 
 let blobsStorePromise = null;
 function getBlobsStore() {
-  // @netlify/blobs functioneaza doar in mediul de runtime Netlify (functions).
-  // Local, import-ul esueaza silentios si cadem pe fisierul JSON.
   if (!blobsStorePromise) {
     blobsStorePromise = import('@netlify/blobs')
       .then(({ getStore }) => getStore('campanie-db'))
-      .catch(() => null);
+      .catch((err) => {
+        console.error('Nu am putut initializa Netlify Blobs:', err);
+        return null;
+      });
   }
   return blobsStorePromise;
 }
 
 export async function readData() {
-  if (process.env.NETLIFY) {
+  if (ESTE_SERVERLESS) {
     const store = await getBlobsStore();
     if (store) {
       const data = await store.get('db', { type: 'json' });
@@ -34,12 +41,16 @@ export async function readData() {
 }
 
 export async function writeData(data) {
-  if (process.env.NETLIFY) {
+  if (ESTE_SERVERLESS) {
     const store = await getBlobsStore();
     if (store) {
       await store.setJSON('db', data);
       return;
     }
+    // Daca Blobs chiar nu e disponibil pe Netlify, nu incercam sa scriem pe disc -
+    // acolo sistemul de fisiere e needitabil si am arunca exact eroarea ENOENT
+    // intalnita. Aruncam o eroare clara in schimb.
+    throw new Error('Netlify Blobs indisponibil si scrierea locala nu e permisa in acest mediu.');
   }
   await fs.mkdir(path.dirname(LOCAL_FILE), { recursive: true });
   await fs.writeFile(LOCAL_FILE, JSON.stringify(data, null, 2));
