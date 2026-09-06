@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Super Admin - Platforma campanie</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="topbar">
+      <h1>Super Admin</h1>
+      <form method="POST" action="/logout"><button class="secondary" type="submit">Iesire</button></form>
+    </div>
+
+    <% if (parolaNoua) { %>
+      <div class="parola-noua">
+        <strong>Cont creat.</strong> Trimite candidatului aceste date de logare (parola nu mai e afisata dupa ce parasesti pagina):<br>
+        Email: <strong><%= emailNou %></strong> &nbsp;·&nbsp; Parola: <strong><%= parolaNoua %></strong>
+      </div>
+    <% } %>
+
+    <div class="card">
+      <h2 style="margin-top:0; font-size:16px">Adauga un candidat nou</h2>
+      <form method="POST" action="/admin/candidati">
+        <label>Nume candidat</label>
+        <input type="text" name="nume_candidat" required placeholder="ex: Ana Marinescu">
+        <label>Email</label>
+        <input type="email" name="email" required placeholder="ana@exemplu.ro">
+        <label>Zona</label>
+        <input type="text" name="zona" placeholder="ex: Timisoara, Fabric">
+        <button type="submit">Creeaza cont</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0; font-size:16px">Candidati (<%= candidati.length %>)</h2>
+      <% if (candidati.length === 0) { %>
+        <p class="note">Inca nu ai adaugat niciun candidat.</p>
+      <% } else { %>
+        <table>
+          <thead>
+            <tr><th>Nume</th><th>Zona</th><th>Site public</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <% candidati.forEach(c => { %>
+              <tr>
+                <td><%= c.nume_candidat %><br><span class="note"><%= c.email %></span></td>
+                <td><%= c.zona || '—' %></td>
+                <td><a href="/site/<%= c.subdomeniu %>" target="_blank">/site/<%= c.subdomeniu %></a></td>
+                <td><span class="pill <%= c.activ ? 'publicat' : 'ciorna' %>"><%= c.activ ? 'Activ' : 'Dezactivat' %></span></td>
+                <td>
+                  <form method="POST" action="/admin/candidati/<%= c.id %>/dezactiveaza">
+                    <button class="secondary" type="submit"><%= c.activ ? 'Dezactiveaza' : 'Activeaza' %></button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

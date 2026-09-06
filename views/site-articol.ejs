@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title><%= articol.titlu %> - <%= user.nume_candidat %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="ziar-wrap">
+    <div class="ziar">
+      <div class="ziar-top">
+        <div class="ziar-brand">
+          <span class="nume"><%= user.nume_candidat.split(' ')[0] %></span>
+          <span class="news">FabricNEWS</span>
+        </div>
+        <a href="/site/<%= user.subdomeniu %>" class="note">&larr; Inapoi la prima pagina</a>
+      </div>
+      <div class="ziar-articol-body">
+        <span class="ziar-tag"><%= articol.categorie %></span>
+        <h1><%= articol.titlu %></h1>
+        <p class="note">
+          <%= new Date(articol.data_publicare).toLocaleDateString('ro-RO') %>
+          <% if (articol.generat_de_ai) { %><span class="badge-ai">Generat cu AI</span><% } %>
+        </p>
+        <div>
+          <% articol.continut.split('\n').filter(p => p.trim()).forEach(paragraf => { %>
+            <p><%= paragraf %></p>
+          <% }) %>
+        </div>
+      </div>
+      <div class="ziar-foot">Material electoral. Sursa de finantare: fonduri proprii ale candidatului.</div>
+    </div>
+  </div>
+</body>
+</html>

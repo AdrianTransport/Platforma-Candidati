@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title><%= articol ? 'Editeaza articol' : 'Articol nou' %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <div class="topbar">
+      <h1><%= articol ? 'Editeaza articol' : 'Articol nou' %></h1>
+      <a class="btn secondary" href="/dashboard">Inapoi la dashboard</a>
+    </div>
+
+    <div class="card">
+      <strong>Asistent AI</strong>
+      <p class="note">Scrie pe scurt ideea ta, iar asistentul iti propune un articol. Poti edita orice inainte de publicare.</p>
+      <label>Ideea ta, pe scurt</label>
+      <textarea id="idee-ai" rows="2" placeholder="ex: Vreau un articol despre lucrarile din Piata Traian, ton pozitiv"></textarea>
+      <label>Ton</label>
+      <select id="ton-ai">
+        <option value="direct si apropiat">Direct si apropiat</option>
+        <option value="oficial si formal">Oficial si formal</option>
+        <option value="optimist">Optimist</option>
+        <option value="ingrijorat, dar constructiv">Ingrijorat, dar constructiv</option>
+      </select>
+      <button type="button" class="secondary" id="btn-genereaza">Genereaza draft</button>
+      <p class="note" id="stare-ai" style="margin-top:8px"></p>
+    </div>
+
+    <div class="card">
+      <form method="POST" action="<%= articol ? `/dashboard/articol/${articol.id}` : '/dashboard/articol' %>">
+        <label>Titlu</label>
+        <input type="text" name="titlu" id="titlu" required value="<%= articol ? articol.titlu : '' %>">
+
+        <label>Tip</label>
+        <select name="tip">
+          <option value="idee" <%= articol && articol.tip === 'idee' ? 'selected' : '' %>>Idee / poziție</option>
+          <option value="candidatura" <%= articol && articol.tip === 'candidatura' ? 'selected' : '' %>>Candidatura oficiala (program)</option>
+          <option value="anunt" <%= articol && articol.tip === 'anunt' ? 'selected' : '' %>>Anunț</option>
+        </select>
+
+        <label>Categorie (afisata pe site)</label>
+        <select name="categorie">
+          <option value="Actualitate" <%= articol && articol.categorie === 'Actualitate' ? 'selected' : '' %>>Actualitate</option>
+          <option value="Program" <%= articol && articol.categorie === 'Program' ? 'selected' : '' %>>Program</option>
+          <option value="Anunț" <%= articol && articol.categorie === 'Anunț' ? 'selected' : '' %>>Anunț</option>
+          <option value="Opinie" <%= articol && articol.categorie === 'Opinie' ? 'selected' : '' %>>Opinie</option>
+        </select>
+
+        <label>Continut</label>
+        <textarea name="continut" id="continut" rows="10" required><%= articol ? articol.continut : '' %></textarea>
+
+        <label style="display:flex; align-items:center; gap:8px; font-weight:400">
+          <input type="checkbox" name="generat_de_ai" id="generat_de_ai" value="true" style="width:auto; margin:0"
+            <%= articol && articol.generat_de_ai ? 'checked' : '' %>>
+          Acest text a fost generat de AI si nu a fost rescris substanțial (se afiseaza eticheta obligatorie pe site, conform AI Act UE)
+        </label>
+
+        <div style="display:flex; gap:10px; margin-top:8px">
+          <button type="submit" name="status" value="ciorna">Salveaza ca ciorna</button>
+          <button type="submit" name="status" value="publicat" class="secondary">Publica pe site</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('btn-genereaza').addEventListener('click', async () => {
+      const idee = document.getElementById('idee-ai').value.trim();
+      const ton = document.getElementById('ton-ai').value;
+      const stare = document.getElementById('stare-ai');
+      if (!idee) { stare.textContent = 'Scrie mai intai ideea articolului.'; return; }
+      stare.textContent = 'Se genereaza draftul...';
+      try {
+        const r = await fetch('/dashboard/genereaza-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idee, ton }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          stare.textContent = data.eroare || 'A aparut o eroare.';
+          return;
+        }
+        document.getElementById('titlu').value = data.titlu;
+        document.getElementById('continut').value = data.continut;
+        document.getElementById('generat_de_ai').checked = true;
+        stare.textContent = 'Draft generat. Citeste-l si editeaza-l inainte sa publici.';
+      } catch (e) {
+        stare.textContent = 'Nu am putut contacta serverul.';
+      }
+    });
+  </script>
+</body>
+</html>

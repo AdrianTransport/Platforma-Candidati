@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title><%= user.nume_candidat %> - <%= user.zona %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="ziar-wrap">
+    <div class="ziar">
+      <div class="ziar-top">
+        <div class="ziar-brand">
+          <span class="nume"><%= user.nume_candidat.split(' ')[0] %></span>
+          <span class="news">FabricNEWS</span>
+        </div>
+        <div class="ziar-zona"><%= user.zona || '' %></div>
+      </div>
+
+      <% if (candidatura) { %>
+        <div class="ziar-hero">
+          <span class="ziar-tag">Candidatura oficiala</span>
+          <h1><%= candidatura.titlu %></h1>
+          <p><%= candidatura.continut.slice(0, 220) %><%= candidatura.continut.length > 220 ? '…' : '' %></p>
+          <a class="btn" style="margin-top:10px" href="/site/<%= user.subdomeniu %>/articol/<%= candidatura.id %>">Citeste programul complet</a>
+        </div>
+      <% } %>
+
+      <div class="ziar-grid">
+        <% if (fluxIdei.length === 0 && !candidatura) { %>
+          <div class="empty">Acest candidat nu a publicat inca niciun articol.</div>
+        <% } %>
+        <% fluxIdei.forEach(a => { %>
+          <a class="ziar-item" href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>">
+            <div>
+              <span class="cat"><%= a.categorie %></span>
+              <h3><%= a.titlu %><% if (a.generat_de_ai) { %><span class="badge-ai">Generat cu AI</span><% } %></h3>
+              <span class="data"><%= new Date(a.data_publicare).toLocaleDateString('ro-RO') %></span>
+            </div>
+          </a>
+        <% }) %>
+      </div>
+
+      <div class="ziar-foot">Material electoral. Sursa de finantare: fonduri proprii ale candidatului.</div>
+    </div>
+  </div>
+</body>
+</html>

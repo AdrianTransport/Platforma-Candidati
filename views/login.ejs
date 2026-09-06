@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Autentificare - Platforma campanie</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <h1>Platforma de campanie</h1>
+    <div class="card">
+      <% if (eroare) { %>
+        <div class="eroare"><%= eroare %></div>
+      <% } %>
+      <form method="POST" action="/login">
+        <label>Email</label>
+        <input type="email" name="email" required autofocus>
+        <label>Parola</label>
+        <input type="password" name="parola" required>
+        <button type="submit" style="width:100%">Intra in cont</button>
+      </form>
+    </div>
+    <p class="note" style="text-align:center">
+      Admin implicit: admin@platforma.ro / admin123<br>
+      (schimba parola in producție)
+    </p>
+  </div>
+</body>
+</html>

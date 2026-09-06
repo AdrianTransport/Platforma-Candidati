@@ -1,0 +1,20 @@
+{
+  "name": "campanie-platforma",
+  "version": "0.2.0",
+  "description": "Platforma pilot pentru 10 candidati - site tip ziar local, dashboard cu asistent AI, compatibila Netlify",
+  "type": "module",
+  "main": "local-server.js",
+  "scripts": {
+    "start": "node local-server.js",
+    "dev": "node --watch local-server.js"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-session": "^2.1.0",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "serverless-http": "^3.2.0"
+  }
+}
