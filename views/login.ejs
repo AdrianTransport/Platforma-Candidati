@@ -2,11 +2,13 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Autentificare - Platforma campanie</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="login-wrap">
+    <a class="back-home" href="/">← Înapoi la prezentarea platformei</a>
     <h1>Platforma de campanie</h1>
     <div class="card">
       <% if (eroare) { %>
@@ -21,8 +23,8 @@
       </form>
     </div>
     <p class="note" style="text-align:center">
-      Admin implicit: admin@platforma.ro / admin123<br>
-      (schimba parola in producție)
+      Accesul este permis numai conturilor activate de administrator.<br>
+      După 5 încercări greșite, contul este blocat temporar.
     </p>
   </div>
 </body>

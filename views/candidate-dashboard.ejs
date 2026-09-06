@@ -2,55 +2,52 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard - <%= user.nume_candidat %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — <%= user.nume_candidat %></title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="app-shell">
+  <div class="app-shell app-shell-wide">
     <div class="topbar">
-      <div>
-        <h1><%= user.nume_candidat %></h1>
-        <p class="note" style="margin:2px 0 0">
-          Site public: <a href="/site/<%= user.subdomeniu %>" target="_blank">/site/<%= user.subdomeniu %></a>
-        </p>
-      </div>
-      <form method="POST" action="/logout"><button class="secondary" type="submit">Iesire</button></form>
+      <div><span class="eyebrow"><%= user.functie_candidatura || 'Candidat' %> · <%= user.zona || 'Zona necompletată' %></span><h1><%= user.nume_candidat %></h1></div>
+      <div class="topbar-actions"><% if (user.module?.site) { %><a class="btn secondary" href="/site/<%= user.subdomeniu %>" target="_blank">Vezi publicația</a><% } %><form method="POST" action="/logout"><button class="secondary" type="submit">Ieșire</button></form></div>
     </div>
 
-    <div class="card" style="display:flex; justify-content:space-between; align-items:center">
-      <div>
-        <strong>Documentele si ideile mele</strong>
-        <p class="note" style="margin:4px 0 0">Ce apare aici cu status "Publicat" e vizibil pe site-ul tau public.</p>
+    <% if (user.module?.statistici) { %>
+      <div class="stats-grid">
+        <div><span>Vizite publicație</span><strong><%= user.statistici?.vizite_site || 0 %></strong></div>
+        <div><span>Citiri articole</span><strong><%= totalCitiri %></strong></div>
+        <div><span>Clickuri sociale</span><strong><%= Object.values(user.statistici?.clickuri_sociale || {}).reduce((a, b) => a + b, 0) %></strong></div>
+        <div><span>Articole publicate</span><strong><%= articole.filter(a => a.status === 'publicat').length %></strong></div>
       </div>
-      <a class="btn" href="/dashboard/articol/nou">+ Adauga articol</a>
-    </div>
+      <div class="dashboard-columns">
+        <section class="card"><h2>Sursele vizitelor</h2><div class="source-list"><% Object.entries(user.statistici?.surse || {}).forEach(([sursa, total]) => { %><div><span><%= sursa %></span><strong><%= total %></strong></div><% }) %></div></section>
+        <section class="card"><h2>Cele mai citite</h2><% if (!topArticole.length) { %><p class="note">Statisticile apar după primele citiri.</p><% } %><% topArticole.forEach(a => { %><div class="rank-row"><span><%= a.titlu %></span><strong><%= a.vizualizari || 0 %></strong></div><% }) %></section>
+      </div>
+    <% } %>
 
-    <div class="card">
-      <% if (articole.length === 0) { %>
-        <p class="note">Nu ai niciun articol inca. Apasa "Adauga articol" ca sa incepi.</p>
-      <% } else { %>
-        <table>
-          <thead><tr><th>Titlu</th><th>Tip</th><th>Categorie</th><th>Status</th><th></th></tr></thead>
-          <tbody>
-            <% articole.forEach(a => { %>
-              <tr>
-                <td>
-                  <%= a.titlu %>
-                  <% if (a.generat_de_ai) { %><span class="pill ai">AI</span><% } %>
-                </td>
-                <td><%= a.tip %></td>
-                <td><%= a.categorie %></td>
-                <td><span class="pill <%= a.status %>"><%= a.status === 'publicat' ? 'Publicat' : 'Ciorna' %></span></td>
-                <td style="white-space:nowrap">
-                  <a class="btn secondary" href="/dashboard/articol/<%= a.id %>/edit">Editeaza</a>
-                  <form style="display:inline" method="POST" action="/dashboard/articol/<%= a.id %>/sterge" onsubmit="return confirm('Sigur stergi acest articol?')">
-                    <button class="danger" type="submit">Sterge</button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
+    <details class="card profile-card">
+      <summary>Profilul public și rețelele sociale</summary>
+      <form method="POST" action="/dashboard/profil" class="form-grid form-grid-2">
+        <label>Slogan<input name="slogan" maxlength="140" value="<%= user.slogan || '' %>" placeholder="Împreună pentru comunitatea noastră"></label>
+        <label>Mesaj scurt<input name="mesaj_scurt" maxlength="240" value="<%= user.mesaj_scurt || '' %>" placeholder="Mesajul afișat în antetul publicației"></label>
+        <label class="full-field">Prezentare<textarea name="descriere" rows="5" maxlength="2000" placeholder="Cine ești și de ce candidezi"><%= user.descriere || '' %></textarea></label>
+        <% if (user.module?.social) { %>
+          <label>Facebook<input type="url" name="facebook_url" value="<%= user.facebook_url || '' %>" placeholder="https://facebook.com/..."></label>
+          <label>Instagram<input type="url" name="instagram_url" value="<%= user.instagram_url || '' %>" placeholder="https://instagram.com/..."></label>
+          <label>TikTok<input type="url" name="tiktok_url" value="<%= user.tiktok_url || '' %>" placeholder="https://tiktok.com/@..."></label>
+          <label>YouTube<input type="url" name="youtube_url" value="<%= user.youtube_url || '' %>" placeholder="https://youtube.com/@..."></label>
+        <% } %>
+        <div class="form-actions"><button type="submit">Salvează profilul</button></div>
+      </form>
+    </details>
+
+    <div class="card content-toolbar"><div><strong>Redacția mea</strong><p>Publică programul, proiectele, evenimentele și știrile campaniei.</p></div><a class="btn" href="/dashboard/articol/nou">+ Articol nou</a></div>
+    <div class="card table-card">
+      <% if (articole.length === 0) { %><p class="note">Nu ai niciun articol încă.</p><% } else { %>
+        <div class="responsive-table"><table><thead><tr><th>Titlu</th><th>Categorie</th><th>Status</th><th>Citiri</th><th>Acțiuni</th></tr></thead><tbody>
+          <% articole.forEach(a => { %><tr><td><strong><%= a.titlu %></strong><% if (a.generat_de_ai) { %> <span class="pill ai">AI</span><% } %></td><td><%= a.categorie %></td><td><span class="pill <%= a.status %>"><%= a.status === 'publicat' ? 'Publicat' : 'Ciornă' %></span></td><td><%= a.vizualizari || 0 %></td><td class="actions-cell"><a class="btn secondary" href="/dashboard/articol/<%= a.id %>/edit">Editează</a><form method="POST" action="/dashboard/articol/<%= a.id %>/sterge" onsubmit="return confirm('Sigur ștergi acest articol?')"><button class="danger" type="submit">Șterge</button></form></td></tr><% }) %>
+        </tbody></table></div>
       <% } %>
     </div>
   </div>

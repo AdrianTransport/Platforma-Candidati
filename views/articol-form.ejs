@@ -2,6 +2,7 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= articol ? 'Editeaza articol' : 'Articol nou' %></title>
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -46,6 +47,10 @@
           <option value="Program" <%= articol && articol.categorie === 'Program' ? 'selected' : '' %>>Program</option>
           <option value="Anunț" <%= articol && articol.categorie === 'Anunț' ? 'selected' : '' %>>Anunț</option>
           <option value="Opinie" <%= articol && articol.categorie === 'Opinie' ? 'selected' : '' %>>Opinie</option>
+          <option value="Proiecte" <%= articol && articol.categorie === 'Proiecte' ? 'selected' : '' %>>Proiecte</option>
+          <option value="Evenimente" <%= articol && articol.categorie === 'Evenimente' ? 'selected' : '' %>>Evenimente</option>
+          <option value="Comunitate" <%= articol && articol.categorie === 'Comunitate' ? 'selected' : '' %>>Comunitate</option>
+          <option value="Video" <%= articol && articol.categorie === 'Video' ? 'selected' : '' %>>Video</option>
         </select>
 
         <label>Continut</label>

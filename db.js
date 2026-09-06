@@ -40,6 +40,51 @@ export async function initDB() {
   db.data.nextUserId ||= 1;
   db.data.nextArticolId ||= 1;
 
+  for (const user of db.data.users) {
+    user.login_attempts ||= 0;
+    user.locked_until ||= null;
+    user.last_login_at ||= null;
+  }
+
+  // Completeaza in mod sigur campurile introduse dupa prima versiune, fara sa
+  // stearga sau sa rescrie datele deja existente in Netlify Blobs.
+  for (const user of db.data.users) {
+    if (user.role !== 'candidate') continue;
+    user.status_cont ||= user.activ === false ? 'suspendat' : 'activ';
+    user.functie_candidatura ||= '';
+    user.judet ||= '';
+    user.partid ||= '';
+    user.slogan ||= '';
+    user.descriere ||= '';
+    user.facebook_url ||= '';
+    user.instagram_url ||= '';
+    user.tiktok_url ||= '';
+    user.youtube_url ||= '';
+    user.module = { site: true, statistici: true, social: true, ...(user.module || {}) };
+    user.statistici = {
+      vizite_site: user.statistici?.vizite_site || 0,
+      surse: {
+        direct: 0,
+        facebook: 0,
+        instagram: 0,
+        tiktok: 0,
+        altele: 0,
+        ...(user.statistici?.surse || {}),
+      },
+      clickuri_sociale: {
+        facebook: 0,
+        instagram: 0,
+        tiktok: 0,
+        youtube: 0,
+        ...(user.statistici?.clickuri_sociale || {}),
+      },
+    };
+  }
+
+  for (const articol of db.data.articole) {
+    articol.vizualizari ||= 0;
+  }
+
   const areAdmin = db.data.users.some((u) => u.role === 'admin');
   if (!areAdmin) {
     db.data.users.push({
@@ -53,6 +98,9 @@ export async function initDB() {
       mesaj_scurt: null,
       domeniu_custom: null,
       activ: true,
+      login_attempts: 0,
+      locked_until: null,
+      last_login_at: null,
       created_at: new Date().toISOString(),
     });
     await db.write();

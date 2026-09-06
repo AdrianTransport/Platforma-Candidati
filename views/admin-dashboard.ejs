@@ -2,63 +2,90 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8">
-  <title>Super Admin - Platforma campanie</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Super Admin — VoceaCandidatului</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="app-shell">
-    <div class="topbar">
-      <h1>Super Admin</h1>
-      <form method="POST" action="/logout"><button class="secondary" type="submit">Iesire</button></form>
+  <div class="app-shell app-shell-wide">
+    <div class="topbar admin-topbar">
+      <div><span class="eyebrow">Administrare platformă</span><h1>Super Admin</h1></div>
+      <div class="topbar-actions"><a class="btn secondary" href="/" target="_blank">Vezi site-ul public</a><form method="POST" action="/logout"><button class="secondary" type="submit">Ieșire</button></form></div>
+    </div>
+
+    <div class="stats-grid admin-stats">
+      <div><span>Total candidați</span><strong><%= sumar.total %></strong></div>
+      <div><span>Activi</span><strong><%= sumar.activi %></strong></div>
+      <div><span>În așteptare</span><strong><%= sumar.asteptare %></strong></div>
+      <div><span>Suspendați</span><strong><%= sumar.suspendati %></strong></div>
     </div>
 
     <% if (parolaNoua) { %>
-      <div class="parola-noua">
-        <strong>Cont creat.</strong> Trimite candidatului aceste date de logare (parola nu mai e afisata dupa ce parasesti pagina):<br>
-        Email: <strong><%= emailNou %></strong> &nbsp;·&nbsp; Parola: <strong><%= parolaNoua %></strong>
-      </div>
+      <div class="parola-noua"><strong>Cont creat în așteptare.</strong> Activează-l după verificare și transmite candidatului:<br>Email: <strong><%= emailNou %></strong> · Parola: <strong><%= parolaNoua %></strong></div>
     <% } %>
+    <% if (mesaj) { %><div class="mesaj-succes"><%= mesaj %></div><% } %>
+    <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
 
-    <div class="card">
-      <h2 style="margin-top:0; font-size:16px">Adauga un candidat nou</h2>
-      <form method="POST" action="/admin/candidati">
-        <label>Nume candidat</label>
-        <input type="text" name="nume_candidat" required placeholder="ex: Ana Marinescu">
-        <label>Email</label>
-        <input type="email" name="email" required placeholder="ana@exemplu.ro">
-        <label>Zona</label>
-        <input type="text" name="zona" placeholder="ex: Timisoara, Fabric">
-        <button type="submit">Creeaza cont</button>
+    <details class="card security-card">
+      <summary>Securitatea contului Super Admin</summary>
+      <p class="note">După 5 încercări greșite, autentificarea este blocată timp de 15 minute. Folosește o parolă unică de minimum 12 caractere.</p>
+      <form method="POST" action="/admin/securitate" class="form-grid form-grid-3">
+        <label>Parola actuală<input type="password" name="parola_actuala" required autocomplete="current-password"></label>
+        <label>Parola nouă<input type="password" name="parola_noua" minlength="12" required autocomplete="new-password"></label>
+        <label>Confirmă parola<input type="password" name="confirma_parola" minlength="12" required autocomplete="new-password"></label>
+        <div class="form-actions"><button class="secondary" type="submit">Schimbă parola</button></div>
       </form>
-    </div>
+    </details>
 
-    <div class="card">
-      <h2 style="margin-top:0; font-size:16px">Candidati (<%= candidati.length %>)</h2>
-      <% if (candidati.length === 0) { %>
-        <p class="note">Inca nu ai adaugat niciun candidat.</p>
-      <% } else { %>
-        <table>
-          <thead>
-            <tr><th>Nume</th><th>Zona</th><th>Site public</th><th>Status</th><th></th></tr>
-          </thead>
-          <tbody>
-            <% candidati.forEach(c => { %>
-              <tr>
-                <td><%= c.nume_candidat %><br><span class="note"><%= c.email %></span></td>
-                <td><%= c.zona || '—' %></td>
-                <td><a href="/site/<%= c.subdomeniu %>" target="_blank">/site/<%= c.subdomeniu %></a></td>
-                <td><span class="pill <%= c.activ ? 'publicat' : 'ciorna' %>"><%= c.activ ? 'Activ' : 'Dezactivat' %></span></td>
-                <td>
-                  <form method="POST" action="/admin/candidati/<%= c.id %>/dezactiveaza">
-                    <button class="secondary" type="submit"><%= c.activ ? 'Dezactiveaza' : 'Activeaza' %></button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-      <% } %>
-    </div>
+    <details class="card admin-create" open>
+      <summary>Adaugă un candidat nou</summary>
+      <form method="POST" action="/admin/candidati" class="form-grid form-grid-3">
+        <label>Nume candidat<input type="text" name="nume_candidat" required placeholder="Ana Marinescu"></label>
+        <label>Email<input type="email" name="email" required placeholder="ana@exemplu.ro"></label>
+        <label>Funcția pentru care candidează<input type="text" name="functie_candidatura" placeholder="Primar, consilier local..."></label>
+        <label>Localitate / zonă<input type="text" name="zona" placeholder="Timișoara, Fabric"></label>
+        <label>Județ<input type="text" name="judet" placeholder="Timiș"></label>
+        <label>Partid sau independent<input type="text" name="partid" placeholder="Independent"></label>
+        <div class="form-actions"><button type="submit">Creează cont în așteptare</button></div>
+      </form>
+    </details>
+
+    <section class="candidate-admin-list">
+      <div class="section-row"><div><span class="eyebrow">Control conturi</span><h2>Candidați</h2></div><span class="note">Activezi separat contul și modulele disponibile.</span></div>
+      <% if (candidati.length === 0) { %><div class="card"><p class="note">Nu există încă niciun candidat.</p></div><% } %>
+      <% candidati.forEach(c => { %>
+        <article class="card candidate-admin-card">
+          <div class="candidate-admin-head">
+            <div><span class="status-dot status-<%= c.status_cont %>"></span><strong><%= c.nume_candidat %></strong><span class="pill <%= c.status_cont === 'activ' ? 'publicat' : 'ciorna' %>"><%= c.status_cont.replace('_', ' ') %></span><p><%= c.email %> · /site/<%= c.subdomeniu %><% if (c.last_login_at) { %> · ultima autentificare <%= new Date(c.last_login_at).toLocaleDateString('ro-RO') %><% } %></p></div>
+            <% if (c.module?.site && c.status_cont === 'activ') { %><a class="btn secondary" href="/site/<%= c.subdomeniu %>" target="_blank">Deschide site-ul</a><% } %>
+          </div>
+          <div class="admin-card-columns">
+            <form method="POST" action="/admin/candidati/<%= c.id %>/configurare" class="form-grid form-grid-2 compact-form">
+              <label>Funcție<input name="functie_candidatura" value="<%= c.functie_candidatura || '' %>"></label>
+              <label>Partid / independent<input name="partid" value="<%= c.partid || '' %>"></label>
+              <label>Localitate / zonă<input name="zona" value="<%= c.zona || '' %>"></label>
+              <label>Județ<input name="judet" value="<%= c.judet || '' %>"></label>
+              <div class="module-checks">
+                <label><input type="checkbox" name="modul_site" <%= c.module?.site ? 'checked' : '' %>> Site public</label>
+                <label><input type="checkbox" name="modul_statistici" <%= c.module?.statistici ? 'checked' : '' %>> Statistici</label>
+                <label><input type="checkbox" name="modul_social" <%= c.module?.social ? 'checked' : '' %>> Rețele sociale</label>
+              </div>
+              <div class="form-actions"><button class="secondary" type="submit">Salvează configurarea</button></div>
+            </form>
+            <form method="POST" action="/admin/candidati/<%= c.id %>/status" class="status-form">
+              <label>Starea contului<select name="status_cont">
+                <option value="in_asteptare" <%= c.status_cont === 'in_asteptare' ? 'selected' : '' %>>În așteptare</option>
+                <option value="activ" <%= c.status_cont === 'activ' ? 'selected' : '' %>>Activ</option>
+                <option value="suspendat" <%= c.status_cont === 'suspendat' ? 'selected' : '' %>>Suspendat</option>
+                <option value="expirat" <%= c.status_cont === 'expirat' ? 'selected' : '' %>>Expirat</option>
+              </select></label>
+              <button type="submit">Aplică starea</button>
+              <p class="note"><%= c.status_cont === 'activ' ? 'Candidatul se poate autentifica și publica.' : 'Autentificarea candidatului este blocată.' %></p>
+            </form>
+          </div>
+        </article>
+      <% }) %>
+    </section>
   </div>
 </body>
 </html>

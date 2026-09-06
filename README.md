@@ -4,6 +4,26 @@ Prototip funcțional: Super Admin creează conturi de candidat, fiecare candidat
 dashboard unde publică idei/program/anunțuri (cu ajutor de la un asistent AI), iar fiecare
 candidat are un site public în stil ziar local/tabloid modern.
 
+## Funcțiile lotului „platformă publică”
+
+- `/` este pagina publică de prezentare a platformei; autentificarea este separată la
+  `/login`.
+- Super Admin gestionează starea conturilor (`în așteptare`, `activ`, `suspendat`,
+  `expirat`), funcția pentru care candidează persoana, zona, județul, partidul și modulele
+  disponibile.
+- Candidatul își completează sloganul, prezentarea și legăturile către Facebook,
+  Instagram, TikTok și YouTube.
+- Site-ul candidatului este o publicație electorală responsive, cu articol principal,
+  carduri clickabile, secțiuni pe categorii și pagini individuale pentru articole.
+- Dashboardul afișează vizitele publicației, citirile articolelor, sursele generale ale
+  traficului și clickurile către rețelele sociale. Nu sunt stocate IP-uri și nu sunt create
+  profiluri politice ale vizitatorilor.
+- Autentificarea se blochează temporar după 5 încercări greșite, iar Super Adminul își
+  poate schimba parola din dashboard (minimum 12 caractere).
+
+Legăturile sociale și distribuirea sunt incluse. Publicarea automată pe conturile sociale
+nu este activată în acest lot; aceasta necesită OAuth și aprobările Meta/TikTok.
+
 Codul e structurat să ruleze **și local** (`npm start`), **și pe Netlify** (GitHub → deploy
 automat), fără să fie nevoie de o bază de date externă separată.
 

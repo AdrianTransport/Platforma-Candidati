@@ -2,46 +2,42 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8">
-  <title><%= user.nume_candidat %> - <%= user.zona %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="<%= user.mesaj_scurt || `${user.nume_candidat} — ${user.functie_candidatura || 'candidat'} pentru ${user.zona || user.judet || 'comunitate'}` %>">
+  <title><%= user.nume_candidat %> — <%= user.functie_candidatura || user.zona %></title>
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
-  <div class="ziar-wrap">
-    <div class="ziar">
-      <div class="ziar-top">
-        <div class="ziar-brand">
-          <span class="nume"><%= user.nume_candidat.split(' ')[0] %></span>
-          <span class="news">FabricNEWS</span>
-        </div>
-        <div class="ziar-zona"><%= user.zona || '' %></div>
-      </div>
+<body class="newspaper-body">
+  <div class="newspaper-shell">
+    <div class="newspaper-kicker"><span>PUBLICAȚIE ELECTORALĂ</span><span><%= new Date().toLocaleDateString('ro-RO') %></span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
+    <header class="newspaper-header">
+      <a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a>
+      <div class="candidate-identity"><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura, user.partid].filter(Boolean).join(' · ') %></span></div>
+    </header>
+    <nav class="newspaper-nav"><a href="#actualitate">Actualitate</a><a href="#program">Program</a><a href="#proiecte">Proiecte</a><a href="#evenimente">Evenimente</a><a href="#despre">Despre candidat</a></nav>
 
-      <% if (candidatura) { %>
-        <div class="ziar-hero">
-          <span class="ziar-tag">Candidatura oficiala</span>
-          <h1><%= candidatura.titlu %></h1>
-          <p><%= candidatura.continut.slice(0, 220) %><%= candidatura.continut.length > 220 ? '…' : '' %></p>
-          <a class="btn" style="margin-top:10px" href="/site/<%= user.subdomeniu %>/articol/<%= candidatura.id %>">Citeste programul complet</a>
-        </div>
-      <% } %>
+    <% const principal = candidatura || fluxIdei[0]; %>
+    <% if (principal) { %>
+      <section class="lead-story">
+        <a class="lead-visual" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><span><%= principal.categorie %></span><b><%= user.slogan || 'Un mesaj direct pentru comunitate' %></b></a>
+        <div class="lead-copy"><span class="article-label"><%= principal.categorie %></span><h1><a href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><%= principal.titlu %></a></h1><p><%= principal.continut.slice(0, 300) %><%= principal.continut.length > 300 ? '…' : '' %></p><div class="story-meta"><span><%= new Date(principal.data_publicare).toLocaleDateString('ro-RO') %></span><span><%= principal.vizualizari || 0 %> citiri</span></div><a class="read-more" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>">Citește articolul →</a></div>
+      </section>
+    <% } else { %><div class="newspaper-empty"><h1><%= user.slogan || 'Publicația este pregătită.' %></h1><p>Primele articole vor apărea în curând.</p></div><% } %>
 
-      <div class="ziar-grid">
-        <% if (fluxIdei.length === 0 && !candidatura) { %>
-          <div class="empty">Acest candidat nu a publicat inca niciun articol.</div>
-        <% } %>
-        <% fluxIdei.forEach(a => { %>
-          <a class="ziar-item" href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>">
-            <div>
-              <span class="cat"><%= a.categorie %></span>
-              <h3><%= a.titlu %><% if (a.generat_de_ai) { %><span class="badge-ai">Generat cu AI</span><% } %></h3>
-              <span class="data"><%= new Date(a.data_publicare).toLocaleDateString('ro-RO') %></span>
-            </div>
-          </a>
-        <% }) %>
-      </div>
+    <% const secundare = fluxIdei.filter(a => a.id !== principal?.id); %>
+    <% if (secundare.length) { %>
+      <section class="story-grid" id="actualitate"><% secundare.slice(0, 6).forEach((a, index) => { %><a class="story-card story-card-<%= index % 3 %>" href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><div class="story-art"><span><%= a.categorie %></span></div><div><span class="article-label"><%= a.categorie %></span><h2><%= a.titlu %></h2><p><%= a.continut.slice(0, 130) %><%= a.continut.length > 130 ? '…' : '' %></p><small><%= a.vizualizari || 0 %> citiri</small></div></a><% }) %></section>
+    <% } %>
 
-      <div class="ziar-foot">Material electoral. Sursa de finantare: fonduri proprii ale candidatului.</div>
-    </div>
+    <% Object.entries(categorii).forEach(([categorie, lista]) => { const ancora = categorie.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-'); %>
+      <section class="category-section" id="<%= ancora %>"><div class="category-title"><h2><%= categorie %></h2><span><%= lista.length %> materiale</span></div><div class="category-list"><% lista.slice(0, 4).forEach(a => { %><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><strong><%= a.titlu %></strong><span><%= new Date(a.data_publicare).toLocaleDateString('ro-RO') %> · <%= a.vizualizari || 0 %> citiri</span></a><% }) %></div></section>
+    <% }) %>
+
+    <section class="candidate-profile" id="despre"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><div><span class="article-label">Despre candidat</span><h2><%= user.nume_candidat %></h2><p><%= user.descriere || user.mesaj_scurt || 'Prezentarea candidatului va fi publicată aici.' %></p><strong><%= [user.functie_candidatura, user.partid, user.zona].filter(Boolean).join(' · ') %></strong></div></section>
+
+    <% if (user.module?.social && [user.facebook_url, user.instagram_url, user.tiktok_url, user.youtube_url].some(Boolean)) { %><section class="social-strip"><span>Urmărește campania</span><div><% ['facebook','instagram','tiktok','youtube'].forEach(platforma => { if (user[`${platforma}_url`]) { %><a href="/site/<%= user.subdomeniu %>/social/<%= platforma %>" target="_blank" rel="noopener"><%= platforma %></a><% } }) %></div></section><% } %>
+
+    <footer class="newspaper-footer"><div><strong><%= user.nume_candidat %></strong><span><%= user.slogan || 'Pentru comunitate.' %></span></div><p>Material electoral. Conținut publicat și asumat de candidat. Platforma măsoară numai afișări anonime și nu creează profiluri politice ale vizitatorilor.</p><a href="/">Platformă realizată cu VoceaCandidatului</a></footer>
   </div>
 </body>
 </html>

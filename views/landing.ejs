@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Platformă simplă pentru site-uri electorale, conținut și statistici de campanie.">
+  <title>VoceaCandidatului — campania ta, clar și profesionist</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="public-body">
+  <header class="marketing-nav">
+    <a class="platform-brand" href="/"><span>Vocea</span>Candidatului</a>
+    <nav>
+      <a href="#cum-functioneaza">Cum funcționează</a>
+      <a href="#beneficii">Beneficii</a>
+      <a class="btn secondary" href="/login">Autentificare</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="marketing-hero">
+      <div>
+        <span class="eyebrow">Platformă pentru campanii electorale locale</span>
+        <h1>Ideile candidatului ajung mai ușor la comunitate.</h1>
+        <p>Site electoral în stil publicație, administrare simplă, distribuire socială și statistici clare — într-un singur loc.</p>
+        <div class="hero-actions">
+          <a class="btn btn-accent" href="#demonstratie">Vezi publicațiile candidaților</a>
+          <a class="btn secondary" href="/login">Intră în cont</a>
+        </div>
+        <p class="trust-line">Configurarea este realizată de administrator. Candidatul intră, scrie și publică.</p>
+      </div>
+      <div class="hero-preview" aria-label="Previzualizare publicație electorală">
+        <div class="preview-head"><strong>COMUNITATEA</strong><span>EDIȚIE LOCALĂ</span></div>
+        <div class="preview-main">
+          <span>PROGRAM</span>
+          <h2>Un plan clar pentru o comunitate mai bine administrată</h2>
+          <p>Proiectele, întâlnirile și mesajele candidatului, publicate într-un format ușor de citit.</p>
+        </div>
+        <div class="preview-grid"><i></i><i></i><i></i></div>
+      </div>
+    </section>
+
+    <section class="marketing-section" id="beneficii">
+      <div class="section-heading">
+        <span class="eyebrow">Tot ce contează</span>
+        <h2>O campanie digitală simplă pentru candidat și clară pentru alegător.</h2>
+      </div>
+      <div class="feature-grid">
+        <article><span>01</span><h3>Site tip ziar</h3><p>Program, proiecte, știri, evenimente și articole organizate într-o publicație modernă.</p></article>
+        <article><span>02</span><h3>Publicare rapidă</h3><p>Candidatul scrie, salvează o ciornă sau publică fără cunoștințe tehnice.</p></article>
+        <article><span>03</span><h3>Rețele sociale</h3><p>Legături către Facebook, Instagram, TikTok și YouTube, plus distribuirea articolelor.</p></article>
+        <article><span>04</span><h3>Statistici anonime</h3><p>Vizualizări, articole citite și sursele generale ale traficului, fără profilarea alegătorilor.</p></article>
+      </div>
+    </section>
+
+    <section class="steps-section" id="cum-functioneaza">
+      <div class="section-heading"><span class="eyebrow">Trei pași</span><h2>De la activarea contului la prima publicație.</h2></div>
+      <ol class="steps-list">
+        <li><strong>Administratorul configurează</strong><span>funcția, zona, partidul și modulele active.</span></li>
+        <li><strong>Candidatul își completează profilul</strong><span>sloganul, prezentarea și rețelele sociale.</span></li>
+        <li><strong>Conținutul devine public</strong><span>iar dashboardul arată ce articole sunt citite.</span></li>
+      </ol>
+    </section>
+
+    <section class="published-section" id="demonstratie">
+      <div class="section-heading"><span class="eyebrow">Publicații active</span><h2>Candidați prezenți pe platformă</h2></div>
+      <% if (candidatiPublici.length === 0) { %>
+        <div class="empty-public">Primul site de candidat va apărea aici după activare.</div>
+      <% } else { %>
+        <div class="candidate-showcase">
+          <% candidatiPublici.forEach(c => { %>
+            <a href="/site/<%= c.subdomeniu %>">
+              <span><%= c.functie_candidatura || 'Candidat' %></span>
+              <strong><%= c.nume_candidat %></strong>
+              <small><%= [c.zona, c.judet].filter(Boolean).join(', ') %></small>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+  </main>
+
+  <footer class="marketing-footer">
+    <strong>VoceaCandidatului</strong>
+    <span>Platformă tehnică pentru comunicare electorală. Responsabilitatea conținutului aparține fiecărui candidat.</span>
+    <a href="/login">Acces administrare</a>
+  </footer>
+</body>
+</html>

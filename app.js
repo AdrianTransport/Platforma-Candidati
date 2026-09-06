@@ -12,6 +12,35 @@ import { requireRole } from './middleware/auth.js';
 // timp cat "views" si "public" sunt incluse in pachetul functiei (vezi netlify.toml).
 const baseDir = process.cwd();
 
+const STATUS_CONT = new Set(['in_asteptare', 'activ', 'suspendat', 'expirat']);
+const RETELE_SOCIALE = new Set(['facebook', 'instagram', 'tiktok', 'youtube']);
+
+function urlSigur(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  try {
+    const url = new URL(text);
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function sursaVizitei(req) {
+  const declarata = String(req.query.utm_source || '').toLowerCase();
+  if (['facebook', 'instagram', 'tiktok'].includes(declarata)) return declarata;
+  const referer = String(req.get('referer') || '').toLowerCase();
+  if (referer.includes('facebook.') || referer.includes('fb.com')) return 'facebook';
+  if (referer.includes('instagram.')) return 'instagram';
+  if (referer.includes('tiktok.')) return 'tiktok';
+  if (!referer) return 'direct';
+  return 'altele';
+}
+
+function poatePublicaSite(user) {
+  return user?.role === 'candidate' && user.activ && user.status_cont === 'activ' && user.module?.site;
+}
+
 export async function createApp() {
   await initDB();
 
@@ -45,16 +74,40 @@ export async function createApp() {
 
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
 
+  app.get('/', (req, res) => {
+    const candidatiPublici = db.data.users
+      .filter(poatePublicaSite)
+      .slice(0, 6);
+    res.render('landing', { candidatiPublici });
+  });
+
   app.get('/login', (req, res) => {
     res.render('login', { eroare: null });
   });
 
   app.post('/login', async (req, res) => {
-    const { email, parola } = req.body;
-    const user = db.data.users.find((u) => u.email === email && u.activ);
-    if (!user || !bcrypt.compareSync(parola, user.password_hash)) {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const parola = String(req.body.parola || '');
+    const user = db.data.users.find((u) => u.email.toLowerCase() === email);
+    if (user?.locked_until && new Date(user.locked_until) > new Date()) {
+      return res.render('login', { eroare: 'Cont blocat temporar după prea multe încercări. Încearcă din nou peste 15 minute.' });
+    }
+    const contPermis = user?.activ && (user.role === 'admin' || user.status_cont === 'activ');
+    if (!user || !contPermis || !bcrypt.compareSync(parola, user.password_hash)) {
+      if (user) {
+        user.login_attempts = (user.login_attempts || 0) + 1;
+        if (user.login_attempts >= 5) {
+          user.locked_until = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+          user.login_attempts = 0;
+        }
+        await db.write();
+      }
       return res.render('login', { eroare: 'Email sau parola incorecte.' });
     }
+    user.login_attempts = 0;
+    user.locked_until = null;
+    user.last_login_at = new Date().toISOString();
+    await db.write();
     req.session.userId = user.id;
     req.session.rol = user.role;
     req.session.numeCandidat = user.nume_candidat;
@@ -67,22 +120,35 @@ export async function createApp() {
     res.redirect('/login');
   });
 
-  app.get('/', (req, res) => res.redirect('/login'));
-
   /* -------------------------------- ADMIN -------------------------------- */
 
   app.get('/admin', requireRole('admin'), (req, res) => {
-    const candidati = db.data.users.filter((u) => u.role === 'candidate');
+    const candidati = db.data.users
+      .filter((u) => u.role === 'candidate')
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const sumar = {
+      total: candidati.length,
+      activi: candidati.filter((c) => c.status_cont === 'activ').length,
+      asteptare: candidati.filter((c) => c.status_cont === 'in_asteptare').length,
+      suspendati: candidati.filter((c) => c.status_cont === 'suspendat').length,
+    };
     res.render('admin-dashboard', {
       candidati,
+      sumar,
       parolaNoua: req.query.parolaNoua || null,
       emailNou: req.query.emailNou || null,
+      mesaj: req.query.mesaj || null,
+      eroare: req.query.eroare || null,
     });
   });
 
   app.post('/admin/candidati', requireRole('admin'), async (req, res) => {
-    const { nume_candidat, email, zona } = req.body;
-    if (!nume_candidat || !email) return res.redirect('/admin');
+    const { nume_candidat, email, zona, judet, functie_candidatura, partid } = req.body;
+    const emailNormalizat = String(email || '').trim().toLowerCase();
+    if (!nume_candidat || !emailNormalizat) return res.redirect('/admin');
+    if (db.data.users.some((u) => u.email.toLowerCase() === emailNormalizat)) {
+      return res.redirect('/admin?eroare=Adresa%20de%20email%20este%20deja%20folosita.');
+    }
     let subdomeniu = slugify(nume_candidat);
     let contor = 1;
     while (db.data.users.some((u) => u.subdomeniu === subdomeniu)) {
@@ -91,25 +157,80 @@ export async function createApp() {
     const parola = generateazaParola();
     db.data.users.push({
       id: nextUserId(),
-      email,
+      email: emailNormalizat,
       password_hash: bcrypt.hashSync(parola, 10),
       role: 'candidate',
       nume_candidat,
       zona: zona || '',
+      judet: judet || '',
+      functie_candidatura: functie_candidatura || '',
+      partid: partid || '',
       subdomeniu,
       mesaj_scurt: '',
+      slogan: '',
+      descriere: '',
       domeniu_custom: null,
-      activ: true,
+      facebook_url: '',
+      instagram_url: '',
+      tiktok_url: '',
+      youtube_url: '',
+      status_cont: 'in_asteptare',
+      activ: false,
+      module: { site: true, statistici: true, social: true },
+      statistici: {
+        vizite_site: 0,
+        surse: { direct: 0, facebook: 0, instagram: 0, tiktok: 0, altele: 0 },
+        clickuri_sociale: { facebook: 0, instagram: 0, tiktok: 0, youtube: 0 },
+      },
+      login_attempts: 0,
+      locked_until: null,
+      last_login_at: null,
       created_at: new Date().toISOString(),
     });
     await db.write();
-    res.redirect(`/admin?parolaNoua=${encodeURIComponent(parola)}&emailNou=${encodeURIComponent(email)}`);
+    res.redirect(`/admin?parolaNoua=${encodeURIComponent(parola)}&emailNou=${encodeURIComponent(emailNormalizat)}`);
   });
 
-  app.post('/admin/candidati/:id/dezactiveaza', requireRole('admin'), async (req, res) => {
+  app.post('/admin/securitate', requireRole('admin'), async (req, res) => {
+    const admin = db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin');
+    const parolaActuala = String(req.body.parola_actuala || '');
+    const parolaNoua = String(req.body.parola_noua || '');
+    if (!admin || !bcrypt.compareSync(parolaActuala, admin.password_hash)) {
+      return res.redirect('/admin?eroare=Parola%20actuala%20nu%20este%20corecta.');
+    }
+    if (parolaNoua.length < 12 || parolaNoua !== String(req.body.confirma_parola || '')) {
+      return res.redirect('/admin?eroare=Parola%20noua%20trebuie%20sa%20aiba%20minimum%2012%20caractere%20si%20sa%20fie%20confirmata.');
+    }
+    admin.password_hash = bcrypt.hashSync(parolaNoua, 12);
+    admin.password_changed_at = new Date().toISOString();
+    await db.write();
+    res.redirect('/admin?mesaj=Parola%20Super%20Adminului%20a%20fost%20schimbata.');
+  });
+
+  app.post('/admin/candidati/:id/status', requireRole('admin'), async (req, res) => {
     const user = db.data.users.find((u) => u.id === Number(req.params.id));
-    if (user) {
-      user.activ = !user.activ;
+    const status = String(req.body.status_cont || '');
+    if (user?.role === 'candidate' && STATUS_CONT.has(status)) {
+      user.status_cont = status;
+      user.activ = status === 'activ';
+      user.activated_at = status === 'activ' ? new Date().toISOString() : user.activated_at || null;
+      await db.write();
+    }
+    res.redirect('/admin');
+  });
+
+  app.post('/admin/candidati/:id/configurare', requireRole('admin'), async (req, res) => {
+    const user = db.data.users.find((u) => u.id === Number(req.params.id));
+    if (user?.role === 'candidate') {
+      user.functie_candidatura = String(req.body.functie_candidatura || '').trim();
+      user.zona = String(req.body.zona || '').trim();
+      user.judet = String(req.body.judet || '').trim();
+      user.partid = String(req.body.partid || '').trim();
+      user.module = {
+        site: req.body.modul_site === 'on',
+        statistici: req.body.modul_statistici === 'on',
+        social: req.body.modul_social === 'on',
+      };
       await db.write();
     }
     res.redirect('/admin');
@@ -122,7 +243,26 @@ export async function createApp() {
       .filter((a) => a.user_id === req.session.userId)
       .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
     const user = db.data.users.find((u) => u.id === req.session.userId);
-    res.render('candidate-dashboard', { articole, user });
+    const totalCitiri = articole.reduce((total, articol) => total + (articol.vizualizari || 0), 0);
+    const topArticole = [...articole]
+      .filter((articol) => articol.status === 'publicat')
+      .sort((a, b) => (b.vizualizari || 0) - (a.vizualizari || 0))
+      .slice(0, 5);
+    res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole });
+  });
+
+  app.post('/dashboard/profil', requireRole('candidate'), async (req, res) => {
+    const user = db.data.users.find((u) => u.id === req.session.userId);
+    if (!user) return res.redirect('/login');
+    user.slogan = String(req.body.slogan || '').trim().slice(0, 140);
+    user.mesaj_scurt = String(req.body.mesaj_scurt || '').trim().slice(0, 240);
+    user.descriere = String(req.body.descriere || '').trim().slice(0, 2000);
+    user.facebook_url = urlSigur(req.body.facebook_url);
+    user.instagram_url = urlSigur(req.body.instagram_url);
+    user.tiktok_url = urlSigur(req.body.tiktok_url);
+    user.youtube_url = urlSigur(req.body.youtube_url);
+    await db.write();
+    res.redirect('/dashboard?profil=salvat');
   });
 
   app.get('/dashboard/articol/nou', requireRole('candidate'), (req, res) => {
@@ -149,6 +289,7 @@ export async function createApp() {
       categorie: categorie || 'Actualitate',
       status: status === 'publicat' ? 'publicat' : 'ciorna',
       generat_de_ai: generat_de_ai === 'true',
+      vizualizari: 0,
       data_publicare: acum,
       updated_at: acum,
     });
@@ -239,9 +380,9 @@ Text: <continutul articolului>`,
 
   /* --------------------------- SITE PUBLIC (ziar) -------------------------- */
 
-  app.get('/site/:subdomeniu', (req, res) => {
+  app.get('/site/:subdomeniu', async (req, res) => {
     const user = db.data.users.find(
-      (u) => u.subdomeniu === req.params.subdomeniu && u.role === 'candidate' && u.activ
+      (u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u)
     );
     if (!user) return res.status(404).send('Pagina nu exista.');
     const toate = db.data.articole
@@ -249,17 +390,51 @@ Text: <continutul articolului>`,
       .sort((a, b) => new Date(b.data_publicare) - new Date(a.data_publicare));
     const candidatura = toate.find((a) => a.tip === 'candidatura');
     const fluxIdei = toate.filter((a) => a.tip !== 'candidatura');
-    res.render('site-public', { user, candidatura, fluxIdei });
+    const categorii = fluxIdei.reduce((grupuri, articol) => {
+      const categorie = articol.categorie || 'Actualitate';
+      grupuri[categorie] ||= [];
+      grupuri[categorie].push(articol);
+      return grupuri;
+    }, {});
+    if (user.module?.statistici) {
+      user.statistici.vizite_site += 1;
+      const sursa = sursaVizitei(req);
+      user.statistici.surse[sursa] = (user.statistici.surse[sursa] || 0) + 1;
+      await db.write();
+    }
+    res.render('site-public', { user, candidatura, fluxIdei, categorii });
   });
 
-  app.get('/site/:subdomeniu/articol/:id', (req, res) => {
-    const user = db.data.users.find((u) => u.subdomeniu === req.params.subdomeniu && u.activ);
+  app.get('/site/:subdomeniu/articol/:id', async (req, res) => {
+    const user = db.data.users.find((u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
     if (!user) return res.status(404).send('Pagina nu exista.');
     const articol = db.data.articole.find(
       (a) => a.id === Number(req.params.id) && a.user_id === user.id && a.status === 'publicat'
     );
     if (!articol) return res.status(404).send('Articolul nu exista sau nu e publicat.');
-    res.render('site-articol', { user, articol });
+    if (user.module?.statistici) {
+      articol.vizualizari = (articol.vizualizari || 0) + 1;
+      await db.write();
+    }
+    const bazaPublica = process.env.URL || `${req.protocol}://${req.get('host')}`;
+    const articolUrl = new URL(req.originalUrl, bazaPublica).toString();
+    res.render('site-articol', { user, articol, articolUrl });
+  });
+
+  app.get('/site/:subdomeniu/social/:platforma', async (req, res) => {
+    const user = db.data.users.find((u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
+    const platforma = String(req.params.platforma || '').toLowerCase();
+    if (!user || !user.module?.social || !RETELE_SOCIALE.has(platforma)) {
+      return res.redirect(`/site/${encodeURIComponent(req.params.subdomeniu)}`);
+    }
+    const destinatie = urlSigur(user[`${platforma}_url`]);
+    if (!destinatie) return res.redirect(`/site/${encodeURIComponent(user.subdomeniu)}`);
+    if (user.module?.statistici) {
+      user.statistici.clickuri_sociale[platforma] =
+        (user.statistici.clickuri_sociale[platforma] || 0) + 1;
+      await db.write();
+    }
+    res.redirect(destinatie);
   });
 
   return app;
