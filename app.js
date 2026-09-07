@@ -5,6 +5,8 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId } from './db.js';
 import { requireRole } from './middleware/auth.js';
+import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, ValidationError } from './publication.js';
+import { createComments, COMMENT_STATUS } from './comments.js';
 import {
   decryptSecret,
   encryptSecret,
@@ -57,7 +59,7 @@ function poatePublicaSite(user) {
   return user?.role === 'candidate' && user.activ && user.status_cont === 'activ' && user.module?.site;
 }
 
-export async function createApp() {
+export async function createApp({ comments = createComments(), now = () => Date.now() } = {}) {
   await initDB();
 
   const app = express();
@@ -67,6 +69,9 @@ export async function createApp() {
   app.engine('ejs', ejs.renderFile);
   app.set('view engine', 'ejs');
   app.set('views', path.join(baseDir, 'views'));
+  app.locals.isPublished = article => isPublished(article, now());
+  app.locals.publicationDate = publicationDate;
+  app.locals.displayDate = displayDate;
   app.use(express.static(path.join(baseDir, 'public')));
   app.use(express.urlencoded({ extended: true }));
   app.use(express.json());
@@ -98,6 +103,21 @@ export async function createApp() {
       return res.status(403).send('Cererea a expirat sau nu este valida. Reincarca pagina si incearca din nou.');
     }
     next();
+  }
+
+  const safely = handler => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+  function requireActiveAccount(req, res, next) {
+    const user = db.data.users.find(u => u.id === req.session.userId);
+    if (!user?.activ || user.role !== req.session.rol || (user.role === 'candidate' && user.status_cont !== 'activ')) {
+      return res.status(403).send('Contul nu este activ.');
+    }
+    next();
+  }
+  function publicArticle(req) {
+    const user = db.data.users.find(u => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
+    const articol = user && db.data.articole.find(a => a.id === Number(req.params.id)
+      && a.user_id === user.id && isPublished(a, now()));
+    return { user, articol };
   }
 
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
@@ -163,6 +183,10 @@ export async function createApp() {
     res.render('admin-dashboard', {
       candidati,
       sumar,
+      topArticole: db.data.articole.filter(a => isPublished(a, now()))
+        .map(a => ({ ...a, candidat: candidati.find(c => c.id === a.user_id) }))
+        .filter(a => a.candidat && poatePublicaSite(a.candidat))
+        .sort((a, b) => (b.vizualizari || 0) - (a.vizualizari || 0)).slice(0, 10),
       parolaNoua: req.query.parolaNoua || null,
       emailNou: req.query.emailNou || null,
       mesaj: req.query.mesaj || null,
@@ -267,6 +291,31 @@ export async function createApp() {
 
   /* ------------------------------ CANDIDAT ------------------------------- */
 
+  app.get('/admin/comentarii', requireRole('admin'), requireActiveAccount, safely(async (req, res) => {
+    const status = typeof req.query.status === 'string' ? req.query.status : 'in_asteptare';
+    if (!COMMENT_STATUS.has(status)) throw new ValidationError('Filtru de moderare invalid.');
+    const all = await comments.list();
+    const total = all.filter(c => c.status === status).length;
+    const pages = Math.max(1, Math.ceil(total / 25));
+    const page = Math.min(pages, Math.max(1, Number.parseInt(req.query.pagina, 10) || 1));
+    const lista = all.filter(c => c.status === status).slice((page - 1) * 25, page * 25).map(c => {
+      const candidat = db.data.users.find(u => u.id === c.user_id);
+      const articol = db.data.articole.find(a => a.id === c.articol_id && a.user_id === c.user_id);
+      return { ...c, candidat, articol, publicLink: poatePublicaSite(candidat) && articol && isPublished(articol, now()) };
+    });
+    res.render('admin-comments', { lista, status, page, pages, total,
+      counts: Object.fromEntries([...COMMENT_STATUS].map(s => [s, all.filter(c => c.status === s).length])) });
+  }));
+
+  app.post('/admin/comentarii/:candidateId/:articleId/:id', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const candidateId = Number(req.params.candidateId);
+    const articleId = Number(req.params.articleId);
+    if (![candidateId, articleId].every(id => Number.isSafeInteger(id) && id > 0)) throw new ValidationError('Identificator invalid.');
+    await comments.moderate({ candidateId, articleId, id: req.params.id, status: req.body.status,
+      adminId: req.session.userId, version: req.body.version });
+    res.redirect(303, '/admin/comentarii');
+  }));
+
   app.get('/dashboard', requireRole('candidate'), (req, res) => {
     const articole = db.data.articole
       .filter((a) => a.user_id === req.session.userId)
@@ -274,7 +323,7 @@ export async function createApp() {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     const totalCitiri = articole.reduce((total, articol) => total + (articol.vizualizari || 0), 0);
     const topArticole = [...articole]
-      .filter((articol) => articol.status === 'publicat')
+      .filter((articol) => isPublished(articol, now()))
       .sort((a, b) => (b.vizualizari || 0) - (a.vizualizari || 0))
       .slice(0, 5);
     res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole });
@@ -284,7 +333,7 @@ export async function createApp() {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (!user?.module?.social) return res.redirect('/dashboard');
     const articole = db.data.articole
-      .filter((a) => a.user_id === user.id && a.status === 'publicat')
+      .filter((a) => a.user_id === user.id && isPublished(a, now()))
       .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
     res.render('social-center', {
       user,
@@ -420,7 +469,7 @@ export async function createApp() {
   app.post('/dashboard/social/publica/:id', requireRole('candidate'), requireCsrf, async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     const articol = db.data.articole.find(
-      (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId && a.status === 'publicat'
+      (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId && isPublished(a, now())
     );
     const platforma = String(req.body.platforma || '').toLowerCase();
     if (!user?.module?.social || !articol || !['facebook', 'instagram', 'tiktok'].includes(platforma)) {
@@ -456,22 +505,22 @@ export async function createApp() {
     }
   });
 
-  app.post('/dashboard/profil', requireRole('candidate'), async (req, res) => {
+  app.post('/dashboard/profil', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (!user) return res.redirect('/login');
-    user.slogan = String(req.body.slogan || '').trim().slice(0, 140);
-    user.mesaj_scurt = String(req.body.mesaj_scurt || '').trim().slice(0, 240);
-    user.descriere = String(req.body.descriere || '').trim().slice(0, 2000);
-    user.facebook_url = urlSigur(req.body.facebook_url);
-    user.instagram_url = urlSigur(req.body.instagram_url);
-    user.tiktok_url = urlSigur(req.body.tiktok_url);
-    user.youtube_url = urlSigur(req.body.youtube_url);
+    Object.assign(user, profileInput(req.body));
+    if (user.module?.social) {
+      user.facebook_url = urlSigur(req.body.facebook_url);
+      user.instagram_url = urlSigur(req.body.instagram_url);
+      user.tiktok_url = urlSigur(req.body.tiktok_url);
+      user.youtube_url = urlSigur(req.body.youtube_url);
+    }
     await db.write();
     res.redirect('/dashboard?profil=salvat');
-  });
+  }));
 
   app.get('/dashboard/articol/nou', requireRole('candidate'), (req, res) => {
-    res.render('articol-form', { articol: null });
+    res.render('articol-form', { articol: null, eroare: '', dataProgramata: '' });
   });
 
   app.get('/dashboard/articol/:id/edit', requireRole('candidate'), (req, res) => {
@@ -479,60 +528,56 @@ export async function createApp() {
       (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId
     );
     if (!articol) return res.redirect('/dashboard');
-    res.render('articol-form', { articol });
+    res.render('articol-form', { articol, eroare: '', dataProgramata: localDateTime(articol.data_programata) });
   });
 
-  app.post('/dashboard/articol', requireRole('candidate'), async (req, res) => {
-    const { titlu, continut, tip, categorie, generat_de_ai, status } = req.body;
-    const acum = new Date().toISOString();
+  function validateArticle(req, res, previous) {
+    try { return articleInput(req.body, previous, now()); }
+    catch (error) {
+      if (!(error instanceof ValidationError)) throw error;
+      const form = Object.fromEntries(['titlu', 'continut', 'tip', 'categorie', 'imagine_url'].map(key =>
+        [key, typeof req.body[key] === 'string' ? req.body[key] : '']));
+      res.status(400).render('articol-form', { articol: { ...form, id: previous?.id, generat_de_ai: req.body.generat_de_ai === 'true' },
+        eroare: error.message, dataProgramata: typeof req.body.data_programata === 'string' ? req.body.data_programata : '' });
+      return null;
+    }
+  }
+
+  app.post('/dashboard/articol', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const fields = validateArticle(req, res, null);
+    if (!fields) return;
     db.data.articole.push({
       id: nextArticolId(),
       user_id: req.session.userId,
-      tip: tip || 'idee',
-      titlu,
-      continut,
-      categorie: categorie || 'Actualitate',
-      status: status === 'publicat' ? 'publicat' : 'ciorna',
-      generat_de_ai: generat_de_ai === 'true',
+      ...fields,
       imagine_url: urlSigur(req.body.imagine_url),
       vizualizari: 0,
       distribuiri_sociale: [],
-      data_publicare: acum,
-      updated_at: acum,
     });
     await db.write();
     res.redirect('/dashboard');
-  });
+  }));
 
-  app.post('/dashboard/articol/:id', requireRole('candidate'), async (req, res) => {
+  app.post('/dashboard/articol/:id', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const articol = db.data.articole.find(
       (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId
     );
     if (!articol) return res.redirect('/dashboard');
-    const { titlu, continut, tip, categorie, generat_de_ai, status } = req.body;
-    articol.titlu = titlu;
-    articol.continut = continut;
-    articol.tip = tip || articol.tip;
-    articol.categorie = categorie || articol.categorie;
-    articol.generat_de_ai = generat_de_ai === 'true';
+    const fields = validateArticle(req, res, articol);
+    if (!fields) return;
+    Object.assign(articol, fields);
     articol.imagine_url = urlSigur(req.body.imagine_url);
-    const eraDejaPublicat = articol.status === 'publicat';
-    articol.status = status === 'publicat' ? 'publicat' : 'ciorna';
-    if (!eraDejaPublicat && articol.status === 'publicat') {
-      articol.data_publicare = new Date().toISOString();
-    }
-    articol.updated_at = new Date().toISOString();
     await db.write();
     res.redirect('/dashboard');
-  });
+  }));
 
-  app.post('/dashboard/articol/:id/sterge', requireRole('candidate'), async (req, res) => {
+  app.post('/dashboard/articol/:id/sterge', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     db.data.articole = db.data.articole.filter(
       (a) => !(a.id === Number(req.params.id) && a.user_id === req.session.userId)
     );
     await db.write();
     res.redirect('/dashboard');
-  });
+  }));
 
   app.post('/dashboard/genereaza-ai', requireRole('candidate'), async (req, res) => {
     const { idee, ton } = req.body;
@@ -588,46 +633,82 @@ Text: <continutul articolului>`,
 
   /* --------------------------- SITE PUBLIC (ziar) -------------------------- */
 
-  app.get('/site/:subdomeniu', async (req, res) => {
+  app.get('/site/:subdomeniu', safely(async (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
     const user = db.data.users.find(
       (u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u)
     );
     if (!user) return res.status(404).send('Pagina nu exista.');
     const toate = db.data.articole
-      .filter((a) => a.user_id === user.id && a.status === 'publicat')
-      .sort((a, b) => new Date(b.data_publicare) - new Date(a.data_publicare));
-    const candidatura = toate.find((a) => a.tip === 'candidatura');
-    const fluxIdei = toate.filter((a) => a.tip !== 'candidatura');
-    const categorii = fluxIdei.reduce((grupuri, articol) => {
+      .filter((a) => a.user_id === user.id && isPublished(a, now()))
+      .sort((a, b) => new Date(publicationDate(b)) - new Date(publicationDate(a)));
+    const { cautaText, categorieSelectata, filtrate } = filterArticles(toate, req.query);
+    const candidatura = filtrate.find((a) => a.tip === 'candidatura');
+    const fluxIdei = filtrate.filter((a) => a.id !== candidatura?.id);
+    const categorii = filtrate.reduce((grupuri, articol) => {
       const categorie = articol.categorie || 'Actualitate';
       grupuri[categorie] ||= [];
       grupuri[categorie].push(articol);
       return grupuri;
-    }, {});
+    }, Object.create(null));
     if (user.module?.statistici) {
       user.statistici.vizite_site += 1;
       const sursa = sursaVizitei(req);
       user.statistici.surse[sursa] = (user.statistici.surse[sursa] || 0) + 1;
       await db.write();
     }
-    res.render('site-public', { user, candidatura, fluxIdei, categorii });
+    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata,
+      categoriiToate: [...new Set(toate.map(a => a.categorie || 'Actualitate'))].sort(),
+      rezultatTotal: filtrate.length });
+  }));
+
+  app.get('/site/:subdomeniu/contact', (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    const user = db.data.users.find(u => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
+    if (!user) return res.status(404).send('Pagina nu există.');
+    res.render('site-contact', { user });
   });
 
-  app.get('/site/:subdomeniu/articol/:id', async (req, res) => {
-    const user = db.data.users.find((u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
-    if (!user) return res.status(404).send('Pagina nu exista.');
-    const articol = db.data.articole.find(
-      (a) => a.id === Number(req.params.id) && a.user_id === user.id && a.status === 'publicat'
-    );
+  async function renderPublicArticle(req, res, { error = '', values = {}, status = 200, count = false } = {}) {
+    res.set('Cache-Control', 'private, no-store');
+    const { user, articol } = publicArticle(req);
     if (!articol) return res.status(404).send('Articolul nu exista sau nu e publicat.');
-    if (user.module?.statistici) {
+    let comentarii = [];
+    let commentsAvailable = true;
+    try { comentarii = (await comments.list(user.id, articol.id)).filter(c => c.status === 'aprobat'); }
+    catch (commentError) {
+      commentsAvailable = false;
+      console.error('Citirea comentariilor a eșuat:', commentError.name);
+    }
+    if (count && user.module?.statistici) {
       articol.vizualizari = (articol.vizualizari || 0) + 1;
       await db.write();
     }
     const bazaPublica = process.env.URL || `${req.protocol}://${req.get('host')}`;
-    const articolUrl = new URL(req.originalUrl, bazaPublica).toString();
-    res.render('site-articol', { user, articol, articolUrl });
-  });
+    const articolUrl = new URL(`/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}`, bazaPublica).toString();
+    res.status(status).render('site-articol', { user, articol, articolUrl, comentarii, commentsAvailable, commentError: error,
+      commentValues: values, commentSent: req.query.comentariu === 'trimis' });
+  }
+
+  app.get('/site/:subdomeniu/articol/:id', safely((req, res) => renderPublicArticle(req, res, { count: true })));
+
+  app.post('/site/:subdomeniu/articol/:id/comentarii', requireCsrf, safely(async (req, res) => {
+    const { user, articol } = publicArticle(req);
+    if (!articol) return res.status(404).send('Articolul nu există sau nu e publicat.');
+    try {
+      await comments.submit({ candidateId: user.id, articleId: articol.id, body: req.body,
+        // Nu avem încredere în X-Forwarded-For trimis direct de client.
+        ip: (process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME)
+          ? req.get('x-nf-client-connection-ip') || req.socket.remoteAddress || 'unknown'
+          : req.socket.remoteAddress || 'unknown' });
+    } catch (error) {
+      if (!(error instanceof ValidationError)) throw error;
+      if (error.status === 429) res.set('Retry-After', '60');
+      return renderPublicArticle(req, res, { error: error.message, status: error.status,
+        values: { nume: typeof req.body.nume === 'string' ? req.body.nume : '', text: typeof req.body.text === 'string' ? req.body.text : '' } });
+    }
+    res.redirect(303, `/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}?comentariu=trimis#comentarii`);
+  }));
 
   app.get('/site/:subdomeniu/social/:platforma', async (req, res) => {
     const user = db.data.users.find((u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
@@ -645,5 +726,12 @@ Text: <continutul articolului>`,
     res.redirect(destinatie);
   });
 
+  app.use((error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    if (error instanceof ValidationError) return res.status(error.status).send(error.message);
+    // Nu expunem stack-uri, secrete sau datele trimise de vizitatori.
+    console.error('Cerere nereușită:', error.name);
+    res.status(503).send('Datele nu pot fi accesate momentan. Reîncarcă pagina și încearcă din nou.');
+  });
   return app;
 }

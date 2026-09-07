@@ -26,6 +26,12 @@
     <% if (mesaj) { %><div class="mesaj-succes"><%= mesaj %></div><% } %>
     <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
 
+    <section class="card"><h2>Moderarea comentariilor</h2><p>Numai comentariile aprobate devin publice. Poți verifica istoricul fiecărei decizii.</p><a class="btn" href="/admin/comentarii">Deschide moderarea</a></section>
+    <section class="card"><h2>Cele mai citite articole</h2><p class="note">Top 10 după afișările înregistrate, nu cititori unici și nu indexare Google.</p>
+      <% if (!topArticole.length) { %><p>Nu există articole publice.</p><% } %>
+      <% topArticole.forEach(a => { %><div class="rank-row"><span><a href="/site/<%= a.candidat.subdomeniu %>/articol/<%= a.id %>"><%= a.titlu %></a><br><small><%= a.candidat.nume_candidat %></small></span><strong><%= a.vizualizari || 0 %></strong></div><% }) %>
+    </section>
+
     <details class="card security-card">
       <summary>Securitatea contului Super Admin</summary>
       <p class="note">După 5 încercări greșite, autentificarea este blocată timp de 15 minute. Folosește o parolă unică de minimum 12 caractere.</p>

@@ -14,14 +14,25 @@
       <a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a>
       <div class="candidate-identity"><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura, user.partid].filter(Boolean).join(' · ') %></span></div>
     </header>
-    <nav class="newspaper-nav"><a href="#actualitate">Actualitate</a><a href="#program">Program</a><a href="#proiecte">Proiecte</a><a href="#evenimente">Evenimente</a><a href="#despre">Despre candidat</a></nav>
+    <nav class="newspaper-nav"><a href="#actualitate">Actualitate</a><a href="#program">Program</a><a href="#proiecte">Proiecte</a><a href="#evenimente">Evenimente</a><a href="#despre">Despre candidat</a><a href="/site/<%= user.subdomeniu %>/contact">Contact</a></nav>
+    <form method="GET" action="/site/<%= user.subdomeniu %>" class="newspaper-search" role="search">
+      <label>Caută în articole<input type="search" name="cauta" maxlength="120" value="<%= cautaText %>" placeholder="Titlu sau conținut"></label>
+      <label>Categorie<select name="categorie"><option value="">Toate categoriile</option>
+        <% if (categorieSelectata && !categoriiToate.includes(categorieSelectata)) { %><option selected value="<%= categorieSelectata %>"><%= categorieSelectata %></option><% } %>
+        <% categoriiToate.forEach(c => { %><option value="<%= c %>" <%= c === categorieSelectata ? 'selected' : '' %>><%= c %></option><% }) %>
+      </select></label>
+      <button type="submit" class="secondary">Caută</button>
+      <% if (cautaText || categorieSelectata) { %><a href="/site/<%= user.subdomeniu %>">Resetează filtrele</a><% } %>
+    </form>
+    <% if (cautaText || categorieSelectata) { %><p class="search-summary" role="status"><%= rezultatTotal %> rezultate<% if (cautaText) { %> pentru „<%= cautaText %>”<% } %></p><% } %>
 
     <% const principal = candidatura || fluxIdei[0]; %>
     <% if (principal) { %>
       <section class="lead-story">
         <a class="lead-visual<%= principal.imagine_url ? ' has-image' : '' %>" <% if (principal.imagine_url) { %>style="background-image:linear-gradient(0deg,rgba(17,24,19,.74),rgba(17,24,19,.08)),url('<%= principal.imagine_url %>')"<% } %> href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><span><%= principal.categorie %></span><b><%= user.slogan || 'Un mesaj direct pentru comunitate' %></b></a>
-        <div class="lead-copy"><span class="article-label"><%= principal.categorie %></span><h1><a href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><%= principal.titlu %></a></h1><p><%= principal.continut.slice(0, 300) %><%= principal.continut.length > 300 ? '…' : '' %></p><div class="story-meta"><span><%= new Date(principal.data_publicare).toLocaleDateString('ro-RO') %></span><span><%= principal.vizualizari || 0 %> citiri</span></div><a class="read-more" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>">Citește articolul →</a></div>
+        <div class="lead-copy"><span class="article-label"><%= principal.categorie %></span><h1><a href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><%= principal.titlu %></a></h1><p><%= principal.continut.slice(0, 300) %><%= principal.continut.length > 300 ? '…' : '' %></p><div class="story-meta"><span><%= displayDate(publicationDate(principal)) %></span><span><%= principal.vizualizari || 0 %> citiri</span></div><a class="read-more" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>">Citește articolul →</a></div>
       </section>
+    <% } else if (cautaText || categorieSelectata) { %><div class="newspaper-empty"><h1>Niciun articol găsit</h1><p>Încearcă alt termen sau elimină filtrul de categorie.</p></div>
     <% } else { %><div class="newspaper-empty"><h1><%= user.slogan || 'Publicația este pregătită.' %></h1><p>Primele articole vor apărea în curând.</p></div><% } %>
 
     <% const secundare = fluxIdei.filter(a => a.id !== principal?.id); %>
@@ -30,14 +41,14 @@
     <% } %>
 
     <% Object.entries(categorii).forEach(([categorie, lista]) => { const ancora = categorie.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-'); %>
-      <section class="category-section" id="<%= ancora %>"><div class="category-title"><h2><%= categorie %></h2><span><%= lista.length %> materiale</span></div><div class="category-list"><% lista.slice(0, 4).forEach(a => { %><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><strong><%= a.titlu %></strong><span><%= new Date(a.data_publicare).toLocaleDateString('ro-RO') %> · <%= a.vizualizari || 0 %> citiri</span></a><% }) %></div></section>
+      <section class="category-section" id="<%= ancora %>"><div class="category-title"><h2><%= categorie %></h2><span><%= lista.length %> materiale</span></div><div class="category-list"><% lista.forEach(a => { %><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><strong><%= a.titlu %></strong><span><%= displayDate(publicationDate(a)) %> · <%= a.vizualizari || 0 %> citiri</span></a><% }) %></div></section>
     <% }) %>
 
     <section class="candidate-profile" id="despre"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><div><span class="article-label">Despre candidat</span><h2><%= user.nume_candidat %></h2><p><%= user.descriere || user.mesaj_scurt || 'Prezentarea candidatului va fi publicată aici.' %></p><strong><%= [user.functie_candidatura, user.partid, user.zona].filter(Boolean).join(' · ') %></strong></div></section>
 
     <% if (user.module?.social && [user.facebook_url, user.instagram_url, user.tiktok_url, user.youtube_url].some(Boolean)) { %><section class="social-strip"><span>Urmărește campania</span><div><% ['facebook','instagram','tiktok','youtube'].forEach(platforma => { if (user[`${platforma}_url`]) { %><a href="/site/<%= user.subdomeniu %>/social/<%= platforma %>" target="_blank" rel="noopener"><%= platforma %></a><% } }) %></div></section><% } %>
 
-    <footer class="newspaper-footer"><div><strong><%= user.nume_candidat %></strong><span><%= user.slogan || 'Pentru comunitate.' %></span></div><p>Material electoral. Conținut publicat și asumat de candidat. Platforma măsoară numai afișări anonime și nu creează profiluri politice ale vizitatorilor.</p><a href="/">Platformă realizată cu VoceaCandidatului</a></footer>
+    <footer class="newspaper-footer"><div><strong><%= user.nume_candidat %></strong><span><%= user.slogan || 'Pentru comunitate.' %></span></div><p>Material electoral. Conținut publicat și asumat de candidat. Statisticile numără afișări, fără profiluri politice ale cititorilor. Comentariile trimise voluntar sunt moderate înainte de afișarea publică.</p><a href="/">Platformă realizată cu VoceaCandidatului</a></footer>
   </div>
 </body>
 </html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Moderare comentarii — Super Admin</title><link rel="stylesheet" href="/style.css"></head>
+<body><main class="app-shell app-shell-wide">
+  <% const labels = { in_asteptare: 'În așteptare', aprobat: 'Aprobate', respins: 'Respinse', sters: 'Șterse logic' }; %>
+  <div class="topbar"><div><span class="eyebrow">Super Admin</span><h1>Moderare comentarii</h1></div><a class="btn secondary" href="/admin">Înapoi la administrare</a></div>
+  <p class="note">Comentariile sunt ascunse implicit. Ștergerea logică le ascunde definitiv; păstrează textul și istoricul pentru verificarea deciziei, nu este ștergere definitivă a datelor.</p>
+  <nav class="moderation-tabs" aria-label="Status comentarii"><% Object.entries(labels).forEach(([key, label]) => { %><a class="btn <%= status === key ? '' : 'secondary' %>" href="/admin/comentarii?status=<%= key %>" <%- status === key ? 'aria-current="page"' : '' %>><%= label %> (<%= counts[key] %>)</a><% }) %></nav>
+  <p><%= total %> comentarii · pagina <%= page %> din <%= pages %></p>
+  <% if (!lista.length) { %><section class="card"><p>Nu există comentarii în această categorie.</p></section><% } %>
+  <% lista.forEach(c => { %><article class="card moderation-card">
+    <header><h2><%= c.nume %></h2><span class="note"><%= displayDate(c.created_at) %> · <%= labels[c.status] %></span></header>
+    <p><strong><%= c.candidat?.nume_candidat || 'Candidat indisponibil' %></strong> · <% if (c.publicLink) { %><a href="/site/<%= c.candidat.subdomeniu %>/articol/<%= c.articol.id %>"><%= c.articol.titlu %></a><% } else { %><%= c.articol?.titlu || 'Articol șters' %> (nepublic)<% } %></p>
+    <blockquote class="comment-text"><%= c.text %></blockquote>
+    <% if (c.status !== 'sters') { %><form method="POST" action="/admin/comentarii/<%= c.user_id %>/<%= c.articol_id %>/<%= c.id %>" class="publication-actions">
+      <input type="hidden" name="csrf_token" value="<%= csrfToken %>"><input type="hidden" name="version" value="<%= c.version %>">
+      <button name="status" value="aprobat" type="submit">Aprobă</button><button name="status" value="respins" class="secondary" type="submit">Respinge</button><button name="status" value="sters" class="danger" type="submit" onclick="return confirm('Ascunzi definitiv comentariul? Textul și istoricul rămân în administrare.')">Șterge logic</button>
+    </form><% } %>
+    <% if (c.history.length) { %><details class="moderation-history"><summary>Istoric moderare (<%= c.history.length %>)</summary><ul><% c.history.forEach(e => { %><li><%= displayDate(e.created_at) %> · Admin #<%= e.admin_id %> · <%= labels[e.status] %></li><% }) %></ul></details><% } %>
+  </article><% }) %>
+  <nav class="moderation-tabs" aria-label="Paginare"><% if (page > 1) { %><a class="btn secondary" href="/admin/comentarii?status=<%= status %>&pagina=<%= page - 1 %>">← Pagina anterioară</a><% } %><% if (page < pages) { %><a class="btn secondary" href="/admin/comentarii?status=<%= status %>&pagina=<%= page + 1 %>">Pagina următoare →</a><% } %></nav>
+</main></body></html>

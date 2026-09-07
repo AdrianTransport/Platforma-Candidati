@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Contact — <%= user.nume_candidat %></title><link rel="stylesheet" href="/style.css"></head>
+<body class="newspaper-body"><div class="newspaper-shell article-shell">
+  <div class="newspaper-kicker"><span>PUBLICAȚIE ELECTORALĂ</span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
+  <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a><a class="back-link" href="/site/<%= user.subdomeniu %>">← Prima pagină</a></header>
+  <main class="contact-page"><span class="article-label">Contact public</span><h1><%= user.nume_candidat %></h1>
+    <p><%= [user.functie_candidatura, user.zona, user.judet].filter(Boolean).join(' · ') %></p>
+    <% if (user.email_contact) { %><p><strong>Email:</strong> <a href="mailto:<%= user.email_contact %>"><%= user.email_contact %></a></p><% } %>
+    <% if (user.telefon_contact) { %><p><strong>Telefon:</strong> <a href="tel:<%= user.telefon_contact.replace(/[^+\d]/g, '') %>"><%= user.telefon_contact %></a></p><% } %>
+    <% if (!user.email_contact && !user.telefon_contact) { %><p>Candidatul nu a publicat încă date de contact.</p><% } %>
+    <p class="note">Date publicate voluntar de candidat. Mesajele sunt trimise prin aplicația ta de email sau telefon; această pagină nu colectează mesaje.</p>
+  </main>
+  <footer class="newspaper-footer"><p>Material electoral. Conținut publicat și asumat de candidat.</p><a href="/">VoceaCandidatului</a></footer>
+</div></body></html>

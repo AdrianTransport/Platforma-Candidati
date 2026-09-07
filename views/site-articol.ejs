@@ -15,12 +15,30 @@
       <article class="article-content">
         <span class="article-label"><%= articol.categorie %></span>
         <h1><%= articol.titlu %></h1>
-        <div class="article-byline"><span>Publicat de <strong><%= user.nume_candidat %></strong></span><span><%= new Date(articol.data_publicare).toLocaleDateString('ro-RO') %></span><span><%= articol.vizualizari || 0 %> citiri</span><% if (articol.generat_de_ai) { %><span class="pill ai">Generat cu AI</span><% } %></div>
+        <div class="article-byline"><span>Publicat de <strong><%= user.nume_candidat %></strong></span><span><%= displayDate(publicationDate(articol)) %></span><span><%= articol.vizualizari || 0 %> citiri</span><% if (articol.generat_de_ai) { %><span class="pill ai">Generat cu AI</span><% } %></div>
         <% if (articol.imagine_url) { %><img class="article-hero-image" src="<%= articol.imagine_url %>" alt="Imagine pentru articolul <%= articol.titlu %>"><% } %>
         <div class="article-text"><% articol.continut.split('\n').filter(p => p.trim()).forEach(paragraf => { %><p><%= paragraf %></p><% }) %></div>
         <div class="share-box"><strong>Distribuie articolul</strong><div><a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(articolUrl) %>">Facebook</a><button type="button" class="secondary" onclick="navigator.clipboard.writeText(location.href).then(() => this.textContent='Link copiat')">Copiază linkul</button></div></div>
+        <section class="comments-section" id="comentarii">
+          <h2>Comentarii<% if (commentsAvailable) { %> (<%= comentarii.length %>)<% } %></h2>
+          <p class="note">Comentariile apar numai după aprobarea Super Adminului. Aprobarea nu confirmă afirmațiile autorului. Nu trimite date personale ale altor persoane.</p>
+          <% if (commentSent) { %><p class="mesaj-succes" role="status">Comentariul a fost trimis pentru moderare. Nu este încă public.</p><% } %>
+          <% if (commentError) { %><p class="eroare" role="alert"><%= commentError %></p><% } %>
+          <% if (!commentsAvailable) { %><p class="eroare" role="status">Comentariile sunt temporar indisponibile. Articolul poate fi citit în continuare; reîncarcă pagina pentru a reîncerca.</p><% } %>
+          <% if (commentsAvailable && !comentarii.length) { %><p>Nu există încă comentarii aprobate.</p><% } %>
+          <% comentarii.forEach(c => { %><article class="public-comment"><header><strong><%= c.nume %></strong> <time datetime="<%= c.created_at %>"><%= displayDate(c.created_at) %></time></header><p><%= c.text %></p></article><% }) %>
+          <% if (commentsAvailable) { %><form method="POST" action="/site/<%= user.subdomeniu %>/articol/<%= articol.id %>/comentarii" class="comment-form">
+            <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+            <div class="spam-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+            <label>Nume sau pseudonim public<input name="nume" maxlength="80" required value="<%= commentValues.nume || '' %>"></label>
+            <label>Comentariu<textarea name="text" rows="5" minlength="3" maxlength="2000" required><%= commentValues.text || '' %></textarea></label>
+            <label class="consent-label"><input type="checkbox" name="acord_publicare" required> Sunt de acord ca numele/pseudonimul și comentariul să fie afișate public după moderare.</label>
+            <p class="note">Pentru protecția anti-spam folosim temporar un identificator pseudonim care se schimbă zilnic. Nu salvăm adresa IP în comentariu.</p>
+            <button type="submit">Trimite spre moderare</button>
+          </form><% } %>
+        </section>
       </article>
-      <aside class="article-aside"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><h2><%= user.nume_candidat %></h2><p><%= user.functie_candidatura || 'Candidat' %><br><%= [user.zona, user.judet].filter(Boolean).join(', ') %></p><a class="btn" href="/site/<%= user.subdomeniu %>">Vezi toate articolele</a></aside>
+      <aside class="article-aside"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><h2><%= user.nume_candidat %></h2><p><%= user.functie_candidatura || 'Candidat' %><br><%= [user.zona, user.judet].filter(Boolean).join(', ') %></p><a class="btn" href="/site/<%= user.subdomeniu %>">Vezi toate articolele</a><p><a href="/site/<%= user.subdomeniu %>/contact">Contact candidat</a></p></aside>
     </main>
     <footer class="newspaper-footer"><p>Material electoral. Conținut publicat și asumat de candidat.</p><a href="/">VoceaCandidatului</a></footer>
   </div>

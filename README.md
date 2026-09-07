@@ -29,6 +29,88 @@ Funcțiile devin active după configurarea și aprobarea aplicațiilor Meta/TikT
 Codul e structurat să ruleze **și local** (`npm start`), **și pe Netlify** (GitHub → deploy
 automat), fără să fie nevoie de o bază de date externă separată.
 
+## Lot nou: programare, contact, căutare și comentarii moderate
+
+- Candidatul poate edita funcția candidaturii, localitatea/zona, județul și, opțional,
+  emailul/telefonul public. `/site/:subdomeniu/contact` afișează doar aceste câmpuri;
+  nu folosește emailul de autentificare. Golirea câmpurilor retrage contactul public.
+- Articolele se salvează ca `ciorna`, `publicat` sau `programat`. Formularul folosește
+  **Europe/Bucharest**, indiferent de fusul browserului/serverului; stocarea este UTC.
+  Datele trecute, invalide și orele inexistente/ambigue la schimbarea orei sunt respinse.
+- Vizibilitatea este evaluată la fiecare cerere, inclusiv pe URL-ul direct, în căutare,
+  clasamente și centrul social. La termen, articolul devine accesibil fără cron și fără
+  schimbarea înregistrării `programat`. O pagină deja deschisă trebuie reîmprospătată.
+  **Nu se programează distribuirea socială și nu se activează Meta/TikTok.**
+- Căutarea în titlu/conținut ignoră diacriticele și poate fi combinată cu o categorie.
+  Ciornele și articolele viitoare nu apar nici în rezultate, nici în lista categoriilor.
+- Comentariile sunt implicit `in_asteptare`. Numai Super Adminul poate aproba, respinge
+  sau șterge logic din `/admin/comentarii`; listele administrative au 25 de intrări/pagină.
+  Public sunt afișate numai comentariile aprobate ale articolului respectiv.
+- Ștergerea logică este terminală și păstrează textul plus istoricul moderării pentru
+  administrator. Nu este ștergere definitivă a datelor. Istoricul conține ID-ul
+  administratorului, acțiunea, data și versiunea anterioară.
+- Formularele pentru profil, articole, comentarii și moderare verifică CSRF.
+  Numele/comentariile sunt texte simple escapate în EJS, fără HTML executabil.
+  Comentariile au limită de 2.000 de caractere, honeypot și confirmare de afișare publică.
+- Topul Super Adminului folosește afișările deja înregistrate. Nu reprezintă cititori
+  unici, lecturi complete sau indexare în motoarele de căutare.
+
+### Stocarea comentariilor și limitele pilotului
+
+`comment-store.js` folosește **același serviciu Netlify Blobs**, într-un store separat
+`campanie-comments`. Comentariile și evenimentele de moderare sunt
+obiecte independente cu UUID-uri, nu array-uri rescrise în `campanie-db/db`.
+Trimiterile simultane nu suprascriu comentariile celorlalți. Moderările concurente sunt
+păstrate în audit; versiunea învechită este respinsă dacă schimbarea este deja vizibilă.
+Dacă două moderări trec verificarea simultan, se aplică ordinea dată de timestamp și UUID;
+o ștergere logică are întotdeauna prioritate. Nu există tranzacții distribuite în acest lot.
+
+SDK-ul 8.2 deja inclus nu propagă endpoint-ul necesar consistenței `strong` prin
+`connectLambda`. Nu schimbăm SDK-ul sau handlerul: folosim exclusiv chei noi pentru
+comentarii/moderare, fără actualizări. Conform [documentației Netlify Blobs](https://docs.netlify.com/build/data-and-storage/netlify-blobs/#consistency),
+obiectele noi devin disponibile imediat și în modul implicit; actualizările/ștergerile
+pot necesita până la 60 de secunde. Singurele ștergeri fizice din acest modul sunt
+marcajele anti-spam expirate, care nu controlează vizibilitatea comentariilor.
+
+În contexte Netlify non-producție se folosește un store de comentarii limitat la deploy;
+comentariile de test nu ajung în store-ul de producție. Local se folosește
+`data/comments/`, exclus din Git. Erorile Blobs nu declanșează scrieri pe discul Lambda.
+**Izolarea aceasta privește comentariile; store-ul principal existent nu a fost schimbat.**
+
+Anti-spamul necesită `SESSION_SECRET` aleatoriu, cu minimum 32 de caractere. Se urmărește
+o trimitere/minut și 10/zi per identificator de conexiune pseudonimizat prin HMAC cu cheie
+secretă și dată. Nu se stochează IP-ul brut sau legătura identificatorului cu textul.
+Marcajele zilelor mai vechi decât ziua precedentă sunt șterse la următoarea trimitere
+validă; fără trafic nu există un job de ștergere automată. Limita este **best-effort**:
+cererile care sosesc exact simultan pot depăși pragul, iar persoanele care împart aceeași
+conexiune pot împărți și limita. Nu este protecție DDoS. Identificarea conexiunii prin
+header-ul Netlify trebuie verificată pe deploy; local se folosește adresa socketului.
+
+La afișarea publică se citesc comentariile/auditul articolului; în administrare se citește
+întreaga listă înainte de paginare. Soluția este pentru pilot, nu pentru volume mari.
+Modelul vechi `db.json` pentru conturi, articole și statistici rămâne neschimbat:
+instanțe serverless diferite pot păstra copii vechi și suprascrie actualizări concurente.
+Acest lot **nu rezolvă** acea problemă generală de stocare sau securitatea completă a
+rutelor vechi. Este necesară o intervenție separată, aprobată, înainte de extindere.
+
+### Verificarea acestui lot
+
+```bash
+node --test tests/*.test.js
+```
+
+Testele folosesc directoare temporare, conturi fictive, ceas controlat și adaptoare de
+stocare simulate. Un test folosește SDK-ul Blobs real și `connectLambda`, cu transport
+HTTP simulat, inclusiv izolarea preview/producție și paginarea. Acoperă fusul orar/DST, vizibilitatea la termen, căutarea, contactul,
+CSRF, izolarea între candidați, moderarea/XSS, auditul, anti-spamul și scrieri simultane.
+Nu trimit mesaje către furnizori sociali și nu ating date de producție.
+
+După aprobarea publicării trebuie verificat pe Netlify: programarea unui articol în
+viitor, accesul înainte/după termen, comentariu nou → reîncărcare → aprobare → reîncărcare,
+apoi respingere/ștergere și persistență după repornirea funcției. Testele locale nu
+înlocuiesc aceste verificări. Politica de moderare, retenția și informarea privind datele
+trebuie validate înainte de folosirea reală; funcțiile tehnice nu certifică legalitatea.
+
 ## Structura tehnica (important de stiut)
 
 - `app.js` — toată aplicația Express (rute, view-uri), exportată ca funcție `createApp()`,
@@ -119,8 +201,8 @@ salvate.
 
 - Conectarea domeniilor proprii ale candidaților (`anamarinescu.ro` → subdomeniul
   platformei) — se face din Netlify, „Domain settings → Add custom domain”, per candidat.
-- Programarea publicărilor și încărcarea directă de fișiere media. Lotul curent folosește
-  URL-uri publice de imagine și publicare manuală, confirmată pentru fiecare articol.
+- Programarea distribuirilor sociale și încărcarea directă de fișiere media. Articolele
+  de pe site pot fi programate; distribuirea socială rămâne manuală și confirmată.
 - Auto-înregistrare / plăți — conturile sunt create manual de admin, cum ați cerut pentru
   pilotul de 10 candidați.
 - Verificare juridică (AEP, GDPR) — de confirmat cu un avocat înainte de lansarea reală.
@@ -133,6 +215,10 @@ local-server.js           - pornire locala
 netlify/functions/api.js  - pornire pe Netlify (functie serverless)
 store.js                  - stocare date: fisier JSON local / Netlify Blobs
 db.js                     - initializare date + functii ajutatoare
+publication.js            - validare, căutare, date și vizibilitate la termen
+comments.js               - moderare, audit și anti-spam
+comment-store.js          - comentarii independente, local / Netlify Blobs
+tests/                    - verificări automate izolate
 netlify.toml              - configurare Netlify
 middleware/auth.js        - protectia rutelor pe roluri (admin / candidat)
 views/                    - paginile HTML (EJS)
