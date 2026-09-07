@@ -18,7 +18,10 @@ function memoryStore() {
     keys: async prefix => [...records.keys()].filter(key => key.startsWith(prefix)), delete: async key => records.delete(key) };
 }
 const body = (tip = 'text') => ({ tip, request_id: randomUUID(), idee: 'O explicație generală a unei propuneri, fără cifre inventate.', acord_ai: true });
-const textResult = { titlu: 'Titlu verificat', rezumat: 'Rezumat.', continut: 'Introducere.\n## O propunere\nDetalii.', verificari: 'Verifică faptele înainte de publicare.' };
+const textResult = { titlu: 'Titlu verificat', rezumat: 'Rezumat.', continut: 'Introducere.\n## O propunere\nDetalii.',
+  tip_material: 'idee', imagine_alt: 'Ilustrație despre propunere', imagine_legenda: 'Imagine simbolică',
+  prompt_imagine: 'Ilustrație editorială orizontală despre o propunere locală, fără text.',
+  verificari: 'Verifică faptele înainte de publicare.' };
 
 test('Adaptorul Netlify citește configurația editorială prin Netlify.env', () => {
   const expected = environment();
@@ -63,8 +66,10 @@ test('Text OpenAI asincron: schemă, job privat, retry fără regenerare, rezult
   const payload = JSON.parse(calls[0].options.body);
   assert.equal(payload.background, true);
   assert.equal(payload.store, false);
-  assert.equal(payload.model, 'gpt-5');
+  assert.equal(payload.model, 'gpt-5-mini');
+  assert.equal(payload.max_output_tokens, 4000);
   assert.equal(payload.text.format.strict, true);
+  assert.deepEqual(payload.text.format.schema.properties.tip_material.enum, ['idee', 'candidatura', 'anunt']);
   assert.equal(calls[0].url, 'https://api.openai.com/v1/responses');
   await assert.rejects(editorial.status(3, job.id), error => error.status === 404);
   assert.equal((await editorial.status(2, job.id)).status, 'in_lucru');

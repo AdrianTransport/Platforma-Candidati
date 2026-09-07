@@ -241,7 +241,7 @@ Variabile de server necesare pentru activare:
 - `AI_TEXT_DAILY_LIMIT`: număr 1–100 de încercări/candidat/zi UTC, ales de administrator.
 - `AI_IMAGE_DAILY_LIMIT`: număr 1–100 de încercări/candidat/zi UTC. `0` dezactivează tipul.
 
-Integrarea folosește OpenAI direct, prin `fetch`, fără SDK nou: Responses API cu `gpt-5`
+Integrarea folosește OpenAI direct, prin `fetch`, fără SDK nou: Responses API cu `gpt-5-mini`
 pentru text și orchestrare; instrumentul de imagini cu `gpt-image-2`, calitate `low`,
 1536×1024 JPEG. Este posibil să fie necesară verificarea organizației OpenAI.
 Nu presupune că Netlify AI Gateway acceptă GPT Image. Modelul/promptul nu sunt

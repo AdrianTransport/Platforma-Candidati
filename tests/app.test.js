@@ -111,7 +111,9 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match(form.html, /value="Proiecte" selected/);
     assert.match(form.html, /Text și imagini cu OpenAI/);
     assert.match(form.html, /id="fisier-imagine"/);
-    assert.match(form.html, /Generează ilustrație/);
+    assert.match(form.html, /Generează material complet/);
+    assert.match(form.html, /Generează doar ilustrația/);
+    assert.match(form.html, /data-editor-context="candidate"/);
 
     const secondProject = { id: 90, user_id: 2, titlu: 'Parcul cartierului', rezumat: 'Un al doilea proiect public.', continut: 'Detaliile proiectului.', tip: 'idee', categorie: 'Proiecte', status: 'publicat', imagine_url: 'https://example.test/parc.jpg', imagine_alt: 'Plan ilustrat al parcului', data_publicare: '2026-01-02T12:00:00Z', vizualizari: 0 };
     db.data.articole.push(secondProject);

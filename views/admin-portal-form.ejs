@@ -14,22 +14,22 @@
       <a class="btn secondary" href="/admin/portal">Înapoi la materiale</a>
     </div>
 
-    <div class="editorial-workspace" data-account="admin-<%= userId %>" data-api-prefix="/admin/portal" data-media-endpoint="/admin/portal/media">
+    <div class="editorial-workspace" data-account="admin-<%= userId %>" data-api-prefix="/admin/portal" data-media-endpoint="/admin/portal/media" data-editor-context="portal">
       <aside class="card editor-assistant">
         <span class="editor-eyebrow">Asistent editorial</span>
         <h2>Text și imagini cu OpenAI</h2>
-        <p class="note">Scrie ideea și informațiile verificate. OpenAI va propune textul sau ilustrația după activarea cheii API; nimic nu se publică automat.</p>
+        <p class="note">Scrie ideea și informațiile verificate. OpenAI completează automat titlul, rezumatul, tipul, conținutul și ilustrația; nimic nu se publică automat.</p>
         <label for="idee-ai">Tema știrii sau campaniei</label>
         <textarea id="idee-ai" rows="6" maxlength="4000" placeholder="Subiectul, faptele confirmate, candidatul și mesajul principal."></textarea>
         <label for="ton-ai">Tonul textului</label>
         <select id="ton-ai"><option value="clar și informativ">Clar și informativ</option><option value="direct și apropiat">Direct și apropiat</option><option value="oficial și formal">Oficial și formal</option></select>
         <label class="editor-consent"><input type="checkbox" id="acord-ai"> Sunt de acord să trimit informațiile către OpenAI. Nu includ date confidențiale sau date personale nepublice.</label>
-        <div class="ai-actions"><button type="button" id="btn-genereaza" disabled>Generează articol</button><button type="button" class="secondary" id="btn-imagine-ai" disabled>Generează ilustrație</button></div>
+        <div class="ai-actions"><button type="button" id="btn-genereaza" disabled>Generează material complet</button><button type="button" class="secondary" id="btn-imagine-ai" disabled>Generează doar ilustrația</button></div>
         <p class="note" id="config-ai" role="status">Verific disponibilitatea generării…</p>
         <p class="note" id="stare-ai" role="status" aria-live="polite"></p>
         <button type="button" class="secondary" id="reia-ai" hidden>Verifică din nou rezultatul</button>
         <section class="ai-proposal" id="ai-result" hidden aria-label="Propunere AI">
-          <h3 id="ai-title"></h3><p id="ai-summary"></p><div id="ai-text"></div><img id="ai-image" alt="Previzualizare ilustrație AI" hidden><p class="note" id="ai-checks"></p><button type="button" id="aplica-ai">Aplică propunerea</button>
+          <h3 id="ai-title"></h3><p id="ai-summary"></p><div id="ai-text"></div><img id="ai-image" alt="Previzualizare ilustrație AI" hidden><p class="note" id="ai-checks"></p>
         </section>
       </aside>
 
