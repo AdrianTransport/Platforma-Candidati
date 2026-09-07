@@ -1,0 +1,8 @@
+<% if (item.imagine_url) { %>
+  <a class="news-photo" href="/site/<%= user.subdomeniu %>/articol/<%= item.id %>" aria-label="<%= item.titlu %>">
+    <img src="<%= item.imagine_url %>" alt="<%= item.imagine_alt || item.titlu %>" loading="<%= typeof eager !== 'undefined' && eager ? 'eager' : 'lazy' %>" decoding="async" width="1536" height="1024" referrerpolicy="no-referrer">
+    <% if (item.imagine_generata_ai) { %><span class="image-badge">Ilustrație AI</span><% } %>
+  </a>
+<% } else { %>
+  <div class="news-image-missing"><strong><%= item.categorie || 'Actualitate' %></strong><span>Articol fără fotografie</span></div>
+<% } %>

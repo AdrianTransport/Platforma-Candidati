@@ -68,6 +68,11 @@ export function articleInput(body, previous = null, now = Date.now()) {
   return {
     titlu, continut, categorie, tip, status, data_programata: scheduled,
     generat_de_ai: body.generat_de_ai === 'true',
+    rezumat: textField(body.rezumat, 'Rezumat', 300),
+    imagine_alt: textField(body.imagine_alt, 'Descriere imagine', 240),
+    imagine_legenda: textField(body.imagine_legenda, 'Legendă imagine', 300),
+    imagine_credit: textField(body.imagine_credit, 'Sursa imaginii', 160),
+    imagine_generata_ai: body.imagine_generata_ai === 'true',
     data_publicare: status === 'publicat'
       ? (previous && isPublished(previous, now) ? publicationDate(previous) : new Date(now).toISOString())
       : null,

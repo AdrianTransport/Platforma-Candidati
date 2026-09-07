@@ -156,13 +156,99 @@ scrisă în cod și nu este afișată în loguri.
    - `META_APP_ID` și `META_APP_SECRET` — din aplicația Meta
    - `META_GRAPH_VERSION` — opțional; implicit `v26.0`
    - `TIKTOK_CLIENT_KEY` și `TIKTOK_CLIENT_SECRET` — din aplicația TikTok
-   - `ANTHROPIC_API_KEY` — cheia ta de la https://console.anthropic.com/settings/keys
-     (opțional — fără ea, doar butonul „Genereaza draft” nu va funcționa)
+   - OpenAI este opțional și dezactivat implicit. Pentru activare, urmează secțiunea
+     „Editorul cu imagini și OpenAI” de mai jos; nu activa înainte de aprobarea costurilor.
 5. Apeși „Deploy site”. La fiecare `git push` ulterior, Netlify redeploy-ează automat.
 6. **Netlify Blobs** e activat automat pentru orice site Netlify — nu trebuie creat sau
    configurat separat, funcționează din prima odată ce funcția rulează pe Netlify.
 
-## Reparatie facuta dupa primul test pe Netlify
+## Editorul cu imagini și OpenAI
+
+Lotul editorial păstrează Express/EJS, Functions, SDK-ul Blobs și toate dependențele.
+Nu activează Meta, TikTok sau un serviciu nou de baze de date. Pagina candidatului are
+articol principal, două materiale secundare, carduri cu fotografii, rubrici cu miniaturi
+și topul afișărilor. Articolele fără fotografii sunt indicate explicit, fără imagini
+documentare inventate. Publicația este identificată drept material electoral al candidatului.
+Adaptorul existent din `netlify/functions/api.js` codifică explicit PNG/JPEG/WebP ca
+răspunsuri binare, ca să nu corupă imaginile în transportul Lambda. Formatul handlerului
+și configurația `netlify.toml` rămân aceleași.
+
+Editorul acceptă rezumat, subtitluri pe rânduri `## `, legendă, sursă și descriere de
+accesibilitate. Se pot încărca PNG/JPEG/WebP. Browserul redimensionează la maximum
+1920 px pe latura mare și re-encodează JPEG (fără EXIF); serverul limitează la 3 MB
+și verifică semnătura raster. Aceasta nu este o scanare antivirus sau moderare a imaginii.
+Nu se descarcă URL-uri externe pe server. Fotografiile externe rămân în responsabilitatea
+sursei externe și pot transmite acelei surse adresa IP a cititorului.
+
+Fotografiile și rezultatele AI folosesc `campanie-editorial`, tot în Netlify Blobs.
+În preview folosesc un store de deploy izolat. Local: `data/editorial/`.
+Fiecare obiect are cheie UUID; nu rescriem baza comună `campanie-db/db`.
+Imaginile încărcate sunt accesibile proprietarului pentru previzualizare; devin publice
+numai dacă apar într-un articol public al unui candidat activ. Retragerea articolului
+oprește accesul public când nu există alt articol public care folosește aceeași imagine.
+Fișierele abandonate rămân stocate; pilotul nu include încă o politică automată de ștergere.
+Încărcările au o limită best-effort de 30/candidat/zi UTC.
+
+### Activare AI — numai după aprobarea titularului contului
+
+Validarea acestui lot se face fără apeluri AI reale și fără activarea facturării.
+Butonul vechi Claude este înlocuit cu propuneri OpenAI de text și ilustrații.
+Scrierea manuală și încărcarea fotografiilor funcționează fără OpenAI.
+
+Variabile de server necesare pentru activare:
+
+- `PLATFORM_OPENAI_API_KEY`: cheie a unui proiect OpenAI autorizat, cu acces la modelele
+  folosite. Nu se trimite în chat și nu se salvează în Git. Numele este dedicat pentru
+  a nu folosi accidental cheia virtuală `OPENAI_API_KEY` injectată de AI Gateway.
+- `AI_GENERATION_ENABLED=true`: comutator explicit. În lipsă sau `false`, zero generări.
+- `AI_TEXT_DAILY_LIMIT`: număr 1–100 de încercări/candidat/zi UTC, ales de administrator.
+- `AI_IMAGE_DAILY_LIMIT`: număr 1–100 de încercări/candidat/zi UTC. `0` dezactivează tipul.
+
+Integrarea folosește OpenAI direct, prin `fetch`, fără SDK nou: Responses API cu `gpt-5`
+pentru text și orchestrare; instrumentul de imagini cu `gpt-image-2`, calitate `low`,
+1536×1024 JPEG. Este posibil să fie necesară verificarea organizației OpenAI.
+Nu presupune că Netlify AI Gateway acceptă GPT Image. Modelul/promptul nu sunt
+selectabile arbitrar din browser. Cheia rămâne numai pe server.
+
+Generarea rulează asincron la OpenAI (`background:true`, `store:false`), iar editorul
+verifică rezultatul prin cereri scurte. Astfel nu ține deschisă o funcție Netlify pentru
+minute întregi. OpenAI păstrează temporar rezultatul pentru recuperare conform politicii
+sale; aplicația permite recuperarea timp de 8 minute. Browserul reține doar ID-ul jobului
+în sesiune. Propunerile finalizate rămân în Blobs. Niciun articol nu este publicat sau
+suprascris automat. Aplicarea propunerii cere confirmare dacă există deja conținut.
+
+Fiecare operațiune cere cont de candidat activ, modul site și CSRF; joburile/imaginile
+sunt verificate pentru proprietar. Promptele nu primesc automat datele contului sau
+ale cititorilor. Utilizatorul confirmă explicit trimiterea propriei idei către OpenAI.
+Ilustrațiile AI sunt etichetate public; pentru cele generate intern eticheta este
+păstrată și server-side, chiar dacă este debifată în formular.
+
+### Costuri și limite cunoscute
+
+Limitele zilnice numără încercările, inclusiv cererile eșuate, pentru a limita abuzul.
+Blobs v8 nu oferă tranzacții: verificarea limitei și prevenirea cererilor duplicate
+sunt **best-effort**, nu un plafon financiar strict între instanțe concurente.
+Configurează separat controale de utilizare/facturare în proiectul OpenAI, verifică
+ce limite sunt efectiv impuse și monitorizează costurile înainte de activare.
+Nu există retry automat al generării. Dacă trimiterea reușește la OpenAI dar salvarea
+ID-ului local eșuează, poate exista un cost fără rezultat recuperabil în aplicație;
+mesajul nu pretinde succes și nu repetă automat cererea.
+
+Rămâne și limita deja documentată a bazei JSON comune: sesiuni de server vechi și
+scrieri concurente pot produce date învechite/pierderea unor actualizări. Acest lot nu
+schimbă acea arhitectură. Nu prezenta platforma drept pregătită pentru utilizare masivă.
+
+Documentație oficială consultată pentru implementare:
+[Responses în fundal](https://developers.openai.com/api/docs/guides/background),
+[generarea imaginilor](https://developers.openai.com/api/docs/guides/tools-image-generation),
+[răspunsuri structurate](https://developers.openai.com/api/docs/guides/structured-outputs),
+[tarife API](https://developers.openai.com/api/docs/pricing).
+
+Testele folosesc răspunsuri OpenAI simulate, nu contul sau bugetul real. Înainte de
+activare publică trebuie efectuat un test real aprobat: generare text, generare imagine,
+aplicare, salvare, publicare și reîncărcare, inclusiv verificarea persistenței Netlify Blobs.
+
+## Reparația inițială Netlify (istoric)
 
 Prima versiune arunca eroarea `TypeError - The "path" argument must be of type string
 or an instance of URL. Received undefined` la orice cerere pe Netlify. Cauza: codul

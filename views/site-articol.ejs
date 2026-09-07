@@ -6,6 +6,7 @@
   <meta name="description" content="<%= articol.continut.slice(0, 155) %>">
   <title><%= articol.titlu %> — <%= user.nume_candidat %></title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/newspaper.css">
 </head>
 <body class="newspaper-body">
   <div class="newspaper-shell article-shell">
@@ -15,9 +16,12 @@
       <article class="article-content">
         <span class="article-label"><%= articol.categorie %></span>
         <h1><%= articol.titlu %></h1>
+        <% if (articol.rezumat) { %><p class="article-deck"><%= articol.rezumat %></p><% } %>
         <div class="article-byline"><span>Publicat de <strong><%= user.nume_candidat %></strong></span><span><%= displayDate(publicationDate(articol)) %></span><span><%= articol.vizualizari || 0 %> citiri</span><% if (articol.generat_de_ai) { %><span class="pill ai">Generat cu AI</span><% } %></div>
-        <% if (articol.imagine_url) { %><img class="article-hero-image" src="<%= articol.imagine_url %>" alt="Imagine pentru articolul <%= articol.titlu %>"><% } %>
-        <div class="article-text"><% articol.continut.split('\n').filter(p => p.trim()).forEach(paragraf => { %><p><%= paragraf %></p><% }) %></div>
+        <% if (articol.imagine_url) { %><figure class="article-figure"><img class="article-hero-image" src="<%= articol.imagine_url %>" alt="<%= articol.imagine_alt || articol.titlu %>" decoding="async" referrerpolicy="no-referrer">
+          <% if (articol.imagine_legenda || articol.imagine_credit || articol.imagine_generata_ai) { %><figcaption><%= articol.imagine_legenda || '' %><% if (articol.imagine_credit) { %> · <%= articol.imagine_credit %><% } %><% if (articol.imagine_generata_ai) { %><span class="image-origin">Ilustrație generată cu AI; nu este o fotografie documentară.</span><% } %></figcaption><% } %>
+        </figure><% } %>
+        <div class="article-text"><% articol.continut.split('\n').filter(p => p.trim()).forEach(paragraf => { %><% if (paragraf.startsWith('## ')) { %><h2><%= paragraf.slice(3) %></h2><% } else { %><p><%= paragraf %></p><% } %><% }) %></div>
         <div class="share-box"><strong>Distribuie articolul</strong><div><a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(articolUrl) %>">Facebook</a><button type="button" class="secondary" onclick="navigator.clipboard.writeText(location.href).then(() => this.textContent='Link copiat')">Copiază linkul</button></div></div>
         <section class="comments-section" id="comentarii">
           <h2>Comentarii<% if (commentsAvailable) { %> (<%= comentarii.length %>)<% } %></h2>

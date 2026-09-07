@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcryptjs';
 import { createComments } from '../comments.js';
 import { createLocalCommentStore } from '../comment-store.js';
+import { createEditorial } from '../editorial.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const csrf = html => html.match(/name="csrf_token" value="([^"]+)"/)?.[1];
@@ -32,9 +33,11 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   }));
   let clock = Date.parse('2026-07-10T08:00:00Z');
   const comments = createComments({ store: createLocalCommentStore(path.join(dir, 'comments')), now: () => clock });
+  const editorial = createEditorial({ store: createLocalCommentStore(path.join(dir, 'editorial')), env: {},
+    fetcher: async () => { throw new Error('AI network must not be called'); }, now: () => clock });
   const { createApp } = await import('../app.js');
   const { db } = await import('../db.js');
-  const app = await createApp({ comments, now: () => clock });
+  const app = await createApp({ comments, editorial, now: () => clock });
   app.set('views', path.join(root, 'views'));
   const server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
@@ -47,11 +50,11 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   const base = `http://127.0.0.1:${server.address().port}`;
   function browser() {
     const cookies = new Map();
-    return async (url, body) => {
+    return async (url, body, json = false) => {
       const response = await fetch(base + url, {
         redirect: 'manual', method: body ? 'POST' : 'GET',
-        headers: { Cookie: [...cookies].map(([k, v]) => `${k}=${v}`).join('; '), ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
-        ...(body ? { body: new URLSearchParams(body) } : {}),
+        headers: { Cookie: [...cookies].map(([k, v]) => `${k}=${v}`).join('; '), ...(body ? { 'Content-Type': json ? 'application/json' : 'application/x-www-form-urlencoded' } : {}) },
+        ...(body ? { body: json ? JSON.stringify(body) : new URLSearchParams(body) } : {}),
       });
       for (const cookie of response.headers.getSetCookie()) {
         const [key, ...value] = cookie.split(';')[0].split('=');
@@ -191,6 +194,88 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
       assert.equal(submission.headers.get('location'), null);
       assert.ok(!submission.html.includes('simulated storage failure'));
     } finally { comments.list = list; comments.submit = submit; }
+  });
+  await t.test('Editor foto: CSRF, acord, proprietar, ciornă privată, persistență și retragere', async () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==';
+    const uploadBody = { base64: png, acord_imagine: true, csrf_token: candidateToken };
+    assert.equal((await guest('/dashboard/media', uploadBody, true)).status, 403);
+    assert.equal((await cand('/dashboard/media', { ...uploadBody, csrf_token: 'wrong' }, true)).status, 403);
+    assert.equal((await cand('/dashboard/media', { ...uploadBody, acord_imagine: false }, true)).status, 400);
+    assert.equal((await cand('/dashboard/media', { ...uploadBody, base64: Buffer.from('<svg/>').toString('base64') }, true)).status, 400);
+    const uploaded = await cand('/dashboard/media', uploadBody, true);
+    assert.equal(uploaded.status, 201);
+    const imageUrl = JSON.parse(uploaded.html).imagine_url;
+    assert.equal((await guest(imageUrl)).status, 404);
+    const own = await cand(imageUrl);
+    assert.equal(own.status, 200);
+    assert.equal(own.headers.get('content-type'), 'image/png');
+    assert.equal(own.headers.get('x-content-type-options'), 'nosniff');
+    const foreign = await editorial.upload(3, png);
+    const fields = { ...articleBody, csrf_token: candidateToken, status: 'ciorna', imagine_url: imageUrl,
+      rezumat: 'Un rezumat editorial.', imagine_alt: 'Imagine descrisă', imagine_legenda: '<script>legendă</script>', imagine_credit: 'Autor test', continut: 'Introducere\n## Subtitlu\n<script>nu se execută</script>' };
+    assert.equal((await cand('/dashboard/articol/1', { ...fields, imagine_url: foreign.imagine_url })).status, 400);
+    assert.equal((await cand('/dashboard/articol/1', fields)).status, 302);
+    assert.equal((await guest(imageUrl)).status, 404);
+    assert.equal((await cand('/dashboard/articol/1', { ...fields, status: 'publicat' })).status, 302);
+    assert.equal((await guest(imageUrl)).status, 200);
+    const article = await guest('/site/ana/articol/1');
+    assert.match(article.html, /Un rezumat editorial/);
+    assert.match(article.html, /<h2>Subtitlu<\/h2>/);
+    assert.match(article.html, /&lt;script&gt;legendă/);
+    assert.ok(!article.html.includes('<script>nu se execută'));
+    assert.match(article.html, /newspaper.css/);
+    const listing = await guest('/site/ana');
+    assert.match(listing.html, /class="front-page"/);
+    assert.ok(listing.html.includes(`src="${imageUrl}"`));
+    assert.match((await cand('/dashboard/articol/1/edit')).html, /Un rezumat editorial/);
+    assert.equal((await cand('/dashboard/articol/1', { ...fields, imagine_url: 'javascript:alert(1)' })).status, 400);
+    assert.equal((await cand('/dashboard/articol/1', fields)).status, 302);
+    assert.equal((await guest(imageUrl)).status, 404);
+    assert.equal((await cand('/dashboard/articol/1', { ...fields, status: 'publicat' })).status, 302);
+    const generatedId = '00000000-0000-4000-8000-000000000042';
+    await createLocalCommentStore(path.join(dir, 'editorial')).set(`media/${generatedId}`, { userId: 2, mime: 'image/png', base64: png, generated: true });
+    assert.equal((await cand('/dashboard/articol/1', { ...fields, status: 'publicat', imagine_url: `/media/${generatedId}`, imagine_generata_ai: 'false' })).status, 302);
+    assert.equal(db.data.articole.find(a => a.id === 1).imagine_generata_ai, true);
+    assert.match((await guest('/site/ana/articol/1')).html, /Ilustrație generată cu AI; nu este o fotografie documentară/);
+    for (let i = 0; i < 5; i++) db.data.articole.push({ id: 100 + i, user_id: 2, titlu: `Material ${i}`, continut: 'Conținut de test', categorie: 'Comunitate', status: 'publicat', tip: 'idee', imagine_url: imageUrl, data_publicare: '2026-01-01T00:00:00Z' });
+    const complete = await guest('/site/ana');
+    assert.match(complete.html, /class="photo-grid"/);
+    assert.match(complete.html, /class="front-sidebar"/);
+    // Șase articole au imagine; articolul programat din fixture nu are fotografie.
+    assert.equal((complete.html.match(/class="news-photo"/g) || []).length, 6);
+    assert.match(complete.html, /Articol fără fotografie/);
+    db.data.articole = db.data.articole.filter(a => a.id < 100);
+    assert.equal((await cand('/dashboard/articol/1', { ...fields, status: 'publicat' })).status, 302);
+  });
+  await t.test('Handlerul Netlify real păstrează octeții imaginii în răspunsul Lambda', async () => {
+    const article = db.data.articole.find(a => a.id === 1);
+    const id = article.imagine_url.split('/').pop();
+    const image = await editorial.media(id);
+    await createLocalCommentStore(path.join(dir, 'data', 'editorial')).set(`media/${id}`, image);
+    await db.write();
+    const { handler } = await import('../netlify/functions/api.js');
+    const response = await handler({ httpMethod: 'GET', path: article.imagine_url, body: null,
+      headers: { host: 'example.test', 'x-nf-site-id': 'test-only-site', 'x-nf-deploy-id': 'test-only-deploy' },
+      blobs: Buffer.from(JSON.stringify({ url: 'https://blobs.example.test', token: 'fake-token' })).toString('base64'),
+      requestContext: { identity: { sourceIp: '127.0.0.1' } } }, {});
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.isBase64Encoded, true);
+    assert.deepEqual(Buffer.from(response.body, 'base64'), Buffer.from(image.base64, 'base64'));
+  });
+  await t.test('OpenAI: oprit implicit, protejat prin cont activ și CSRF, fără apeluri externe', async () => {
+    const config = await cand('/dashboard/ai/config');
+    assert.deepEqual(JSON.parse(config.html), { text: false, image: false });
+    assert.equal((await guest('/dashboard/ai/config')).status, 403);
+    assert.equal((await cand('/dashboard/genereaza-ai', {})).status, 403);
+    const result = await cand('/dashboard/genereaza-ai', { csrf_token: candidateToken, tip: 'text' }, true);
+    assert.equal(result.status, 503);
+    assert.match(result.html, /nu este activată/);
+    assert.equal((await cand('/dashboard/ai/00000000-0000-4000-8000-000000000000/status', { csrf_token: candidateToken }, true)).status, 404);
+    const user = db.data.users.find(u => u.id === 2);
+    user.activ = false;
+    assert.equal((await cand('/dashboard/ai/config')).status, 403);
+    assert.equal((await cand('/dashboard/media', { csrf_token: candidateToken }, true)).status, 403);
+    user.activ = true;
   });
   await t.test('Izolare între candidați, retragerea articolului și cont suspendat', async () => {
     const before = db.data.articole.find(a => a.id === 2).titlu;

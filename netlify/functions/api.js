@@ -11,7 +11,10 @@ export const handler = async (event, context) => {
   connectLambda(event);
 
   if (!handlerPromise) {
-    handlerPromise = createApp().then((app) => serverless(app));
+    // Păstrăm adaptorul existent; imaginile trebuie codate binar, nu ca text UTF-8.
+    handlerPromise = createApp().then((app) => serverless(app, {
+      binary: ['image/png', 'image/jpeg', 'image/webp'],
+    }));
   }
   const serverlessHandler = await handlerPromise;
   return serverlessHandler(event, context);

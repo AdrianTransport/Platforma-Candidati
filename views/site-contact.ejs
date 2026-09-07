@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ro">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Contact — <%= user.nume_candidat %></title><link rel="stylesheet" href="/style.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Contact — <%= user.nume_candidat %></title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/newspaper.css"></head>
 <body class="newspaper-body"><div class="newspaper-shell article-shell">
   <div class="newspaper-kicker"><span>PUBLICAȚIE ELECTORALĂ</span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
   <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a><a class="back-link" href="/site/<%= user.subdomeniu %>">← Prima pagină</a></header>

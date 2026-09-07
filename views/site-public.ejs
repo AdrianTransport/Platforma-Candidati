@@ -6,6 +6,7 @@
   <meta name="description" content="<%= user.mesaj_scurt || `${user.nume_candidat} — ${user.functie_candidatura || 'candidat'} pentru ${user.zona || user.judet || 'comunitate'}` %>">
   <title><%= user.nume_candidat %> — <%= user.functie_candidatura || user.zona %></title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/newspaper.css">
 </head>
 <body class="newspaper-body">
   <div class="newspaper-shell">
@@ -14,7 +15,7 @@
       <a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a>
       <div class="candidate-identity"><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura, user.partid].filter(Boolean).join(' · ') %></span></div>
     </header>
-    <nav class="newspaper-nav"><a href="#actualitate">Actualitate</a><a href="#program">Program</a><a href="#proiecte">Proiecte</a><a href="#evenimente">Evenimente</a><a href="#despre">Despre candidat</a><a href="/site/<%= user.subdomeniu %>/contact">Contact</a></nav>
+    <nav class="newspaper-nav" aria-label="Rubricile publicației"><a href="/site/<%= user.subdomeniu %>">Prima pagină</a><% ['Actualitate','Program','Proiecte','Evenimente'].forEach(c => { %><a href="/site/<%= user.subdomeniu %>?categorie=<%= encodeURIComponent(c) %>"><%= c %></a><% }) %><a href="#despre">Despre candidat</a><a href="/site/<%= user.subdomeniu %>/contact">Contact</a></nav>
     <form method="GET" action="/site/<%= user.subdomeniu %>" class="newspaper-search" role="search">
       <label>Caută în articole<input type="search" name="cauta" maxlength="120" value="<%= cautaText %>" placeholder="Titlu sau conținut"></label>
       <label>Categorie<select name="categorie"><option value="">Toate categoriile</option>
@@ -26,23 +27,53 @@
     </form>
     <% if (cautaText || categorieSelectata) { %><p class="search-summary" role="status"><%= rezultatTotal %> rezultate<% if (cautaText) { %> pentru „<%= cautaText %>”<% } %></p><% } %>
 
-    <% const principal = candidatura || fluxIdei[0]; %>
+    <main class="edition-main">
+    <div class="edition-label"><strong><%= categorieSelectata || 'Din publicație' %></strong><span>Idei, proiecte și mesaje asumate de <%= user.nume_candidat %></span></div>
+    <% const principal = candidatura || fluxIdei[0]; const secundare = fluxIdei.filter(a => a.id !== principal?.id); %>
     <% if (principal) { %>
-      <section class="lead-story">
-        <a class="lead-visual<%= principal.imagine_url ? ' has-image' : '' %>" <% if (principal.imagine_url) { %>style="background-image:linear-gradient(0deg,rgba(17,24,19,.74),rgba(17,24,19,.08)),url('<%= principal.imagine_url %>')"<% } %> href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><span><%= principal.categorie %></span><b><%= user.slogan || 'Un mesaj direct pentru comunitate' %></b></a>
-        <div class="lead-copy"><span class="article-label"><%= principal.categorie %></span><h1><a href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><%= principal.titlu %></a></h1><p><%= principal.continut.slice(0, 300) %><%= principal.continut.length > 300 ? '…' : '' %></p><div class="story-meta"><span><%= displayDate(publicationDate(principal)) %></span><span><%= principal.vizualizari || 0 %> citiri</span></div><a class="read-more" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>">Citește articolul →</a></div>
+      <section class="front-page" aria-label="În prim-plan">
+        <article class="front-main">
+          <%- include('partials/news-image', { item: principal, user, eager: true }) %>
+          <span class="article-label"><%= principal.categorie %> · În prim-plan</span>
+          <h1><a href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><%= principal.titlu %></a></h1>
+          <p><%= principal.rezumat || `${principal.continut.slice(0, 300)}${principal.continut.length > 300 ? '…' : ''}` %></p>
+          <div class="story-meta"><time><%= displayDate(publicationDate(principal)) %></time><span><%= principal.vizualizari || 0 %> afișări</span></div>
+          <a class="read-more" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>">Citește articolul</a>
+        </article>
+        <aside class="front-sidebar" aria-label="Alte materiale">
+          <% secundare.slice(0, 2).forEach(a => { %><article>
+            <%- include('partials/news-image', { item: a, user }) %>
+            <span class="article-label"><%= a.categorie %></span>
+            <h2><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><%= a.titlu %></a></h2>
+            <p><%= a.rezumat || `${a.continut.slice(0, 120)}${a.continut.length > 120 ? '…' : ''}` %></p>
+            <div class="story-meta"><time><%= displayDate(publicationDate(a)) %></time></div>
+          </article><% }) %>
+          <% if (!secundare.length) { %><article><span class="article-label">Autorul publicației</span><h2><%= user.nume_candidat %></h2><p><%= user.mesaj_scurt || user.descriere || 'Aceasta este publicația electorală a candidatului.' %></p><a class="read-more" href="#despre">Despre candidat</a></article><% } %>
+        </aside>
       </section>
     <% } else if (cautaText || categorieSelectata) { %><div class="newspaper-empty"><h1>Niciun articol găsit</h1><p>Încearcă alt termen sau elimină filtrul de categorie.</p></div>
     <% } else { %><div class="newspaper-empty"><h1><%= user.slogan || 'Publicația este pregătită.' %></h1><p>Primele articole vor apărea în curând.</p></div><% } %>
 
-    <% const secundare = fluxIdei.filter(a => a.id !== principal?.id); %>
-    <% if (secundare.length) { %>
-      <section class="story-grid" id="actualitate"><% secundare.slice(0, 6).forEach((a, index) => { %><a class="story-card story-card-<%= index % 3 %>" href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><div class="story-art"><span><%= a.categorie %></span></div><div><span class="article-label"><%= a.categorie %></span><h2><%= a.titlu %></h2><p><%= a.continut.slice(0, 130) %><%= a.continut.length > 130 ? '…' : '' %></p><small><%= a.vizualizari || 0 %> citiri</small></div></a><% }) %></section>
+    <% if (secundare.length > 2) { %>
+      <section aria-labelledby="latest-title"><div class="section-heading"><h2 id="latest-title">Mai multe din publicație</h2><a href="#rubrici">Explorează rubricile</a></div>
+      <div class="photo-grid"><% secundare.slice(2, 8).forEach(a => { %><article class="photo-card">
+        <%- include('partials/news-image', { item: a, user }) %>
+        <span class="article-label"><%= a.categorie %></span><h3><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><%= a.titlu %></a></h3>
+        <p><%= a.rezumat || `${a.continut.slice(0, 150)}${a.continut.length > 150 ? '…' : ''}` %></p><div class="story-meta"><time><%= displayDate(publicationDate(a)) %></time><span><%= a.vizualizari || 0 %> afișări</span></div>
+      </article><% }) %></div></section>
     <% } %>
 
+    <div class="editorial-columns" id="rubrici"><div class="editorial-categories">
     <% Object.entries(categorii).forEach(([categorie, lista]) => { const ancora = categorie.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-'); %>
-      <section class="category-section" id="<%= ancora %>"><div class="category-title"><h2><%= categorie %></h2><span><%= lista.length %> materiale</span></div><div class="category-list"><% lista.forEach(a => { %><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><strong><%= a.titlu %></strong><span><%= displayDate(publicationDate(a)) %> · <%= a.vizualizari || 0 %> citiri</span></a><% }) %></div></section>
+      <section class="category-section" id="rubrica-<%= ancora %>"><div class="category-title"><h2><%= categorie %></h2><span><%= lista.length %> materiale</span></div><div class="category-list"><% lista.forEach(a => { %><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>">
+        <% if (a.imagine_url) { %><img src="<%= a.imagine_url %>" alt="<%= a.imagine_alt || '' %>" loading="lazy" decoding="async" width="128" height="88" referrerpolicy="no-referrer"><% } else { %><span class="no-thumbnail"><%= categorie %></span><% } %>
+        <div><strong><%= a.titlu %></strong><time><%= displayDate(publicationDate(a)) %> · <%= a.vizualizari || 0 %> afișări<% if (a.imagine_generata_ai) { %> · Ilustrație AI<% } %></time></div>
+      </a><% }) %></div></section>
     <% }) %>
+    </div><% if (principal) { const populare = [principal, ...secundare].sort((a,b) => (b.vizualizari || 0) - (a.vizualizari || 0)).slice(0,5); %>
+      <aside class="edition-aside"><h2>Cele mai accesate</h2><ol class="most-read"><% populare.forEach(a => { %><li><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><%= a.titlu %><small><%= a.vizualizari || 0 %> afișări</small></a></li><% }) %></ol><p>Contorul măsoară afișările paginii, nu cititori unici sau lectura integrală.</p></aside>
+    <% } %></div>
+    </main>
 
     <section class="candidate-profile" id="despre"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><div><span class="article-label">Despre candidat</span><h2><%= user.nume_candidat %></h2><p><%= user.descriere || user.mesaj_scurt || 'Prezentarea candidatului va fi publicată aici.' %></p><strong><%= [user.functie_candidatura, user.partid, user.zona].filter(Boolean).join(' · ') %></strong></div></section>
 

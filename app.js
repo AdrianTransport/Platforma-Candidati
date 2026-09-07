@@ -7,6 +7,8 @@ import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId } fro
 import { requireRole } from './middleware/auth.js';
 import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, ValidationError } from './publication.js';
 import { createComments, COMMENT_STATUS } from './comments.js';
+import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
+import { attachEditorialRoutes } from './editorial-routes.js';
 import {
   decryptSecret,
   encryptSecret,
@@ -59,7 +61,7 @@ function poatePublicaSite(user) {
   return user?.role === 'candidate' && user.activ && user.status_cont === 'activ' && user.module?.site;
 }
 
-export async function createApp({ comments = createComments(), now = () => Date.now() } = {}) {
+export async function createApp({ comments = createComments(), now = () => Date.now(), editorial = createEditorial({ now }) } = {}) {
   await initDB();
 
   const app = express();
@@ -74,6 +76,7 @@ export async function createApp({ comments = createComments(), now = () => Date.
   app.locals.displayDate = displayDate;
   app.use(express.static(path.join(baseDir, 'public')));
   app.use(express.urlencoded({ extended: true }));
+  app.use('/dashboard/media', express.json({ limit: '4300kb' }));
   app.use(express.json());
 
   // Sesiune stocata in cookie semnat (fara memorie pe server) - functioneaza
@@ -478,6 +481,8 @@ export async function createApp({ comments = createComments(), now = () => Date.
     const articolUrl = `${publicBaseUrl(req)}/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}?utm_source=${platforma}`;
     const textScurt = String(articol.continut || '').replace(/\s+/g, ' ').trim().slice(0, 450);
     try {
+      const imaginePublica = internalImageId(articol.imagine_url)
+        ? new URL(articol.imagine_url, publicBaseUrl(req)).toString() : articol.imagine_url;
       let rezultat;
       if (platforma === 'facebook' || platforma === 'instagram') {
         const meta = user.social_connections?.meta;
@@ -485,11 +490,11 @@ export async function createApp({ comments = createComments(), now = () => Date.
         if (!page) throw new Error('Conecteaza Meta si selecteaza o Pagina inainte de publicare.');
         rezultat = platforma === 'facebook'
           ? await publishFacebook(page, `${articol.titlu}\n\n${textScurt}`, articolUrl)
-          : await publishInstagram(page, `${articol.titlu}\n\n${textScurt}\n\n${articolUrl}`, articol.imagine_url);
+          : await publishInstagram(page, `${articol.titlu}\n\n${textScurt}\n\n${articolUrl}`, imaginePublica);
       } else {
         const connection = user.social_connections?.tiktok;
         if (!connection) throw new Error('Conecteaza contul TikTok inainte de publicare.');
-        rezultat = await publishTikTokPhoto(connection, articol.titlu, `${textScurt}\n\n${articolUrl}`, articol.imagine_url);
+        rezultat = await publishTikTokPhoto(connection, articol.titlu, `${textScurt}\n\n${articolUrl}`, imaginePublica);
       }
       articol.distribuiri_sociale ||= [];
       articol.distribuiri_sociale.push({
@@ -531,26 +536,35 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.render('articol-form', { articol, eroare: '', dataProgramata: localDateTime(articol.data_programata) });
   });
 
-  function validateArticle(req, res, previous) {
-    try { return articleInput(req.body, previous, now()); }
+  async function validateArticle(req, res, previous) {
+    try {
+      const fields = articleInput(req.body, previous, now());
+      fields.imagine_url = editorialImageUrl(req.body.imagine_url);
+      const imageId = internalImageId(fields.imagine_url);
+      if (imageId) {
+        const image = await editorial.media(imageId);
+        if (!image || image.userId !== req.session.userId) throw new ValidationError('Imaginea nu aparține contului tău sau nu mai este disponibilă.');
+        fields.imagine_generata_ai = image.generated || fields.imagine_generata_ai;
+      }
+      return fields;
+    }
     catch (error) {
       if (!(error instanceof ValidationError)) throw error;
-      const form = Object.fromEntries(['titlu', 'continut', 'tip', 'categorie', 'imagine_url'].map(key =>
+      const form = Object.fromEntries(['titlu', 'continut', 'tip', 'categorie', 'imagine_url', 'rezumat', 'imagine_alt', 'imagine_legenda', 'imagine_credit'].map(key =>
         [key, typeof req.body[key] === 'string' ? req.body[key] : '']));
-      res.status(400).render('articol-form', { articol: { ...form, id: previous?.id, generat_de_ai: req.body.generat_de_ai === 'true' },
+      res.status(400).render('articol-form', { articol: { ...form, id: previous?.id, generat_de_ai: req.body.generat_de_ai === 'true', imagine_generata_ai: req.body.imagine_generata_ai === 'true' },
         eroare: error.message, dataProgramata: typeof req.body.data_programata === 'string' ? req.body.data_programata : '' });
       return null;
     }
   }
 
   app.post('/dashboard/articol', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
-    const fields = validateArticle(req, res, null);
+    const fields = await validateArticle(req, res, null);
     if (!fields) return;
     db.data.articole.push({
       id: nextArticolId(),
       user_id: req.session.userId,
       ...fields,
-      imagine_url: urlSigur(req.body.imagine_url),
       vizualizari: 0,
       distribuiri_sociale: [],
     });
@@ -563,10 +577,9 @@ export async function createApp({ comments = createComments(), now = () => Date.
       (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId
     );
     if (!articol) return res.redirect('/dashboard');
-    const fields = validateArticle(req, res, articol);
+    const fields = await validateArticle(req, res, articol);
     if (!fields) return;
     Object.assign(articol, fields);
-    articol.imagine_url = urlSigur(req.body.imagine_url);
     await db.write();
     res.redirect('/dashboard');
   }));
@@ -579,57 +592,7 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.redirect('/dashboard');
   }));
 
-  app.post('/dashboard/genereaza-ai', requireRole('candidate'), async (req, res) => {
-    const { idee, ton } = req.body;
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return res.status(400).json({
-        eroare: 'Nu este configurata ANTHROPIC_API_KEY. Vezi README.md pentru instructiuni.',
-      });
-    }
-    try {
-      const raspuns = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-5',
-          max_tokens: 700,
-          messages: [
-            {
-              role: 'user',
-              content: `Esti asistentul de comunicare al unui candidat local la alegeri din Romania. Scrie un articol scurt (120-180 de cuvinte), in limba romana, ton ${ton || 'direct si apropiat'}, plecand de la aceasta idee data de candidat: "${idee}".
-Reguli stricte:
-- Nu inventa cifre, date sau promisiuni concrete pe care candidatul nu le-a mentionat.
-- Nu ataca alti candidati sau partide.
-- Nu folosi limbaj de campanie negativa sau afirmatii neverificabile.
-- Scrie la persoana intai, ca si cum candidatul insusi ar vorbi.
-Raspunde DOAR cu doua linii:
-Titlu: <titlul articolului>
-Text: <continutul articolului>`,
-            },
-          ],
-        }),
-      });
-      if (!raspuns.ok) {
-        const detalii = await raspuns.text();
-        return res.status(502).json({ eroare: 'Eroare de la API-ul Claude.', detalii });
-      }
-      const data = await raspuns.json();
-      const text = data.content?.find((b) => b.type === 'text')?.text || '';
-      const potrivireTitlu = text.match(/Titlu:\s*(.+)/i);
-      const potrivireText = text.match(/Text:\s*([\s\S]+)/i);
-      res.json({
-        titlu: potrivireTitlu ? potrivireTitlu[1].trim() : 'Titlu generat de AI',
-        continut: potrivireText ? potrivireText[1].trim() : text.trim(),
-      });
-    } catch (err) {
-      res.status(500).json({ eroare: 'Nu am putut contacta API-ul Claude.', detalii: String(err) });
-    }
-  });
+  attachEditorialRoutes(app, { db, editorial, requireRole, requireActiveAccount, requireCsrf, now });
 
   /* --------------------------- SITE PUBLIC (ziar) -------------------------- */
 
@@ -728,6 +691,9 @@ Text: <continutul articolului>`,
 
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);
+    if (req.path === '/dashboard/media' && error.type === 'entity.too.large') {
+      return res.status(413).json({ eroare: 'Imagine prea mare. Încarcă un fișier de maximum 3 MB după redimensionare.' });
+    }
     if (error instanceof ValidationError) return res.status(error.status).send(error.message);
     // Nu expunem stack-uri, secrete sau datele trimise de vizitatori.
     console.error('Cerere nereușită:', error.name);
