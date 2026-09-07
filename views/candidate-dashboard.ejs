@@ -64,14 +64,20 @@
 
     <div class="card content-toolbar"><div><strong>Toate materialele mele</strong><p>Textele și imaginile pot fi scrise manual sau pregătite cu OpenAI înainte de publicare.</p></div><a class="btn" href="/dashboard/articol/nou">+ Material nou</a></div>
     <div class="card table-card">
-      <% if (articole.length === 0) { %><p class="note">Nu ai niciun articol încă.</p><% } else { %>
+      <form class="dashboard-filters" method="GET" action="/dashboard">
+        <label>Rubrică<select name="categorie"><option value="">Toate rubricile</option><% categoriiDashboard.forEach(categorie => { %><option value="<%= categorie %>" <%= categorieFiltru === categorie ? 'selected' : '' %>><%= categorie %></option><% }) %></select></label>
+        <label>Status<select name="status"><option value="">Toate statusurile</option><option value="ciorna" <%= statusFiltru === 'ciorna' ? 'selected' : '' %>>Ciornă</option><option value="programat" <%= statusFiltru === 'programat' ? 'selected' : '' %>>Programat</option><option value="publicat" <%= statusFiltru === 'publicat' ? 'selected' : '' %>>Publicat</option><option value="suspendat" <%= statusFiltru === 'suspendat' ? 'selected' : '' %>>Suspendat</option></select></label>
+        <button type="submit" class="secondary">Filtrează</button>
+        <% if (categorieFiltru || statusFiltru) { %><a href="/dashboard">Resetează</a><span class="filter-result"><%= rezultatTotal %> din <%= totalArticole %> materiale</span><% } %>
+      </form>
+      <% if (articole.length === 0) { %><p class="note"><%= totalArticole ? 'Niciun material nu corespunde filtrelor selectate.' : 'Nu ai niciun material încă.' %></p><% } else { %>
         <div class="responsive-table"><table><thead><tr><th>Titlu</th><th>Categorie</th><th>Status</th><th>Citiri</th><th>Acțiuni</th></tr></thead><tbody>
-          <% articole.forEach(a => { %><tr>
+          <% articole.forEach(a => { const publicHref = a.categorie === 'Proiecte' ? `/site/${user.subdomeniu}/proiect/${a.id}` : `/site/${user.subdomeniu}/articol/${a.id}`; %><tr>
             <td><strong><%= a.titlu %></strong><% if (a.generat_de_ai) { %> <span class="pill ai">AI</span><% } %><% if (a.distribuiri_sociale?.length) { %> <span class="pill social-count"><%= a.distribuiri_sociale.length %> distribuiri</span><% } %></td>
             <td><%= a.categorie %></td>
             <td><% if (a.moderation_status === 'suspendat') { %><span class="pill suspendat">Suspendat</span><small class="schedule-label"><%= a.moderation_reason || 'În analiză' %></small><% } else { %><span class="pill <%= isPublished(a) ? 'publicat' : a.status %>"><%= isPublished(a) ? 'Publicat' : (a.status === 'programat' ? 'Programat' : 'Ciornă') %></span><% if (a.status === 'programat') { %><small class="schedule-label"><%= displayDate(a.data_programata) %> · ora României</small><% } %><% } %></td>
             <td><%= a.vizualizari || 0 %></td>
-            <td class="actions-cell"><a class="btn secondary" href="/dashboard/articol/<%= a.id %>/edit">Editează</a><form method="POST" action="/dashboard/articol/<%= a.id %>/sterge" onsubmit="return confirm('Sigur ștergi acest articol?')"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Șterge</button></form></td>
+            <td class="actions-cell"><div class="material-actions"><a class="btn secondary" href="/dashboard/articol/<%= a.id %>/preview" target="_blank" rel="noopener">Previzualizează</a><% if (isPublished(a) && a.moderation_status !== 'suspendat') { %><a class="btn secondary" href="<%= publicHref %>" target="_blank" rel="noopener">Vezi public</a><% } %><a class="btn secondary" href="/dashboard/articol/<%= a.id %>/edit">Editează</a><form method="POST" action="/dashboard/articol/<%= a.id %>/sterge" onsubmit="return confirm('Sigur ștergi acest articol?')"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Șterge</button></form></div></td>
           </tr><% }) %>
         </tbody></table></div>
       <% } %>

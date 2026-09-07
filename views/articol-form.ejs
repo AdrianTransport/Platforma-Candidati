@@ -12,7 +12,7 @@
   <div class="app-shell">
     <div class="topbar">
       <h1><%= titluFormular %></h1>
-      <a class="btn secondary" href="/dashboard">Inapoi la dashboard</a>
+      <div class="topbar-actions"><% if (articol?.id) { %><a class="btn" href="/dashboard/articol/<%= articol.id %>/preview" target="_blank" rel="noopener">Previzualizează</a><% } %><a class="btn secondary" href="/dashboard">Înapoi la dashboard</a></div>
     </div>
 
     <div class="editorial-workspace" data-account="<%= userId %>">

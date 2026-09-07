@@ -143,6 +143,55 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match(about.html, /Consilier local/);
     assert.match((await guest('/site/ana')).html, /href="\/site\/ana\/proiecte"/);
   });
+  await t.test('Previzualizarea este privată, nu numără citiri, iar filtrele dashboardului sunt exacte', async () => {
+    const draft = db.data.articole.find(article => article.id === 3);
+    const publicArticle = db.data.articole.find(article => article.id === 1);
+    const draftReads = draft.vizualizari || 0;
+    const publicReads = publicArticle.vizualizari || 0;
+
+    assert.equal((await guest('/dashboard/articol/3/preview')).status, 403);
+    assert.equal((await cand('/dashboard/articol/2/preview')).status, 404);
+    assert.equal((await guest('/site/ana/articol/3')).status, 404);
+
+    const preview = await cand('/dashboard/articol/3/preview');
+    assert.equal(preview.status, 200);
+    assert.equal(preview.headers.get('cache-control'), 'private, no-store');
+    assert.match(preview.html, /Previzualizare privată/);
+    assert.match(preview.html, /Ciorna secretă/);
+    assert.match(preview.html, /Numai tu poți vedea această pagină/);
+    assert.match(preview.html, /Continuă editarea/);
+    assert.ok(!preview.html.includes('class="comment-form"'));
+    assert.ok(!preview.html.includes('sharer.php'));
+    assert.ok(!preview.html.includes('Raportează materialul'));
+    assert.equal(draft.vizualizari || 0, draftReads);
+
+    const publishedPreview = await cand('/dashboard/articol/1/preview');
+    assert.equal(publishedPreview.status, 200);
+    assert.equal(publicArticle.vizualizari || 0, publicReads);
+
+    const projects = await cand('/dashboard?categorie=Proiecte');
+    assert.match(projects.html, /1 din 2 materiale/);
+    assert.match(projects.html, /Școala publică/);
+    assert.ok(!projects.html.includes('Ciorna secretă'));
+    assert.match(projects.html, /href="\/site\/ana\/proiect\/1"/);
+    assert.match(projects.html, /href="\/dashboard\/articol\/1\/preview"/);
+
+    const drafts = await cand('/dashboard?status=ciorna');
+    const draftRows = drafts.html.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] || '';
+    assert.match(draftRows, /Ciorna secretă/);
+    assert.ok(!draftRows.includes('Școala publică'));
+    assert.ok(!draftRows.includes('/site/ana/articol/3'));
+    assert.match(draftRows, /href="\/dashboard\/articol\/3\/preview"/);
+
+    const published = await cand('/dashboard?status=publicat');
+    const publishedRows = published.html.match(/<tbody>([\s\S]*?)<\/tbody>/)?.[1] || '';
+    assert.match(publishedRows, /Școala publică/);
+    assert.ok(!publishedRows.includes('Ciorna secretă'));
+    const invalid = await cand('/dashboard?categorie=%3Cscript%3E&status=necunoscut');
+    assert.match(invalid.html, /Școala publică/);
+    assert.match(invalid.html, /Ciorna secretă/);
+    assert.ok(!invalid.html.includes('&lt;script&gt;'));
+  });
   await t.test('Etichetele electorale, transparența și paginile juridice sunt publice', async () => {
     const listing = await guest('/site/ana');
     assert.match(listing.html, /Material electoral · publicitate politică/);

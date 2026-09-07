@@ -46,6 +46,7 @@ const baseDir = process.cwd();
 
 const STATUS_CONT = new Set(['in_asteptare', 'activ', 'suspendat', 'expirat']);
 const RETELE_SOCIALE = new Set(['facebook', 'instagram', 'tiktok', 'youtube']);
+const STATUS_DASHBOARD = new Set(['ciorna', 'programat', 'publicat', 'suspendat']);
 const SECTIUNI_EDITORIALE = Object.freeze([
   { slug: 'actualitate', categorie: 'Actualitate', titlu: 'Actualitate', descriere: 'Știri, reacții și informații recente din campanie.' },
   { slug: 'program', categorie: 'Program', titlu: 'Program', descriere: 'Prioritățile și angajamentele candidatului.' },
@@ -687,21 +688,31 @@ export async function createApp({
   }));
 
   app.get('/dashboard', requireRole('candidate'), (req, res) => {
-    const articole = db.data.articole
+    const toateArticolele = db.data.articole
       .filter((a) => a.user_id === req.session.userId)
       .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
     const user = db.data.users.find((u) => u.id === req.session.userId);
-    const totalCitiri = articole.reduce((total, articol) => total + (articol.vizualizari || 0), 0);
-    const topArticole = [...articole]
+    const categoriiDashboard = [...new Set(toateArticolele.map(article => article.categorie || 'Actualitate'))].sort();
+    const categorieFiltru = categoriiDashboard.includes(req.query.categorie) ? req.query.categorie : '';
+    const statusFiltru = STATUS_DASHBOARD.has(req.query.status) ? req.query.status : '';
+    const statusArticol = article => article.moderation_status === 'suspendat'
+      ? 'suspendat' : (isPublished(article, now()) ? 'publicat' : article.status);
+    const articole = toateArticolele.filter(article =>
+      (!categorieFiltru || article.categorie === categorieFiltru)
+      && (!statusFiltru || statusArticol(article) === statusFiltru));
+    const totalCitiri = toateArticolele.reduce((total, articol) => total + (articol.vizualizari || 0), 0);
+    const topArticole = [...toateArticolele]
       .filter((articol) => isPublished(articol, now()))
       .sort((a, b) => (b.vizualizari || 0) - (a.vizualizari || 0))
       .slice(0, 5);
     const sectiuniEditoriale = SECTIUNI_EDITORIALE.map(section => ({
       ...section,
-      total: articole.filter(article => article.categorie === section.categorie).length,
-      publicate: articole.filter(article => article.categorie === section.categorie && isPublished(article, now())).length,
+      total: toateArticolele.filter(article => article.categorie === section.categorie).length,
+      publicate: toateArticolele.filter(article => article.categorie === section.categorie && isPublished(article, now())).length,
     }));
     res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole, sectiuniEditoriale,
+      categoriiDashboard, categorieFiltru, statusFiltru, rezultatTotal: articole.length,
+      totalArticole: toateArticolele.length,
       lipsuriJuridice: candidateComplianceMissing(user, platform) });
   });
 
@@ -917,6 +928,18 @@ export async function createApp({
     res.render('articol-form', { articol, eroare: '', dataProgramata: localDateTime(articol.data_programata), confirmareResponsabilitate: false });
   });
 
+  app.get('/dashboard/articol/:id/preview', requireRole('candidate'), requireActiveAccount, (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
+    const articol = db.data.articole.find(item => item.id === Number(req.params.id) && item.user_id === user?.id);
+    if (!user?.module?.site || !articol) return res.status(404).send('Materialul nu există.');
+    const articolUrl = `${req.protocol}://${req.get('host')}/dashboard/articol/${articol.id}/preview`;
+    res.render('site-articol', {
+      user, articol, articolUrl, transparenta: publicTransparency(user, articol), activeSection: sectionSlugForCategory(articol.categorie),
+      comentarii: [], commentsAvailable: true, commentError: '', commentValues: {}, commentSent: false, preview: true,
+    });
+  });
+
   async function validateArticle(req, res, previous) {
     try {
       const fields = articleInput(req.body, previous, now());
@@ -1112,7 +1135,7 @@ export async function createApp({
     const articolUrl = new URL(`/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}`, bazaPublica).toString();
     res.status(status).render('site-articol', { user, articol, articolUrl, transparenta: publicTransparency(user, articol), comentarii, commentsAvailable, commentError: error,
       activeSection: sectionSlugForCategory(articol.categorie),
-      commentValues: values, commentSent: req.query.comentariu === 'trimis' });
+      commentValues: values, commentSent: req.query.comentariu === 'trimis', preview: false });
   }
 
   app.get('/site/:subdomeniu/articol/:id', safely((req, res) => renderPublicArticle(req, res, { count: true })));
