@@ -2,10 +2,18 @@
   const $ = id => document.getElementById(id);
   const csrf = document.querySelector('input[name=csrf_token]').value;
   const workspace = document.querySelector('.editorial-workspace');
+  const form = document.querySelector('.editor-article form');
   const apiPrefix = workspace.dataset.apiPrefix || '/dashboard';
   const mediaEndpoint = workspace.dataset.mediaEndpoint || '/dashboard/media';
   const storageKey = `editor-ai:${workspace.dataset.account}:${location.pathname}`;
-  let settings = { text: false, image: false }, busy = false, uploading = false, proposal, pending;
+  let settings = { text: false, image: false }, busy = false, uploading = false, submitting = false, proposal, pending;
+  function setEditorStep(step) {
+    document.querySelectorAll('[data-editor-step]').forEach(item => {
+      const itemStep = Number(item.dataset.editorStep);
+      item.classList.toggle('active', itemStep === step);
+      item.classList.toggle('complete', itemStep < step);
+    });
+  }
   function persist(job) {
     pending = job;
     try { if (job) sessionStorage.setItem(storageKey, JSON.stringify(job)); else sessionStorage.removeItem(storageKey); } catch { /* Stocare browser opțională. */ }
@@ -74,12 +82,16 @@
       $('imagine-url').value = result.imagine_url;
       $('imagine-alt').value = ''; $('imagine-legenda').value = ''; $('imagine-credit').value = '';
       // Nu presupunem că un fișier încărcat de utilizator nu a fost creat anterior cu AI.
-      previewImage(); $('stare-imagine').textContent = 'Fotografie încărcată. Completează descrierea și sursa, apoi salvează articolul.';
+      previewImage(); setEditorStep(3); $('stare-imagine').textContent = 'Fotografie încărcată. Completează descrierea și sursa, apoi salvează articolul.';
     } catch (error) { $('stare-imagine').textContent = error.message; }
     finally { uploading = false; button.disabled = false; }
   });
-  document.querySelector('.editor-article form').addEventListener('submit', event => {
-    if (uploading) { event.preventDefault(); $('stare-imagine').textContent = 'Așteaptă finalizarea încărcării înainte să salvezi articolul.'; }
+  form.addEventListener('submit', event => {
+    if (uploading) { event.preventDefault(); $('stare-imagine').textContent = 'Așteaptă finalizarea încărcării înainte să salvezi articolul.'; return; }
+    if (submitting) { event.preventDefault(); return; }
+    submitting = true;
+    workspace.setAttribute('aria-busy', 'true');
+    setEditorStep(4);
   });
 
   function applyProposal(result) {
@@ -98,6 +110,7 @@
       const type = document.querySelector('[name="tip"]');
       if (type && [...type.options].some(option => option.value === result.tip_material)) type.value = result.tip_material;
     }
+    setEditorStep(3);
     persist(null);
   }
   function showProposal(result) {
@@ -157,6 +170,7 @@
       && !confirm('Generarea completă va înlocui titlul, rezumatul, tipul, conținutul și imaginea din formular. Continui?')) return;
     if (tip === 'image' && $('imagine-url').value.trim()
       && !confirm('Ilustrația generată va înlocui imaginea selectată. Continui?')) return;
+    setEditorStep(2);
     busy = true; buttons(); $('ai-result').hidden = true; $('stare-ai').textContent = 'Trimit cererea către OpenAI…';
     let textApplied = false;
     try {

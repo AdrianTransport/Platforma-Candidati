@@ -914,10 +914,11 @@ export async function createApp({
   }));
 
   app.get('/dashboard/articol/nou', requireRole('candidate'), (req, res) => {
+    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
     const section = SECTIUNI_EDITORIALE.find(item => item.categorie === req.query.categorie);
     const categorie = section?.categorie || 'Actualitate';
     const tip = categorie === 'Program' ? 'candidatura' : (categorie === 'Evenimente' ? 'anunt' : 'idee');
-    res.render('articol-form', { articol: { titlu: '', continut: '', categorie, tip }, eroare: '', dataProgramata: '', confirmareResponsabilitate: false });
+    res.render('articol-form', { user, legalReady: candidateComplianceMissing(user, platform).length === 0, articol: { titlu: '', continut: '', categorie, tip }, eroare: '', dataProgramata: '', confirmareResponsabilitate: false });
   });
 
   app.get('/dashboard/articol/:id/edit', requireRole('candidate'), (req, res) => {
@@ -925,7 +926,8 @@ export async function createApp({
       (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId
     );
     if (!articol) return res.redirect('/dashboard');
-    res.render('articol-form', { articol, eroare: '', dataProgramata: localDateTime(articol.data_programata), confirmareResponsabilitate: false });
+    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
+    res.render('articol-form', { user, legalReady: candidateComplianceMissing(user, platform).length === 0, articol, eroare: '', dataProgramata: localDateTime(articol.data_programata), confirmareResponsabilitate: false });
   });
 
   app.get('/dashboard/articol/:id/preview', requireRole('candidate'), requireActiveAccount, (req, res) => {
@@ -968,7 +970,8 @@ export async function createApp({
       if (!(error instanceof ValidationError)) throw error;
       const form = Object.fromEntries(['titlu', 'continut', 'tip', 'categorie', 'imagine_url', 'rezumat', 'imagine_alt', 'imagine_legenda', 'imagine_credit'].map(key =>
         [key, typeof req.body[key] === 'string' ? req.body[key] : '']));
-      res.status(400).render('articol-form', { articol: { ...form, id: previous?.id, generat_de_ai: req.body.generat_de_ai === 'true', imagine_generata_ai: req.body.imagine_generata_ai === 'true' },
+      const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
+      res.status(400).render('articol-form', { user, legalReady: candidateComplianceMissing(user, platform).length === 0, articol: { ...form, id: previous?.id, generat_de_ai: req.body.generat_de_ai === 'true', imagine_generata_ai: req.body.imagine_generata_ai === 'true' },
         eroare: error.message, dataProgramata: typeof req.body.data_programata === 'string' ? req.body.data_programata : '',
         confirmareResponsabilitate: req.body.confirmare_responsabilitate === 'on' });
       return null;

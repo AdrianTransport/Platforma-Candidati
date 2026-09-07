@@ -99,6 +99,9 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   await t.test('Rubricile au pagini proprii, iar proiectele sunt multiple, clicabile și administrate din dashboard', async () => {
     const dashboard = await cand('/dashboard');
     assert.match(dashboard.html, /Administrează fiecare pagină din meniu/);
+    assert.match(dashboard.html, /href="\/candidate-ui\.css"/);
+    assert.match(dashboard.html, /class="candidate-sidebar"/);
+    assert.match(dashboard.html, /data-label="Acțiuni"/);
     for (const section of ['actualitate', 'program', 'proiecte', 'evenimente']) {
       assert.ok(dashboard.html.includes(`/dashboard/articol/nou?categorie=${section[0].toUpperCase()}${section.slice(1)}`));
       assert.ok(dashboard.html.includes(`/site/ana/${section}`));
@@ -114,6 +117,9 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match(form.html, /Generează material complet/);
     assert.match(form.html, /Generează doar ilustrația/);
     assert.match(form.html, /data-editor-context="candidate"/);
+    assert.match(form.html, /data-editor-step="1"/);
+    assert.match(form.html, /data-editor-step="4"/);
+    assert.match(form.html, /Verifică și asumă materialul/);
 
     const secondProject = { id: 90, user_id: 2, titlu: 'Parcul cartierului', rezumat: 'Un al doilea proiect public.', continut: 'Detaliile proiectului.', tip: 'idee', categorie: 'Proiecte', status: 'publicat', imagine_url: 'https://example.test/parc.jpg', imagine_alt: 'Plan ilustrat al parcului', data_publicare: '2026-01-02T12:00:00Z', vizualizari: 0 };
     db.data.articole.push(secondProject);

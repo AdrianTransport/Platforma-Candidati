@@ -1,0 +1,33 @@
+<aside class="candidate-sidebar" aria-label="Navigare candidat">
+  <nav class="candidate-nav">
+    <a class="candidate-nav-link <%= activePage === 'overview' ? 'active' : '' %>" href="/dashboard" <% if (activePage === 'overview') { %>aria-current="page"<% } %>>
+      <span class="candidate-nav-icon" aria-hidden="true">⌂</span>
+      <span>Prezentare</span>
+    </a>
+    <a class="candidate-nav-link <%= activePage === 'materials' ? 'active' : '' %>" href="/dashboard#materiale" <% if (activePage === 'materials') { %>aria-current="page"<% } %>>
+      <span class="candidate-nav-icon" aria-hidden="true">▤</span>
+      <span>Materiale</span>
+    </a>
+    <a class="candidate-nav-link" href="/dashboard#profil-public">
+      <span class="candidate-nav-icon" aria-hidden="true">◎</span>
+      <span>Profil public</span>
+    </a>
+    <% if (user.module?.social) { %>
+      <a class="candidate-nav-link <%= activePage === 'social' ? 'active' : '' %>" href="/dashboard/social" <% if (activePage === 'social') { %>aria-current="page"<% } %>>
+        <span class="candidate-nav-icon" aria-hidden="true">↗</span>
+        <span>Rețele sociale</span>
+      </a>
+    <% } %>
+    <% if (user.module?.site) { %>
+      <a class="candidate-nav-link" href="/site/<%= user.subdomeniu %>" target="_blank" rel="noopener">
+        <span class="candidate-nav-icon" aria-hidden="true">□</span>
+        <span>Vezi publicația</span>
+      </a>
+    <% } %>
+  </nav>
+
+  <div class="candidate-sidebar-status <%= legalReady ? 'ready' : 'blocked' %>">
+    <strong><%= legalReady ? 'Cont pregătit' : 'Acțiune necesară' %></strong>
+    <p><%= legalReady ? 'Datele juridice și responsabilitatea editorială sunt confirmate.' : 'Completează informațiile juridice înainte de publicare.' %></p>
+  </div>
+</aside>
