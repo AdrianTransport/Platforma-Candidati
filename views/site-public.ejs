@@ -15,7 +15,7 @@
       <a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a>
       <div class="candidate-identity"><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura, user.partid].filter(Boolean).join(' · ') %></span></div>
     </header>
-    <nav class="newspaper-nav" aria-label="Rubricile publicației"><a href="/site/<%= user.subdomeniu %>">Prima pagină</a><% ['Actualitate','Program','Proiecte','Evenimente'].forEach(c => { %><a href="/site/<%= user.subdomeniu %>?categorie=<%= encodeURIComponent(c) %>"><%= c %></a><% }) %><a href="#despre">Despre candidat</a><a href="/site/<%= user.subdomeniu %>/contact">Contact</a><a href="/site/<%= user.subdomeniu %>/transparenta">Transparență</a></nav>
+    <%- include('partials/candidate-nav', { user, activeSection }) %>
     <% const transparentaPublicatie = publicTransparency(user, null); %>
     <section class="political-ad-banner" aria-label="Informații despre publicitatea politică">
       <strong>Material electoral · publicitate politică</strong>
@@ -54,7 +54,7 @@
             <p><%= a.rezumat || `${a.continut.slice(0, 120)}${a.continut.length > 120 ? '…' : ''}` %></p>
             <div class="story-meta"><time><%= displayDate(publicationDate(a)) %></time></div>
           </article><% }) %>
-          <% if (!secundare.length) { %><article><span class="article-label">Autorul publicației</span><h2><%= user.nume_candidat %></h2><p><%= user.mesaj_scurt || user.descriere || 'Aceasta este publicația electorală a candidatului.' %></p><a class="read-more" href="#despre">Despre candidat</a></article><% } %>
+          <% if (!secundare.length) { %><article><span class="article-label">Autorul publicației</span><h2><%= user.nume_candidat %></h2><p><%= user.mesaj_scurt || user.descriere || 'Aceasta este publicația electorală a candidatului.' %></p><a class="read-more" href="/site/<%= user.subdomeniu %>/despre">Despre candidat</a></article><% } %>
         </aside>
       </section>
     <% } else if (cautaText || categorieSelectata) { %><div class="newspaper-empty"><h1>Niciun articol găsit</h1><p>Încearcă alt termen sau elimină filtrul de categorie.</p></div>
@@ -81,7 +81,7 @@
     <% } %></div>
     </main>
 
-    <section class="candidate-profile" id="despre"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><div><span class="article-label">Despre candidat</span><h2><%= user.nume_candidat %></h2><p><%= user.descriere || user.mesaj_scurt || 'Prezentarea candidatului va fi publicată aici.' %></p><strong><%= [user.functie_candidatura, user.partid, user.zona].filter(Boolean).join(' · ') %></strong></div></section>
+    <section class="candidate-profile" id="despre"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><div><span class="article-label">Despre candidat</span><h2><%= user.nume_candidat %></h2><p><%= user.descriere || user.mesaj_scurt || 'Prezentarea candidatului va fi publicată aici.' %></p><strong><%= [user.functie_candidatura, user.partid, user.zona].filter(Boolean).join(' · ') %></strong><p><a class="read-more" href="/site/<%= user.subdomeniu %>/despre">Citește prezentarea completă</a></p></div></section>
 
     <% if (user.module?.social && [user.facebook_url, user.instagram_url, user.tiktok_url, user.youtube_url].some(Boolean)) { %><section class="social-strip"><span>Urmărește campania</span><div><% ['facebook','instagram','tiktok','youtube'].forEach(platforma => { if (user[`${platforma}_url`]) { %><a href="/site/<%= user.subdomeniu %>/social/<%= platforma %>" target="_blank" rel="noopener"><%= platforma %></a><% } }) %></div></section><% } %>
 

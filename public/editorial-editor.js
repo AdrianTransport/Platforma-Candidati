@@ -113,7 +113,8 @@
     const job = { id: crypto.randomUUID(), tip };
     persist(job); proposal = undefined;
     try {
-      await request(`${apiPrefix}/genereaza-ai`, { tip, idee, ton: $('ton-ai').value, acord_ai: true, request_id: job.id });
+      const categorie = document.querySelector('[name="categorie"]')?.value || 'Actualitate';
+      await request(`${apiPrefix}/genereaza-ai`, { tip, idee, ton: $('ton-ai').value, categorie, acord_ai: true, request_id: job.id });
       await poll(job);
     } catch (error) { $('stare-ai').textContent = error.message; $('reia-ai').hidden = false; }
     finally { busy = false; buttons(); }

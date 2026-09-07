@@ -51,7 +51,18 @@
       </form>
     </details>
 
-    <div class="card content-toolbar"><div><strong>Redacția mea</strong><p>Publică programul, proiectele, evenimentele și știrile campaniei.</p></div><a class="btn" href="/dashboard/articol/nou">+ Articol nou</a></div>
+    <section class="editorial-section-dashboard" aria-labelledby="sectiuni-editoriale">
+      <div class="section-row"><div><span class="eyebrow">Conținutul site-ului</span><h2 id="sectiuni-editoriale">Administrează fiecare pagină din meniu</h2></div></div>
+      <div class="editorial-section-grid">
+        <% sectiuniEditoriale.forEach(section => { %><article class="card editorial-section-card">
+          <span class="eyebrow"><%= section.publicate %> publicate · <%= section.total %> total</span>
+          <h3><%= section.titlu %></h3><p><%= section.descriere %></p>
+          <div><a class="btn" href="/dashboard/articol/nou?categorie=<%= encodeURIComponent(section.categorie) %>">+ Adaugă <%= section.slug === 'proiecte' ? 'proiect' : 'material' %></a><a class="btn secondary" href="/site/<%= user.subdomeniu %>/<%= section.slug %>" target="_blank">Vezi pagina</a></div>
+        </article><% }) %>
+      </div>
+    </section>
+
+    <div class="card content-toolbar"><div><strong>Toate materialele mele</strong><p>Textele și imaginile pot fi scrise manual sau pregătite cu OpenAI înainte de publicare.</p></div><a class="btn" href="/dashboard/articol/nou">+ Material nou</a></div>
     <div class="card table-card">
       <% if (articole.length === 0) { %><p class="note">Nu ai niciun articol încă.</p><% } else { %>
         <div class="responsive-table"><table><thead><tr><th>Titlu</th><th>Categorie</th><th>Status</th><th>Citiri</th><th>Acțiuni</th></tr></thead><tbody>

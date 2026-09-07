@@ -1,0 +1,10 @@
+<nav class="newspaper-nav" aria-label="Rubricile publicației">
+  <a href="/site/<%= user.subdomeniu %>" <%- activeSection === 'acasa' ? 'class="active" aria-current="page"' : '' %>>Prima pagină</a>
+  <a href="/site/<%= user.subdomeniu %>/actualitate" <%- activeSection === 'actualitate' ? 'class="active" aria-current="page"' : '' %>>Actualitate</a>
+  <a href="/site/<%= user.subdomeniu %>/program" <%- activeSection === 'program' ? 'class="active" aria-current="page"' : '' %>>Program</a>
+  <a href="/site/<%= user.subdomeniu %>/proiecte" <%- activeSection === 'proiecte' ? 'class="active" aria-current="page"' : '' %>>Proiecte</a>
+  <a href="/site/<%= user.subdomeniu %>/evenimente" <%- activeSection === 'evenimente' ? 'class="active" aria-current="page"' : '' %>>Evenimente</a>
+  <a href="/site/<%= user.subdomeniu %>/despre" <%- activeSection === 'despre' ? 'class="active" aria-current="page"' : '' %>>Despre candidat</a>
+  <a href="/site/<%= user.subdomeniu %>/contact" <%- activeSection === 'contact' ? 'class="active" aria-current="page"' : '' %>>Contact</a>
+  <a href="/site/<%= user.subdomeniu %>/transparenta" <%- activeSection === 'transparenta' ? 'class="active" aria-current="page"' : '' %>>Transparență</a>
+</nav>

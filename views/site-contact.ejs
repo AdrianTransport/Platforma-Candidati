@@ -4,6 +4,7 @@
 <body class="newspaper-body"><div class="newspaper-shell article-shell">
   <div class="newspaper-kicker"><span>PUBLICAȚIE ELECTORALĂ</span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
   <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a><a class="back-link" href="/site/<%= user.subdomeniu %>">← Prima pagină</a></header>
+  <%- include('partials/candidate-nav', { user, activeSection }) %>
   <% const transparenta = publicTransparency(user, null); %>
   <section class="political-ad-banner" aria-label="Informații despre publicitatea politică"><strong>Material electoral · publicitate politică</strong><span>Finanțat de <%= transparenta.finantat_de %> · asumat de <%= transparenta.responsabil_editorial %></span><a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența</a></section>
   <main class="contact-page"><span class="article-label">Contact public</span><h1><%= user.nume_candidat %></h1>

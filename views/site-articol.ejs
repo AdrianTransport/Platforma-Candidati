@@ -12,6 +12,7 @@
   <div class="newspaper-shell article-shell">
     <div class="newspaper-kicker"><span>PUBLICAȚIE ELECTORALĂ</span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
     <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a><a class="back-link" href="/site/<%= user.subdomeniu %>">← Prima pagină</a></header>
+    <%- include('partials/candidate-nav', { user, activeSection }) %>
     <main class="article-layout">
       <article class="article-content">
         <span class="article-label"><%= articol.categorie %></span>

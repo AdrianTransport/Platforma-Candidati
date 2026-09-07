@@ -11,6 +11,7 @@
   <main class="newspaper-shell transparency-page">
     <div class="newspaper-kicker"><span>INFORMAȚII DE TRANSPARENȚĂ</span><span>PUBLICITATE POLITICĂ</span></div>
     <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a><a class="back-link" href="<%= articol ? `/site/${user.subdomeniu}/articol/${articol.id}` : `/site/${user.subdomeniu}` %>">← Înapoi</a></header>
+    <%- include('partials/candidate-nav', { user, activeSection }) %>
     <section class="transparency-content">
       <span class="article-label"><%= articol ? 'Material individual' : 'Publicația candidatului' %></span>
       <h1><%= articol?.titlu || user.nume_candidat %></h1>

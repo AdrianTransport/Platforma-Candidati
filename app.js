@@ -46,6 +46,12 @@ const baseDir = process.cwd();
 
 const STATUS_CONT = new Set(['in_asteptare', 'activ', 'suspendat', 'expirat']);
 const RETELE_SOCIALE = new Set(['facebook', 'instagram', 'tiktok', 'youtube']);
+const SECTIUNI_EDITORIALE = Object.freeze([
+  { slug: 'actualitate', categorie: 'Actualitate', titlu: 'Actualitate', descriere: 'Știri, reacții și informații recente din campanie.' },
+  { slug: 'program', categorie: 'Program', titlu: 'Program', descriere: 'Prioritățile și angajamentele candidatului.' },
+  { slug: 'proiecte', categorie: 'Proiecte', titlu: 'Proiecte', descriere: 'Proiecte concrete pentru comunitate, fiecare cu pagina sa.' },
+  { slug: 'evenimente', categorie: 'Evenimente', titlu: 'Evenimente', descriere: 'Întâlniri publice, dezbateri și acțiuni de campanie.' },
+]);
 const ACCEPTANCE_FIELDS = [
   'functie_candidatura', 'zona', 'judet', 'partid', 'tip_candidat', 'entitate_responsabila',
   'finantator_materiale', 'scrutin', 'cod_mandatar_financiar', 'tip_contract', 'numar_contract',
@@ -165,6 +171,20 @@ export async function createApp({
     const articol = user && db.data.articole.find(a => a.id === Number(req.params.id)
       && a.user_id === user.id && isPublished(a, now()));
     return { user, articol };
+  }
+
+  function publicCandidate(subdomeniu) {
+    return db.data.users.find(user => user.subdomeniu === subdomeniu && poatePublicaSite(user));
+  }
+
+  function publicCandidateArticles(user) {
+    return db.data.articole
+      .filter(article => article.user_id === user.id && isPublished(article, now()))
+      .sort((a, b) => new Date(publicationDate(b)) - new Date(publicationDate(a)));
+  }
+
+  function sectionSlugForCategory(category) {
+    return SECTIUNI_EDITORIALE.find(section => section.categorie === category)?.slug || '';
   }
 
   function portalCandidate(post) {
@@ -676,7 +696,12 @@ export async function createApp({
       .filter((articol) => isPublished(articol, now()))
       .sort((a, b) => (b.vizualizari || 0) - (a.vizualizari || 0))
       .slice(0, 5);
-    res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole,
+    const sectiuniEditoriale = SECTIUNI_EDITORIALE.map(section => ({
+      ...section,
+      total: articole.filter(article => article.categorie === section.categorie).length,
+      publicate: articole.filter(article => article.categorie === section.categorie && isPublished(article, now())).length,
+    }));
+    res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole, sectiuniEditoriale,
       lipsuriJuridice: candidateComplianceMissing(user, platform) });
   });
 
@@ -878,7 +903,10 @@ export async function createApp({
   }));
 
   app.get('/dashboard/articol/nou', requireRole('candidate'), (req, res) => {
-    res.render('articol-form', { articol: null, eroare: '', dataProgramata: '', confirmareResponsabilitate: false });
+    const section = SECTIUNI_EDITORIALE.find(item => item.categorie === req.query.categorie);
+    const categorie = section?.categorie || 'Actualitate';
+    const tip = categorie === 'Program' ? 'candidatura' : (categorie === 'Evenimente' ? 'anunt' : 'idee');
+    res.render('articol-form', { articol: { titlu: '', continut: '', categorie, tip }, eroare: '', dataProgramata: '', confirmareResponsabilitate: false });
   });
 
   app.get('/dashboard/articol/:id/edit', requireRole('candidate'), (req, res) => {
@@ -983,9 +1011,7 @@ export async function createApp({
       (u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u)
     );
     if (!user) return res.status(404).send('Pagina nu exista.');
-    const toate = db.data.articole
-      .filter((a) => a.user_id === user.id && isPublished(a, now()))
-      .sort((a, b) => new Date(publicationDate(b)) - new Date(publicationDate(a)));
+    const toate = publicCandidateArticles(user);
     const { cautaText, categorieSelectata, filtrate } = filterArticles(toate, req.query);
     const candidatura = filtrate.find((a) => a.tip === 'candidatura');
     const fluxIdei = filtrate.filter((a) => a.id !== candidatura?.id);
@@ -1001,27 +1027,45 @@ export async function createApp({
       user.statistici.surse[sursa] = (user.statistici.surse[sursa] || 0) + 1;
       await db.write();
     }
-    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata,
+    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata, activeSection: 'acasa',
       categoriiToate: [...new Set(toate.map(a => a.categorie || 'Actualitate'))].sort(),
       rezultatTotal: filtrate.length });
   }));
 
+  for (const section of SECTIUNI_EDITORIALE) {
+    app.get(`/site/:subdomeniu/${section.slug}`, (req, res) => {
+      res.set('Cache-Control', 'private, no-store');
+      const user = publicCandidate(req.params.subdomeniu);
+      if (!user) return res.status(404).send('Pagina nu există.');
+      const articole = publicCandidateArticles(user)
+        .filter(article => article.categorie === section.categorie);
+      res.render('site-section', { user, section, articole, activeSection: section.slug });
+    });
+  }
+
+  app.get('/site/:subdomeniu/despre', (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    const user = publicCandidate(req.params.subdomeniu);
+    if (!user) return res.status(404).send('Pagina nu există.');
+    res.render('site-about', { user, activeSection: 'despre' });
+  });
+
   app.get('/site/:subdomeniu/contact', (req, res) => {
     res.set('Cache-Control', 'private, no-store');
-    const user = db.data.users.find(u => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
+    const user = publicCandidate(req.params.subdomeniu);
     if (!user) return res.status(404).send('Pagina nu există.');
-    res.render('site-contact', { user });
+    res.render('site-contact', { user, activeSection: 'contact' });
   });
 
   app.get('/site/:subdomeniu/transparenta', (req, res) => {
     res.set('Cache-Control', 'private, no-store');
-    const user = db.data.users.find(candidate => candidate.subdomeniu === req.params.subdomeniu && poatePublicaSite(candidate));
+    const user = publicCandidate(req.params.subdomeniu);
     if (!user) return res.status(404).send('Pagina nu există.');
     const articleId = Number(req.query.articol);
     const articol = Number.isSafeInteger(articleId) && articleId > 0
       ? db.data.articole.find(item => item.id === articleId && item.user_id === user.id && isPublished(item, now()))
       : null;
-    res.render('site-transparency', { user, articol, transparenta: publicTransparency(user, articol) });
+    res.render('site-transparency', { user, articol, transparenta: publicTransparency(user, articol), activeSection: 'transparenta' });
   });
 
   app.get('/site/:subdomeniu/articol/:id/raporteaza', (req, res) => {
@@ -1047,10 +1091,12 @@ export async function createApp({
     }
   }));
 
-  async function renderPublicArticle(req, res, { error = '', values = {}, status = 200, count = false } = {}) {
+  async function renderPublicArticle(req, res, { error = '', values = {}, status = 200, count = false, expectedCategory = '' } = {}) {
     res.set('Cache-Control', 'private, no-store');
     const { user, articol } = publicArticle(req);
-    if (!articol) return res.status(404).send('Articolul nu exista sau nu e publicat.');
+    if (!articol || (expectedCategory && articol.categorie !== expectedCategory)) {
+      return res.status(404).send('Articolul nu exista sau nu e publicat.');
+    }
     let comentarii = [];
     let commentsAvailable = true;
     try { comentarii = (await comments.list(user.id, articol.id)).filter(c => c.status === 'aprobat'); }
@@ -1065,10 +1111,12 @@ export async function createApp({
     const bazaPublica = process.env.URL || `${req.protocol}://${req.get('host')}`;
     const articolUrl = new URL(`/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}`, bazaPublica).toString();
     res.status(status).render('site-articol', { user, articol, articolUrl, transparenta: publicTransparency(user, articol), comentarii, commentsAvailable, commentError: error,
+      activeSection: sectionSlugForCategory(articol.categorie),
       commentValues: values, commentSent: req.query.comentariu === 'trimis' });
   }
 
   app.get('/site/:subdomeniu/articol/:id', safely((req, res) => renderPublicArticle(req, res, { count: true })));
+  app.get('/site/:subdomeniu/proiect/:id', safely((req, res) => renderPublicArticle(req, res, { count: true, expectedCategory: 'Proiecte' })));
 
   app.post('/site/:subdomeniu/articol/:id/comentarii', requireCsrf, safely(async (req, res) => {
     const { user, articol } = publicArticle(req);

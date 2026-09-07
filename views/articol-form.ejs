@@ -1,16 +1,17 @@
+<% const esteProiect = articol?.categorie === 'Proiecte'; const titluFormular = articol?.id ? (esteProiect ? 'Editează proiectul' : 'Editează materialul') : (esteProiect ? 'Proiect nou' : 'Material nou'); %>
 <!DOCTYPE html>
 <html lang="ro">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><%= articol?.id ? 'Editeaza articol' : 'Articol nou' %></title>
+  <title><%= titluFormular %></title>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/editorial-editor.css">
 </head>
 <body>
   <div class="app-shell">
     <div class="topbar">
-      <h1><%= articol?.id ? 'Editeaza articol' : 'Articol nou' %></h1>
+      <h1><%= titluFormular %></h1>
       <a class="btn secondary" href="/dashboard">Inapoi la dashboard</a>
     </div>
 
@@ -18,7 +19,7 @@
     <aside class="card editor-assistant">
       <span class="editor-eyebrow">Asistent editorial</span>
       <h2>Text și imagini cu OpenAI</h2>
-      <p class="note">Descrie subiectul și faptele confirmate. Propunerile nu se publică automat și nu îți înlocuiesc textul până nu le aplici.</p>
+      <p class="note">Descrie subiectul și faptele confirmate pentru rubrica <strong><%= articol?.categorie || 'Actualitate' %></strong>. Propunerile nu se publică automat și nu îți înlocuiesc textul până nu le aplici.</p>
       <label for="idee-ai">Tema articolului sau a ilustrației</label>
       <textarea id="idee-ai" rows="6" maxlength="4000" placeholder="Ce vrei să explici? Ce informații sunt verificate? Pentru imagine, descrie o scenă ilustrată, fără a o prezenta drept un eveniment real."></textarea>
       <label for="ton-ai">Tonul textului</label>
@@ -56,7 +57,7 @@
           <option value="anunt" <%= articol && articol.tip === 'anunt' ? 'selected' : '' %>>Anunț</option>
         </select>
 
-        <label>Categorie (afisata pe site)</label>
+        <label>Pagina în care va apărea materialul</label>
         <select name="categorie">
           <option value="Actualitate" <%= articol && articol.categorie === 'Actualitate' ? 'selected' : '' %>>Actualitate</option>
           <option value="Program" <%= articol && articol.categorie === 'Program' ? 'selected' : '' %>>Program</option>

@@ -96,6 +96,53 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal((await cand('/dashboard/social')).status, 200);
     assert.equal((await cand('/admin/comentarii')).status, 403);
   });
+  await t.test('Rubricile au pagini proprii, iar proiectele sunt multiple, clicabile și administrate din dashboard', async () => {
+    const dashboard = await cand('/dashboard');
+    assert.match(dashboard.html, /Administrează fiecare pagină din meniu/);
+    for (const section of ['actualitate', 'program', 'proiecte', 'evenimente']) {
+      assert.ok(dashboard.html.includes(`/dashboard/articol/nou?categorie=${section[0].toUpperCase()}${section.slice(1)}`));
+      assert.ok(dashboard.html.includes(`/site/ana/${section}`));
+      assert.equal((await guest(`/site/ana/${section}`)).status, 200);
+    }
+
+    const form = await cand('/dashboard/articol/nou?categorie=Proiecte');
+    assert.equal(form.status, 200);
+    assert.match(form.html, /<h1>Proiect nou<\/h1>/);
+    assert.match(form.html, /value="Proiecte" selected/);
+    assert.match(form.html, /Text și imagini cu OpenAI/);
+    assert.match(form.html, /id="fisier-imagine"/);
+    assert.match(form.html, /Generează ilustrație/);
+
+    const secondProject = { id: 90, user_id: 2, titlu: 'Parcul cartierului', rezumat: 'Un al doilea proiect public.', continut: 'Detaliile proiectului.', tip: 'idee', categorie: 'Proiecte', status: 'publicat', imagine_url: 'https://example.test/parc.jpg', imagine_alt: 'Plan ilustrat al parcului', data_publicare: '2026-01-02T12:00:00Z', vizualizari: 0 };
+    db.data.articole.push(secondProject);
+    try {
+      const projects = await guest('/site/ana/proiecte');
+      assert.equal(projects.status, 200);
+      assert.match(projects.html, /2 materiale publicate/);
+      assert.match(projects.html, /Școala publică/);
+      assert.match(projects.html, /Parcul cartierului/);
+      assert.match(projects.html, /src="https:\/\/example\.test\/parc\.jpg"/);
+      assert.match(projects.html, /href="\/site\/ana\/proiect\/1"/);
+      assert.match(projects.html, /href="\/site\/ana\/proiect\/90"/);
+      assert.ok(!projects.html.includes('Alt candidat'));
+      assert.ok(!projects.html.includes('Ciorna secretă'));
+      const reads = db.data.articole.find(article => article.id === 1).vizualizari || 0;
+      const detail = await guest('/site/ana/proiect/1');
+      assert.equal(detail.status, 200);
+      assert.match(detail.html, /Școala publică/);
+      assert.equal(db.data.articole.find(article => article.id === 1).vizualizari, reads + 1);
+      assert.equal((await guest('/site/ana/proiect/3')).status, 404);
+      assert.equal((await guest('/site/bogdan/proiect/2')).status, 404);
+    } finally {
+      db.data.articole = db.data.articole.filter(article => article.id !== secondProject.id);
+    }
+
+    const about = await guest('/site/ana/despre');
+    assert.equal(about.status, 200);
+    assert.match(about.html, /Despre candidat/);
+    assert.match(about.html, /Consilier local/);
+    assert.match((await guest('/site/ana')).html, /href="\/site\/ana\/proiecte"/);
+  });
   await t.test('Etichetele electorale, transparența și paginile juridice sunt publice', async () => {
     const listing = await guest('/site/ana');
     assert.match(listing.html, /Material electoral · publicitate politică/);
