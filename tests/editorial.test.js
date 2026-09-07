@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createEditorial, editorialImageUrl, imageBytes, internalImageId } from '../editorial.js';
+import { readEditorialEnv } from '../netlify/functions/api.js';
 import { createLocalCommentStore } from '../comment-store.js';
 import { articleInput } from '../publication.js';
 
@@ -18,6 +19,21 @@ function memoryStore() {
 }
 const body = (tip = 'text') => ({ tip, request_id: randomUUID(), idee: 'O explicație generală a unei propuneri, fără cifre inventate.', acord_ai: true });
 const textResult = { titlu: 'Titlu verificat', rezumat: 'Rezumat.', continut: 'Introducere.\n## O propunere\nDetalii.', verificari: 'Verifică faptele înainte de publicare.' };
+
+test('Adaptorul Netlify citește configurația editorială prin Netlify.env', () => {
+  const expected = environment();
+  const requested = [];
+  assert.deepEqual(readEditorialEnv((key) => {
+    requested.push(key);
+    return expected[key];
+  }), expected);
+  assert.deepEqual(requested, [
+    'PLATFORM_OPENAI_API_KEY',
+    'AI_GENERATION_ENABLED',
+    'AI_TEXT_DAILY_LIMIT',
+    'AI_IMAGE_DAILY_LIMIT',
+  ]);
+});
 
 test('Fără activare explicită, cheie dedicată și limite pozitive, nu se apelează OpenAI', async () => {
   for (const env of [{}, { OPENAI_API_KEY: 'gateway-virtual' }, { ...environment(), AI_GENERATION_ENABLED: 'false' },
