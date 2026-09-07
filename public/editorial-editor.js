@@ -25,7 +25,11 @@
     const type = response.headers.get('content-type') || '';
     if (!type.includes('application/json')) throw new Error('Sesiunea sau cererea nu mai este validă. Salvează local textul și reîncarcă pagina.');
     const result = await response.json();
-    if (!response.ok) throw new Error(result.eroare || 'Operațiunea nu a reușit.');
+    if (!response.ok) {
+      const error = new Error(result.eroare || 'Operațiunea nu a reușit.');
+      error.status = response.status;
+      throw error;
+    }
     return result;
   }
   function previewImage() {
@@ -111,7 +115,17 @@
   async function poll(job) {
     $('reia-ai').hidden = true;
     for (let attempt = 0; attempt < 90; attempt++) {
-      const result = await request(`${apiPrefix}/ai/${encodeURIComponent(job.id)}/status`, {});
+      let result;
+      try {
+        result = await request(`${apiPrefix}/ai/${encodeURIComponent(job.id)}/status`, {});
+      } catch (error) {
+        // Blobs poate avea o scurtă întârziere de propagare între două instanțe
+        // Functions. Un 404 imediat după creare este tranzitoriu, nu un job pierdut.
+        if (error.status !== 404 || attempt >= 11) throw error;
+        $('stare-ai').textContent = 'Sincronizez cererea OpenAI…';
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        continue;
+      }
       if (result.status === 'gata') return result;
       $('stare-ai').textContent = job.tip === 'image'
         ? 'OpenAI generează ilustrația. Textul completat rămâne în formular.'

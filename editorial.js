@@ -9,17 +9,24 @@ const RESPONSE_ID = /^resp_[a-zA-Z0-9_-]{1,200}$/;
 const JOB_LIFETIME = 8 * 60 * 1000;
 
 // Același serviciu Blobs; nicio modificare a campanie-db/db sau a SDK-ului.
-export function createEditorialStore() {
-  const serverless = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME;
+export function createEditorialStore({
+  serverless = Boolean(process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME),
+  context = process.env.CONTEXT,
+  region = process.env.AWS_REGION,
+  credentials,
+  loadBlobs = () => import('@netlify/blobs'),
+} = {}) {
   if (!serverless) return createLocalCommentStore(path.join(process.cwd(), 'data', 'editorial'));
   let adapter;
   async function ready() {
     if (!adapter) {
-      const { getStore, getDeployStore } = await import('@netlify/blobs');
-      const options = { name: 'campanie-editorial' };
-      const preview = process.env.CONTEXT && process.env.CONTEXT !== 'production';
+      const { getStore, getDeployStore } = await loadBlobs();
+      // În Functions, opțiunile explicite folosesc API-ul Blobs și evită ca un
+      // răspuns 404 cache-uit la edge să ascundă jobul creat cu câteva clipe înainte.
+      const options = { name: 'campanie-editorial', ...(credentials || {}) };
+      const preview = context && context !== 'production';
       adapter = createBlobCommentStore(preview
-        ? getDeployStore({ ...options, ...(process.env.AWS_REGION ? { region: process.env.AWS_REGION } : {}) })
+        ? getDeployStore({ ...options, ...(region ? { region } : {}) })
         : getStore(options));
     }
     return adapter;

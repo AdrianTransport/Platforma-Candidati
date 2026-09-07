@@ -525,16 +525,27 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     const article = db.data.articole.find(a => a.id === 1);
     const id = article.imagine_url.split('/').pop();
     const image = await editorial.media(id);
-    await createLocalCommentStore(path.join(dir, 'data', 'editorial')).set(`media/${id}`, image);
     await db.write();
-    const { handler } = await import('../netlify/functions/api.js');
-    const response = await handler({ httpMethod: 'GET', path: article.imagine_url, body: null,
-      headers: { host: 'example.test', 'x-nf-site-id': 'test-only-site', 'x-nf-deploy-id': 'test-only-deploy' },
-      blobs: Buffer.from(JSON.stringify({ url: 'https://blobs.example.test', token: 'fake-token' })).toString('base64'),
-      requestContext: { identity: { sourceIp: '127.0.0.1' } } }, {});
-    assert.equal(response.statusCode, 200);
-    assert.equal(response.isBase64Encoded, true);
-    assert.deepEqual(Buffer.from(response.body, 'base64'), Buffer.from(image.base64, 'base64'));
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input, options = {}) => {
+      const url = new URL(input);
+      if (url.hostname === 'api.netlify.com') {
+        assert.equal(options.method.toUpperCase(), 'GET');
+        return Response.json({ url: 'https://signed-blobs.example.test/editorial-image' });
+      }
+      if (url.hostname === 'signed-blobs.example.test') return Response.json(image);
+      throw new Error(`Cerere externă neașteptată: ${url.hostname}`);
+    };
+    try {
+      const { handler } = await import('../netlify/functions/api.js');
+      const response = await handler({ httpMethod: 'GET', path: article.imagine_url, body: null,
+        headers: { host: 'example.test', 'x-nf-site-id': 'test-only-site', 'x-nf-deploy-id': 'test-only-deploy' },
+        blobs: Buffer.from(JSON.stringify({ url: 'https://blobs.example.test', token: 'fake-token' })).toString('base64'),
+        requestContext: { identity: { sourceIp: '127.0.0.1' } } }, {});
+      assert.equal(response.statusCode, 200, response.body);
+      assert.equal(response.isBase64Encoded, true);
+      assert.deepEqual(Buffer.from(response.body, 'base64'), Buffer.from(image.base64, 'base64'));
+    } finally { globalThis.fetch = originalFetch; }
   });
   await t.test('OpenAI: oprit implicit, protejat prin cont activ și CSRF, fără apeluri externe', async () => {
     const config = await cand('/dashboard/ai/config');

@@ -4,8 +4,8 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createEditorial, editorialImageUrl, imageBytes, internalImageId } from '../editorial.js';
-import { readEditorialEnv } from '../netlify/functions/api.js';
+import { createEditorial, createEditorialStore, editorialImageUrl, imageBytes, internalImageId } from '../editorial.js';
+import { readBlobsCredentials, readEditorialEnv } from '../netlify/functions/api.js';
 import { createLocalCommentStore } from '../comment-store.js';
 import { articleInput } from '../publication.js';
 
@@ -36,6 +36,58 @@ test('Adaptorul Netlify citește configurația editorială prin Netlify.env', ()
     'AI_TEXT_DAILY_LIMIT',
     'AI_IMAGE_DAILY_LIMIT',
   ]);
+});
+
+test('Joburile editoriale folosesc explicit Blobs în Functions, fără process.env', async () => {
+  const records = new Map();
+  let receivedOptions;
+  const blobsStore = {
+    get: async key => records.get(key) || null,
+    setJSON: async (key, value) => records.set(key, value),
+    list: async ({ prefix }) => ({ blobs: [...records.keys()].filter(key => key.startsWith(prefix)).map(key => ({ key })) }),
+    delete: async key => records.delete(key),
+  };
+  const store = createEditorialStore({ serverless: true, context: 'production',
+    credentials: { siteID: 'site-test', token: 'token-test' },
+    loadBlobs: async () => ({
+      getStore: options => { receivedOptions = options; return blobsStore; },
+      getDeployStore: () => { throw new Error('Nu trebuie folosit în producție.'); },
+    }) });
+  await store.set('jobs/2/test', { status: 'salvat' });
+  assert.deepEqual(await store.get('jobs/2/test'), { status: 'salvat' });
+  assert.deepEqual(receivedOptions, { name: 'campanie-editorial', siteID: 'site-test', token: 'token-test' });
+
+  const event = { blobs: Buffer.from(JSON.stringify({ url: 'https://blobs.test', token: 'secret' })).toString('base64'),
+    headers: { 'x-nf-site-id': 'site-id' } };
+  assert.deepEqual(readBlobsCredentials(event), { siteID: 'site-id', token: 'secret' });
+  assert.equal(readBlobsCredentials({}), undefined);
+});
+
+test('SDK Blobs scrie și citește imediat jobul editorial prin API în producție', async () => {
+  const originalFetch = globalThis.fetch;
+  const records = new Map();
+  globalThis.fetch = async (input, options = {}) => {
+    const url = new URL(input);
+    if (url.hostname === 'api.netlify.com') {
+      return Response.json({ url: `https://signed-blobs.example.test/value?key=${encodeURIComponent(url.pathname)}` });
+    }
+    if (url.hostname === 'signed-blobs.example.test') {
+      const key = url.searchParams.get('key');
+      if (options.method.toUpperCase() === 'PUT') {
+        records.set(key, JSON.parse(options.body));
+        return new Response('', { status: 200 });
+      }
+      return records.has(key) ? Response.json(records.get(key)) : new Response('', { status: 404 });
+    }
+    throw new Error(`Cerere externă neașteptată: ${url.hostname}`);
+  };
+  try {
+    const store = createEditorialStore({ serverless: true, context: 'production',
+      credentials: { siteID: 'site-test', token: 'token-test' } });
+    const job = { id: 'job-test', kind: 'text', responseId: 'resp_test', createdAt: 1 };
+    await store.set('jobs/2/job-test', job);
+    assert.deepEqual(await store.get('jobs/2/job-test'), job);
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 test('Fără activare explicită, cheie dedicată și limite pozitive, nu se apelează OpenAI', async () => {

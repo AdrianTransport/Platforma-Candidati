@@ -1,7 +1,7 @@
 import { connectLambda } from '@netlify/blobs';
 import serverless from 'serverless-http';
 import { createApp } from '../../app.js';
-import { createEditorial } from '../../editorial.js';
+import { createEditorial, createEditorialStore } from '../../editorial.js';
 
 let handlerPromise;
 
@@ -21,6 +21,21 @@ export function readEditorialEnv(getValue = (key) => (
   }));
 }
 
+function runtimeValue(key) {
+  const value = typeof Netlify === 'undefined' ? process.env[key] : Netlify.env.get(key);
+  return typeof value === 'string' && value ? value : undefined;
+}
+
+export function readBlobsCredentials(event) {
+  try {
+    const data = JSON.parse(Buffer.from(event.blobs, 'base64').toString('utf8'));
+    const siteID = event.headers?.['x-nf-site-id'];
+    return typeof siteID === 'string' && typeof data.token === 'string'
+      ? { siteID, token: data.token }
+      : undefined;
+  } catch { return undefined; }
+}
+
 export const handler = async (event, context) => {
   // Functia ruleaza in mod compatibil AWS Lambda (prin serverless-http). In acest
   // mod, Netlify Blobs nu primeste automat contextul cererii - trebuie legat
@@ -30,7 +45,15 @@ export const handler = async (event, context) => {
   if (!handlerPromise) {
     // Păstrăm adaptorul existent; imaginile trebuie codate binar, nu ca text UTF-8.
     // Variabilele cu scope Functions sunt citite prin API-ul runtime Netlify.
-    const editorial = createEditorial({ env: readEditorialEnv() });
+    // Forțăm explicit adaptorul Blobs: process.env nu reflectă întotdeauna toate
+    // valorile runtime expuse prin Netlify.env în această funcție compatibilă Lambda.
+    const store = createEditorialStore({
+      serverless: true,
+      context: runtimeValue('CONTEXT'),
+      region: runtimeValue('AWS_REGION'),
+      credentials: readBlobsCredentials(event),
+    });
+    const editorial = createEditorial({ store, env: readEditorialEnv() });
     handlerPromise = createApp({ editorial }).then((app) => serverless(app, {
       binary: ['image/png', 'image/jpeg', 'image/webp'],
     }));
