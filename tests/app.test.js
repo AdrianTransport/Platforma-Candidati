@@ -205,6 +205,71 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal((await admin(url, { csrf_token: adminToken, status: 'sters', version: current.version })).status, 303);
     assert.match((await admin('/admin/comentarii?status=sters')).html, /Istoric moderare \(3\)/);
   });
+  await t.test('Site principal: numai Super Admin publică știri și campanii cu imagini și citiri', async () => {
+    assert.equal((await cand('/admin/portal')).status, 403);
+    const center = await admin('/admin/portal');
+    assert.equal(center.status, 200);
+    assert.match(center.html, /Centrul editorial/);
+    assert.match(center.html, /Nu există încă știri sau campanii/);
+    const form = await admin('/admin/portal/nou');
+    assert.equal(form.status, 200);
+    assert.match(form.html, /Text și imagini cu OpenAI/);
+    assert.equal((await admin('/admin/portal', { titlu: 'Fără CSRF' })).status, 403);
+
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==';
+    const uploaded = await admin('/admin/portal/media', { csrf_token: adminToken, base64: png, acord_imagine: true }, true);
+    assert.equal(uploaded.status, 201);
+    const imageUrl = JSON.parse(uploaded.html).imagine_url;
+    assert.equal((await guest(imageUrl)).status, 404);
+
+    const campaign = {
+      csrf_token: adminToken, tip: 'campanie', candidate_id: '2', titlu: 'Campanie pentru cartiere curate',
+      rezumat: 'Ana prezintă proiectele propuse pentru comunitate.', continut: 'Primul paragraf.\n## Proiecte\n<script>nu se execută</script>',
+      categorie: 'Campanie locală', finantator: 'Ana — campanie electorală', imagine_url: imageUrl,
+      imagine_alt: 'Candidat discutând cu locuitorii', imagine_credit: 'Arhiva candidatului', principal: 'on',
+      confirmare_responsabilitate: 'on', status: 'publicat',
+    };
+    const created = await admin('/admin/portal', campaign);
+    assert.equal(created.status, 302);
+    assert.match(created.headers.get('location'), /^\/admin\/portal/);
+    const post = db.data.portal_posts[0];
+    assert.equal(post.slug, 'campanie-pentru-cartiere-curate');
+    assert.equal(post.transparenta.responsabil_editorial, 'ana');
+    assert.equal(post.transparenta.finantat_de, 'Ana — campanie electorală');
+    assert.equal((await guest(imageUrl)).status, 200);
+
+    const home = await guest('/');
+    assert.match(home.html, /Campanie pentru cartiere curate/);
+    assert.match(home.html, /Campanie candidat/);
+    const detail = await guest(`/actualitate/${post.slug}`);
+    assert.equal(detail.status, 200);
+    assert.match(detail.html, /Ana — campanie electorală/);
+    assert.match(detail.html, /Vezi publicația candidatului/);
+    assert.match(detail.html, /<h2>Proiecte<\/h2>/);
+    assert.ok(!detail.html.includes('<script>nu se execută'));
+    assert.equal(post.vizualizari, 1);
+
+    const drafted = await admin(`/admin/portal/${post.id}`, { ...campaign, status: 'ciorna', confirmare_responsabilitate: '' });
+    assert.equal(drafted.status, 302);
+    assert.equal((await guest(`/actualitate/${post.slug}`)).status, 404);
+    assert.ok(!(await guest('/')).html.includes('Campanie pentru cartiere curate'));
+
+    const news = await admin('/admin/portal', {
+      csrf_token: adminToken, tip: 'stire', titlu: 'Noutăți din platformă', rezumat: 'O informare publicată de operator.',
+      continut: 'Conținut editorial verificat.', categorie: 'Actualitate', imagine_url: '',
+      confirmare_responsabilitate: 'on', status: 'publicat',
+    });
+    assert.equal(news.status, 302);
+    const newsPost = db.data.portal_posts.find(item => item.tip === 'stire');
+    assert.equal(newsPost.transparenta.responsabil_editorial, 'Operator Test SRL');
+    assert.match((await guest(`/actualitate/${newsPost.slug}`)).html, /Știre publicată și asumată editorial de/);
+    const invalidImage = await admin(`/admin/portal/${newsPost.id}`, {
+      csrf_token: adminToken, ...newsPost, imagine_url: 'javascript:alert(1)', status: 'publicat', confirmare_responsabilitate: 'on',
+    });
+    assert.equal(invalidImage.status, 400);
+    assert.match(invalidImage.html, /Adresa imaginii trebuie să fie HTTP\/HTTPS/);
+    assert.deepEqual(JSON.parse((await admin('/admin/portal/ai/config')).html), { text: false, image: false });
+  });
   await t.test('Activare contractuală: cont în așteptare, acceptare și activare de Super Admin', async () => {
     const created = await admin('/admin/candidati', {
       csrf_token: adminToken, nume_candidat: 'Candidat Nou', email: 'nou@example.test',

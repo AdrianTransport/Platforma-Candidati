@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Centrul editorial — Super Admin</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-shell app-shell-wide">
+    <div class="topbar admin-topbar">
+      <div><span class="eyebrow">Site principal</span><h1>Centrul editorial</h1></div>
+      <div class="topbar-actions"><a class="btn secondary" href="/" target="_blank">Vezi site-ul public</a><a class="btn secondary" href="/admin">Înapoi la Super Admin</a></div>
+    </div>
+
+    <% if (mesaj) { %><div class="mesaj-succes"><%= mesaj %></div><% } %>
+
+    <div class="stats-grid admin-stats portal-stats">
+      <div><span>Total materiale</span><strong><%= sumar.total %></strong></div>
+      <div><span>Publicate</span><strong><%= sumar.publicate %></strong></div>
+      <div><span>Ciorne</span><strong><%= sumar.ciorne %></strong></div>
+      <div><span>Citiri</span><strong><%= sumar.citiri %></strong></div>
+    </div>
+
+    <section class="card portal-admin-intro">
+      <div><span class="eyebrow">Administrat numai de tine</span><h2>Știri și campanii pentru prima pagină</h2><p>Publică știri proprii ale platformei sau materiale de campanie asociate unui candidat. Niciun candidat nu are acces la acest centru.</p></div>
+      <a class="btn" href="/admin/portal/nou">Creează un material</a>
+    </section>
+
+    <div class="section-row"><div><span class="eyebrow">Arhiva editorială</span><h2>Materialele site-ului principal</h2></div></div>
+    <% if (!posts.length) { %>
+      <div class="empty-public">Nu există încă știri sau campanii. Creează primul material pentru pagina principală.</div>
+    <% } else { %>
+      <div class="portal-admin-list">
+        <% posts.forEach(post => { %>
+          <article class="card portal-admin-row">
+            <div class="portal-admin-thumb">
+              <% if (post.imagine_url) { %><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>"><% } else { %><span><%= post.tip === 'campanie' ? 'CAMPANIE' : 'ȘTIRE' %></span><% } %>
+            </div>
+            <div class="portal-admin-copy">
+              <div class="portal-admin-meta"><span class="pill"><%= post.tip === 'campanie' ? 'Campanie candidat' : 'Știre platformă' %></span><span class="pill <%= post.status %>"><%= post.status === 'publicat' ? 'Publicat' : 'Ciornă' %></span><% if (post.principal) { %><span class="pill principal">Articol principal</span><% } %></div>
+              <h3><%= post.titlu %></h3>
+              <p><%= post.rezumat %></p>
+              <small><% if (post.candidat) { %>Candidat: <%= post.candidat.nume_candidat %> · <% } %><%= post.vizualizari || 0 %> citiri · actualizat <%= displayDate(post.updated_at || post.created_at) %></small>
+            </div>
+            <div class="portal-admin-actions">
+              <a class="btn secondary" href="/admin/portal/<%= post.id %>/edit">Editează</a>
+              <% if (post.status === 'publicat') { %><a class="btn secondary" href="/actualitate/<%= post.slug %>" target="_blank">Deschide</a><% } %>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</body>
+</html>

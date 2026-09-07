@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="<%= post.rezumat.slice(0, 155) %>">
+  <title><%= post.titlu %> — <%= platform.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="public-body portal-public-body">
+  <header class="portal-news-header">
+    <a class="platform-brand" href="/"><span>Vocea</span>Candidatului</a>
+    <nav><a href="/#stiri">Știri</a><a href="/#campanii">Campanii</a><a href="/#candidati">Candidați</a><a class="btn secondary" href="/login">Autentificare</a></nav>
+  </header>
+  <main class="portal-article-shell">
+    <a class="back-home" href="/">← Înapoi la prima pagină</a>
+    <article class="portal-article">
+      <header>
+        <div class="portal-article-meta"><span><%= post.tip === 'campanie' ? 'CAMPANIE CANDIDAT' : 'ȘTIREA PLATFORMEI' %></span><span><%= post.categorie %></span><time><%= displayDate(portalPublicationDate(post)) %></time></div>
+        <h1><%= post.titlu %></h1><p class="portal-article-lead"><%= post.rezumat %></p>
+      </header>
+      <% if (post.imagine_url) { %><figure class="portal-article-image"><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>"><% if (post.imagine_legenda || post.imagine_credit) { %><figcaption><%= [post.imagine_legenda, post.imagine_credit && `Foto: ${post.imagine_credit}`].filter(Boolean).join(' · ') %></figcaption><% } %><% if (post.imagine_generata_ai) { %><span>Ilustrație generată cu AI</span><% } %></figure><% } %>
+      <div class="portal-article-layout">
+        <div class="portal-article-text"><% post.continut.split('\n').filter(line => line.trim()).forEach(line => { %><% if (line.startsWith('## ')) { %><h2><%= line.slice(3) %></h2><% } else { %><p><%= line %></p><% } %><% }) %></div>
+        <aside class="portal-transparency-card">
+          <span class="eyebrow">Transparență</span>
+          <% if (post.tip === 'campanie' && candidat) { %>
+            <h2><%= candidat.nume_candidat %></h2><p><%= candidat.functie_candidatura %><br><%= [candidat.zona, candidat.judet].filter(Boolean).join(', ') %></p>
+            <dl><dt>Responsabil editorial</dt><dd><%= post.transparenta?.responsabil_editorial || candidat.entitate_responsabila %></dd><dt>Finanțat de</dt><dd><%= post.transparenta?.finantat_de || post.finantator %></dd><dt>Scrutin</dt><dd><%= post.transparenta?.scrutin || candidat.scrutin %></dd><dt>Cod mandatar</dt><dd><%= post.transparenta?.cod_mandatar_financiar || candidat.cod_mandatar_financiar %></dd></dl>
+            <a class="btn" href="/site/<%= candidat.subdomeniu %>">Vezi publicația candidatului</a>
+          <% } else { %>
+            <h2><%= platform.name %></h2><p>Știre publicată și asumată editorial de <strong><%= platform.operatorName %></strong>.</p><a href="/legal/continut">Politica editorială</a>
+          <% } %>
+          <p class="portal-read-count"><%= post.vizualizari || 0 %> citiri</p>
+        </aside>
+      </div>
+      <% if (post.generat_de_ai) { %><p class="ai-disclosure">Text redactat cu ajutorul OpenAI și verificat de editor înainte de publicare.</p><% } %>
+    </article>
+  </main>
+  <footer class="marketing-footer"><strong><%= platform.name %></strong><span>Operator: <%= platform.operatorName %> · <%= platform.operatorId %></span><nav class="legal-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a></nav></footer>
+</body>
+</html>

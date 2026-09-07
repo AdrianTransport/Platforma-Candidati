@@ -3,13 +3,14 @@ import ejs from 'ejs';
 import cookieSession from 'cookie-session';
 import bcrypt from 'bcryptjs';
 import path from 'path';
-import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId } from './db.js';
+import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { requireRole } from './middleware/auth.js';
 import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, ValidationError } from './publication.js';
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
 import { attachEditorialRoutes } from './editorial-routes.js';
 import { LEGAL_PAGES } from './legal-pages.js';
+import { isPortalPublished, portalPostInput, portalPublicationDate } from './portal.js';
 import {
   TERMS_VERSION,
   REPORT_STATUS,
@@ -106,6 +107,7 @@ export async function createApp({
   app.set('views', path.join(baseDir, 'views'));
   app.locals.isPublished = article => isPublished(article, now());
   app.locals.publicationDate = publicationDate;
+  app.locals.portalPublicationDate = portalPublicationDate;
   app.locals.displayDate = displayDate;
   app.locals.publicTransparency = publicTransparency;
   app.locals.platform = platform;
@@ -113,6 +115,7 @@ export async function createApp({
   app.use(express.static(path.join(baseDir, 'public')));
   app.use(express.urlencoded({ extended: true }));
   app.use('/dashboard/media', express.json({ limit: '4300kb' }));
+  app.use('/admin/portal/media', express.json({ limit: '4300kb' }));
   app.use(express.json());
 
   // Sesiune stocata in cookie semnat (fara memorie pe server) - functioneaza
@@ -164,14 +167,55 @@ export async function createApp({
     return { user, articol };
   }
 
+  function portalCandidate(post) {
+    return post?.candidate_id
+      ? db.data.users.find(user => user.id === post.candidate_id && poatePublicaSite(user))
+      : null;
+  }
+
+  function portalPostIsPublic(post) {
+    return isPortalPublished(post) && (post.tip !== 'campanie' || portalCandidate(post));
+  }
+
+  function uniquePortalSlug(title, currentId = null) {
+    const base = slugify(title) || `material-${currentId || db.data.nextPortalPostId}`;
+    let value = base;
+    let index = 2;
+    while (db.data.portal_posts.some(post => post.slug === value && post.id !== currentId)) {
+      value = `${base}-${index++}`;
+    }
+    return value;
+  }
+
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
 
   app.get('/', (req, res) => {
     const candidatiPublici = db.data.users
       .filter(poatePublicaSite)
       .slice(0, 6);
-    res.render('landing', { candidatiPublici });
+    const portalPosts = db.data.portal_posts
+      .filter(portalPostIsPublic)
+      .sort((a, b) => Number(b.principal) - Number(a.principal)
+        || new Date(portalPublicationDate(b)) - new Date(portalPublicationDate(a)));
+    const withCandidate = post => ({ ...post, candidat: portalCandidate(post) });
+    const mainPost = portalPosts[0] || null;
+    res.set('Cache-Control', 'private, no-store');
+    res.render('landing', {
+      candidatiPublici,
+      principal: mainPost ? withCandidate(mainPost) : null,
+      stiri: portalPosts.filter(post => post.tip === 'stire' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
+      campanii: portalPosts.filter(post => post.tip === 'campanie' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
+    });
   });
+
+  app.get('/actualitate/:slug', safely(async (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    const post = db.data.portal_posts.find(item => item.slug === req.params.slug && portalPostIsPublic(item));
+    if (!post) return res.status(404).send('Materialul nu există.');
+    post.vizualizari = (post.vizualizari || 0) + 1;
+    await db.write();
+    res.render('portal-post', { post, candidat: portalCandidate(post) });
+  }));
 
   app.get('/login', (req, res) => {
     res.render('login', { eroare: null });
@@ -283,6 +327,150 @@ export async function createApp({
         [candidate.id, candidateComplianceMissing(candidate, platform)])),
     });
   });
+
+  const portalCandidates = () => db.data.users
+    .filter(user => user.role === 'candidate')
+    .sort((a, b) => String(a.nume_candidat || '').localeCompare(String(b.nume_candidat || ''), 'ro'));
+
+  function renderPortalForm(res, { post = null, eroare = '', status = 200 } = {}) {
+    return res.status(status).render('admin-portal-form', {
+      post,
+      eroare,
+      candidati: portalCandidates(),
+    });
+  }
+
+  async function validatePortalPost(req, res, previous = null) {
+    try {
+      const fields = portalPostInput(req.body, previous, now());
+      const candidate = fields.candidate_id
+        ? db.data.users.find(user => user.id === fields.candidate_id && user.role === 'candidate')
+        : null;
+      if (fields.tip === 'campanie' && !candidate) throw new ValidationError('Candidatul selectat nu există.');
+      if (fields.status === 'publicat' && !platform.complete) {
+        throw new ValidationError('Publicarea este blocată până la configurarea completă a datelor juridice ale operatorului.');
+      }
+      if (fields.status === 'publicat' && fields.tip === 'campanie') {
+        if (!poatePublicaSite(candidate)) throw new ValidationError('Campania poate fi publicată numai pentru un candidat activ cu site public.');
+        const missing = candidateComplianceMissing(candidate, platform);
+        if (missing.length) throw new ValidationError(`Publicarea campaniei este blocată. Lipsesc: ${missing.join(', ')}.`);
+      }
+      const imageId = internalImageId(fields.imagine_url);
+      if (imageId) {
+        const image = await editorial.media(imageId);
+        if (!image || image.userId !== req.session.userId) {
+          throw new ValidationError('Imaginea nu aparține contului Super Admin sau nu mai este disponibilă.');
+        }
+        fields.imagine_generata_ai = image.generated || fields.imagine_generata_ai;
+      }
+      const recordedAt = new Date(now()).toISOString();
+      fields.transparenta = fields.tip === 'campanie'
+        ? { ...transparencySnapshot(candidate, recordedAt), finantat_de: fields.finantator }
+        : {
+          material: 'stire_platforma',
+          publicat_de: platform.name,
+          responsabil_editorial: platform.operatorName,
+          finantat_de: platform.operatorName,
+          recorded_at: recordedAt,
+        };
+      return fields;
+    } catch (error) {
+      if (!(error instanceof ValidationError)) throw error;
+      const form = Object.fromEntries([
+        'titlu', 'rezumat', 'continut', 'tip', 'categorie', 'finantator', 'imagine_url',
+        'imagine_alt', 'imagine_legenda', 'imagine_credit',
+      ].map(key => [key, typeof req.body[key] === 'string' ? req.body[key] : '']));
+      form.id = previous?.id;
+      form.slug = previous?.slug;
+      form.candidate_id = Number(req.body.candidate_id) || null;
+      form.status = typeof req.body.status === 'string' ? req.body.status : 'ciorna';
+      form.principal = req.body.principal === 'on';
+      form.generat_de_ai = req.body.generat_de_ai === 'true';
+      form.imagine_generata_ai = req.body.imagine_generata_ai === 'true';
+      renderPortalForm(res, { post: form, eroare: error.message, status: error.status || 400 });
+      return null;
+    }
+  }
+
+  app.get('/admin/portal', requireRole('admin'), requireActiveAccount, (req, res) => {
+    const posts = db.data.portal_posts
+      .map(post => ({ ...post, candidat: portalCandidates().find(candidate => candidate.id === post.candidate_id) }))
+      .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+    res.render('admin-portal', {
+      posts,
+      sumar: {
+        total: posts.length,
+        publicate: posts.filter(post => post.status === 'publicat').length,
+        ciorne: posts.filter(post => post.status === 'ciorna').length,
+        citiri: posts.reduce((total, post) => total + (post.vizualizari || 0), 0),
+      },
+      mesaj: req.query.mesaj || '',
+    });
+  });
+
+  app.get('/admin/portal/nou', requireRole('admin'), requireActiveAccount, (req, res) => {
+    renderPortalForm(res);
+  });
+
+  app.get('/admin/portal/:id(\\d+)/edit', requireRole('admin'), requireActiveAccount, (req, res) => {
+    const post = db.data.portal_posts.find(item => item.id === Number(req.params.id));
+    if (!post) return res.redirect('/admin/portal');
+    renderPortalForm(res, { post });
+  });
+
+  app.post('/admin/portal', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const fields = await validatePortalPost(req, res);
+    if (!fields) return;
+    const id = nextPortalPostId();
+    const post = {
+      id,
+      slug: uniquePortalSlug(fields.titlu, id),
+      ...fields,
+      vizualizari: 0,
+      created_at: new Date(now()).toISOString(),
+    };
+    if (post.principal && post.status === 'publicat') db.data.portal_posts.forEach(item => { item.principal = false; });
+    db.data.portal_posts.push(post);
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'portal_post_created',
+      targetType: 'portal_post', targetId: post.id, details: { type: post.tip, status: post.status, title: post.titlu } });
+    res.redirect('/admin/portal?mesaj=Materialul%20a%20fost%20salvat.');
+  }));
+
+  app.post('/admin/portal/:id(\\d+)', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const post = db.data.portal_posts.find(item => item.id === Number(req.params.id));
+    if (!post) return res.redirect('/admin/portal');
+    const fields = await validatePortalPost(req, res, post);
+    if (!fields) return;
+    if (fields.principal && fields.status === 'publicat') {
+      db.data.portal_posts.forEach(item => { item.principal = item.id === post.id; });
+    }
+    Object.assign(post, fields);
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'portal_post_updated',
+      targetType: 'portal_post', targetId: post.id, details: { type: post.tip, status: post.status, title: post.titlu } });
+    res.redirect('/admin/portal?mesaj=Materialul%20a%20fost%20actualizat.');
+  }));
+
+  const adminJson = handler => async (req, res) => {
+    try { await handler(req, res); }
+    catch (error) {
+      const known = error instanceof ValidationError;
+      res.status(known ? error.status : 503).json({
+        eroare: known ? error.message : 'Operațiunea nu a putut fi salvată. Nu a fost publicat nimic.',
+      });
+    }
+  };
+
+  app.get('/admin/portal/ai/config', requireRole('admin'), requireActiveAccount, (req, res) => res.json(editorial.config()));
+  app.post('/admin/portal/genereaza-ai', requireRole('admin'), requireActiveAccount, requireCsrf,
+    adminJson(async (req, res) => res.status(202).json(await editorial.start(req.session.userId, req.body))));
+  app.post('/admin/portal/ai/:id/status', requireRole('admin'), requireActiveAccount, requireCsrf,
+    adminJson(async (req, res) => res.json(await editorial.status(req.session.userId, req.params.id))));
+  app.post('/admin/portal/media', requireRole('admin'), requireActiveAccount, requireCsrf, adminJson(async (req, res) => {
+    if (req.body.acord_imagine !== true) throw new ValidationError('Confirmă dreptul de utilizare a imaginii.');
+    res.status(201).json(await editorial.upload(req.session.userId, req.body.base64));
+  }));
 
   app.post('/admin/candidati', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const { nume_candidat, email, zona, judet, functie_candidatura, partid } = req.body;
@@ -782,7 +970,10 @@ export async function createApp({
     res.redirect('/dashboard');
   }));
 
-  attachEditorialRoutes(app, { db, editorial, requireRole, requireActiveAccount, requireCsrf, now });
+  attachEditorialRoutes(app, {
+    db, editorial, requireRole, requireActiveAccount, requireCsrf, now,
+    isPortalPostPublished: portalPostIsPublic,
+  });
 
   /* --------------------------- SITE PUBLIC (ziar) -------------------------- */
 
@@ -913,7 +1104,7 @@ export async function createApp({
 
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);
-    if (req.path === '/dashboard/media' && error.type === 'entity.too.large') {
+    if (['/dashboard/media', '/admin/portal/media'].includes(req.path) && error.type === 'entity.too.large') {
       return res.status(413).json({ eroare: 'Imagine prea mare. Încarcă un fișier de maximum 3 MB după redimensionare.' });
     }
     if (error instanceof ValidationError) return res.status(error.status).send(error.message);

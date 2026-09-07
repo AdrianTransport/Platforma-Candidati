@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= post?.id ? 'Editează materialul' : 'Material nou' %> — Super Admin</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/editorial-editor.css">
+</head>
+<body>
+  <div class="app-shell app-shell-wide">
+    <div class="topbar">
+      <div><span class="eyebrow">Centrul editorial</span><h1><%= post?.id ? 'Editează materialul' : 'Material nou' %></h1></div>
+      <a class="btn secondary" href="/admin/portal">Înapoi la materiale</a>
+    </div>
+
+    <div class="editorial-workspace" data-account="admin-<%= userId %>" data-api-prefix="/admin/portal" data-media-endpoint="/admin/portal/media">
+      <aside class="card editor-assistant">
+        <span class="editor-eyebrow">Asistent editorial</span>
+        <h2>Text și imagini cu OpenAI</h2>
+        <p class="note">Scrie ideea și informațiile verificate. OpenAI va propune textul sau ilustrația după activarea cheii API; nimic nu se publică automat.</p>
+        <label for="idee-ai">Tema știrii sau campaniei</label>
+        <textarea id="idee-ai" rows="6" maxlength="4000" placeholder="Subiectul, faptele confirmate, candidatul și mesajul principal."></textarea>
+        <label for="ton-ai">Tonul textului</label>
+        <select id="ton-ai"><option value="clar și informativ">Clar și informativ</option><option value="direct și apropiat">Direct și apropiat</option><option value="oficial și formal">Oficial și formal</option></select>
+        <label class="editor-consent"><input type="checkbox" id="acord-ai"> Sunt de acord să trimit informațiile către OpenAI. Nu includ date confidențiale sau date personale nepublice.</label>
+        <div class="ai-actions"><button type="button" id="btn-genereaza" disabled>Generează articol</button><button type="button" class="secondary" id="btn-imagine-ai" disabled>Generează ilustrație</button></div>
+        <p class="note" id="config-ai" role="status">Verific disponibilitatea generării…</p>
+        <p class="note" id="stare-ai" role="status" aria-live="polite"></p>
+        <button type="button" class="secondary" id="reia-ai" hidden>Verifică din nou rezultatul</button>
+        <section class="ai-proposal" id="ai-result" hidden aria-label="Propunere AI">
+          <h3 id="ai-title"></h3><p id="ai-summary"></p><div id="ai-text"></div><img id="ai-image" alt="Previzualizare ilustrație AI" hidden><p class="note" id="ai-checks"></p><button type="button" id="aplica-ai">Aplică propunerea</button>
+        </section>
+      </aside>
+
+      <div class="card editor-article">
+        <% if (eroare) { %><p class="eroare" role="alert"><%= eroare %></p><% } %>
+        <form method="POST" action="<%= post?.id ? `/admin/portal/${post.id}` : '/admin/portal' %>">
+          <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+          <label for="titlu">Titlu</label><input id="titlu" name="titlu" maxlength="200" required value="<%= post?.titlu || '' %>">
+          <label for="rezumat">Rezumat pentru prima pagină</label><textarea id="rezumat" name="rezumat" rows="3" maxlength="400" required><%= post?.rezumat || '' %></textarea>
+
+          <div class="form-grid form-grid-2 portal-form-grid">
+            <label>Tip material<select name="tip" id="portal-tip"><option value="stire" <%= post?.tip !== 'campanie' ? 'selected' : '' %>>Știre a platformei</option><option value="campanie" <%= post?.tip === 'campanie' ? 'selected' : '' %>>Campanie pentru candidat</option></select></label>
+            <label>Categorie<input name="categorie" maxlength="60" value="<%= post?.categorie || '' %>" placeholder="Actualitate, Comunitate, Campanie…"></label>
+          </div>
+
+          <fieldset class="editor-media campaign-fields" id="campaign-fields">
+            <legend>Datele campaniei candidatului</legend>
+            <label for="candidate-id">Candidat beneficiar</label>
+            <select name="candidate_id" id="candidate-id">
+              <option value="">Selectează candidatul</option>
+              <% candidati.forEach(candidate => { %><option value="<%= candidate.id %>" <%= Number(post?.candidate_id) === candidate.id ? 'selected' : '' %>><%= candidate.nume_candidat %> — <%= candidate.status_cont %></option><% }) %>
+            </select>
+            <label for="finantator">Finanțatorul real al materialului</label><input id="finantator" name="finantator" maxlength="200" value="<%= post?.finantator || '' %>" placeholder="Candidat, partid sau sponsor declarat legal">
+            <p class="note">La publicare se copiază și responsabilul editorial, scrutinul, codul mandatarului și datele contractuale din contul candidatului.</p>
+          </fieldset>
+
+          <label for="continut">Conținut</label><textarea id="continut" name="continut" rows="14" maxlength="30000" required><%= post?.continut || '' %></textarea>
+          <p class="note">Pentru un subtitlu, începe rândul cu „## ”. Codul HTML introdus este afișat ca text, nu este executat.</p>
+
+          <fieldset class="editor-media"><legend>Imaginea materialului</legend>
+            <label for="fisier-imagine">Încarcă o fotografie</label><input type="file" id="fisier-imagine" accept="image/jpeg,image/png,image/webp">
+            <label class="editor-consent"><input type="checkbox" id="acord-imagine"> Am dreptul să folosesc și să public această imagine.</label>
+            <button type="button" class="secondary" id="incarca-imagine">Încarcă fotografia</button><p class="note" id="stare-imagine" role="status" aria-live="polite">PNG, JPEG sau WebP. Imaginea este redimensionată în browser și salvată în Netlify Blobs.</p>
+            <label for="imagine-url">Sau adresa unei imagini publice</label><input name="imagine_url" id="imagine-url" maxlength="2048" value="<%= post?.imagine_url || '' %>" placeholder="https://exemplu.ro/imagine.jpg">
+            <figure class="editor-image-preview" id="image-preview" hidden><img id="preview-image" alt="Previzualizare imagine"><figcaption>Imaginea selectată</figcaption></figure>
+            <label for="imagine-alt">Descriere pentru accesibilitate</label><input id="imagine-alt" name="imagine_alt" maxlength="240" value="<%= post?.imagine_alt || '' %>">
+            <label for="imagine-legenda">Legendă</label><input id="imagine-legenda" name="imagine_legenda" maxlength="300" value="<%= post?.imagine_legenda || '' %>">
+            <label for="imagine-credit">Autor / sursă</label><input id="imagine-credit" name="imagine_credit" maxlength="160" value="<%= post?.imagine_credit || '' %>">
+            <label class="editor-consent"><input type="checkbox" name="imagine_generata_ai" id="imagine-generata-ai" value="true" <%= post?.imagine_generata_ai ? 'checked' : '' %>> Imagine generată cu AI.</label>
+          </fieldset>
+
+          <label class="editor-consent"><input type="checkbox" name="generat_de_ai" id="generat_de_ai" value="true" <%= post?.generat_de_ai ? 'checked' : '' %>> Text creat cu ajutorul AI; am verificat rezultatul.</label>
+          <label class="editor-consent"><input type="checkbox" name="principal" <%= post?.principal ? 'checked' : '' %>> Afișează acest material ca subiect principal pe prima pagină.</label>
+          <section class="editor-compliance"><strong>Control editorial</strong><p class="note">Știrile sunt asumate editorial de operatorul platformei. Campaniile afișează datele candidatului și finanțatorului.</p><label class="consent-label"><input type="checkbox" name="confirmare_responsabilitate"> Confirm că informațiile și imaginea au fost verificate și că datele de transparență sunt corecte.</label></section>
+
+          <div class="publication-actions"><button type="submit" name="status" value="ciorna">Salvează ca ciornă</button><button type="submit" name="status" value="publicat" class="secondary">Publică pe site</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script src="/editorial-editor.js" defer></script>
+  <script src="/portal-form.js" defer></script>
+</body>
+</html>

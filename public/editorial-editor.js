@@ -1,7 +1,10 @@
 (() => {
   const $ = id => document.getElementById(id);
   const csrf = document.querySelector('input[name=csrf_token]').value;
-  const storageKey = `editor-ai:${document.querySelector('.editorial-workspace').dataset.account}:${location.pathname}`;
+  const workspace = document.querySelector('.editorial-workspace');
+  const apiPrefix = workspace.dataset.apiPrefix || '/dashboard';
+  const mediaEndpoint = workspace.dataset.mediaEndpoint || '/dashboard/media';
+  const storageKey = `editor-ai:${workspace.dataset.account}:${location.pathname}`;
   let settings = { text: false, image: false }, busy = false, uploading = false, proposal, pending;
   function persist(job) {
     pending = job;
@@ -63,7 +66,7 @@
     uploading = true; button.disabled = true; $('stare-imagine').textContent = 'Pregătesc și salvez fotografia…';
     try {
       const base64 = await normalizedPhoto($('fisier-imagine').files[0]);
-      const result = await request('/dashboard/media', { base64, acord_imagine: true });
+      const result = await request(mediaEndpoint, { base64, acord_imagine: true });
       $('imagine-url').value = result.imagine_url;
       $('imagine-alt').value = ''; $('imagine-legenda').value = ''; $('imagine-credit').value = '';
       // Nu presupunem că un fișier încărcat de utilizator nu a fost creat anterior cu AI.
@@ -92,7 +95,7 @@
     busy = true; buttons(); $('reia-ai').hidden = true;
     try {
       for (let attempt = 0; attempt < 90; attempt++) {
-        const result = await request(`/dashboard/ai/${encodeURIComponent(job.id)}/status`, {});
+        const result = await request(`${apiPrefix}/ai/${encodeURIComponent(job.id)}/status`, {});
         if (result.status === 'gata') { showProposal(result); return; }
         $('stare-ai').textContent = 'OpenAI lucrează la propunere. Poți continua să scrii; articolul nu se publică automat.';
         await new Promise(resolve => setTimeout(resolve, 5000));
@@ -110,7 +113,7 @@
     const job = { id: crypto.randomUUID(), tip };
     persist(job); proposal = undefined;
     try {
-      await request('/dashboard/genereaza-ai', { tip, idee, ton: $('ton-ai').value, acord_ai: true, request_id: job.id });
+      await request(`${apiPrefix}/genereaza-ai`, { tip, idee, ton: $('ton-ai').value, acord_ai: true, request_id: job.id });
       await poll(job);
     } catch (error) { $('stare-ai').textContent = error.message; $('reia-ai').hidden = false; }
     finally { busy = false; buttons(); }
@@ -132,7 +135,7 @@
     $('stare-ai').textContent = 'Propunere aplicată în formular. Verifică și salvează articolul; nu a fost publicat automat.';
     persist(null);
   });
-  request('/dashboard/ai/config').then(result => {
+  request(`${apiPrefix}/ai/config`).then(result => {
     settings = result; buttons();
     $('config-ai').textContent = result.text || result.image
       ? `Generare text: ${result.text ? 'disponibilă' : 'dezactivată'}. Generare imagini: ${result.image ? 'disponibilă' : 'dezactivată'}. Se aplică limite zilnice.`

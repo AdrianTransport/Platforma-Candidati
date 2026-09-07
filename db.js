@@ -34,11 +34,13 @@ export function generateazaParola() {
 
 export async function initDB() {
   await db.read();
-  db.data ||= { users: [], articole: [], nextUserId: 1, nextArticolId: 1 };
+  db.data ||= { users: [], articole: [], portal_posts: [], nextUserId: 1, nextArticolId: 1, nextPortalPostId: 1 };
   db.data.users ||= [];
   db.data.articole ||= [];
+  db.data.portal_posts ||= [];
   db.data.nextUserId ||= 1;
   db.data.nextArticolId ||= 1;
+  db.data.nextPortalPostId ||= 1;
 
   for (const user of db.data.users) {
     user.login_attempts ||= 0;
@@ -110,6 +112,19 @@ export async function initDB() {
     articol.transparenta ||= null;
   }
 
+  for (const post of db.data.portal_posts) {
+    post.vizualizari ||= 0;
+    post.imagine_url ||= '';
+    post.imagine_alt ||= '';
+    post.imagine_legenda ||= '';
+    post.imagine_credit ||= '';
+    post.imagine_generata_ai ||= false;
+    post.generat_de_ai ||= false;
+    post.principal ||= false;
+    post.status ||= 'ciorna';
+    post.tip ||= 'stire';
+  }
+
   const areAdmin = db.data.users.some((u) => u.role === 'admin');
   if (!areAdmin) {
     const parolaInitiala = String(process.env.INITIAL_ADMIN_PASSWORD || '');
@@ -145,5 +160,11 @@ export function nextUserId() {
 export function nextArticolId() {
   const id = db.data.nextArticolId;
   db.data.nextArticolId += 1;
+  return id;
+}
+
+export function nextPortalPostId() {
+  const id = db.data.nextPortalPostId;
+  db.data.nextPortalPostId += 1;
   return id;
 }

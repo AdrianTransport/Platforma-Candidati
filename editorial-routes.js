@@ -1,7 +1,9 @@
 import { internalImageId, imageBytes } from './editorial.js';
 import { isPublished, ValidationError } from './publication.js';
 
-export function attachEditorialRoutes(app, { db, editorial, requireRole, requireActiveAccount, requireCsrf, now }) {
+export function attachEditorialRoutes(app, {
+  db, editorial, requireRole, requireActiveAccount, requireCsrf, now, isPortalPostPublished = () => false,
+}) {
   const candidate = [requireRole('candidate'), requireActiveAccount, (req, res, next) => {
     if (!db.data.users.find(u => u.id === req.session.userId)?.module?.site) {
       return res.status(403).json({ eroare: 'Modulul site nu este activ.' });
@@ -32,12 +34,15 @@ export function attachEditorialRoutes(app, { db, editorial, requireRole, require
   app.get('/media/:id', json(async (req, res) => {
     res.set('Cache-Control', 'private, no-store');
     const image = await editorial.media(req.params.id);
-    const owner = image && db.data.users.find(u => u.id === image.userId && u.role === 'candidate'
-      && u.activ && u.status_cont === 'activ' && u.module?.site);
-    const ownPreview = owner && req.session.userId === owner.id && req.session.rol === 'candidate';
-    const published = owner && db.data.articole.some(a => a.user_id === owner.id
+    const owner = image && db.data.users.find(u => u.id === image.userId && u.activ);
+    const candidateOwner = owner?.role === 'candidate' && owner.status_cont === 'activ' && owner.module?.site;
+    const adminOwner = owner?.role === 'admin';
+    const ownPreview = owner && req.session.userId === owner.id && req.session.rol === owner.role;
+    const published = candidateOwner && db.data.articole.some(a => a.user_id === owner.id
       && internalImageId(a.imagine_url) === req.params.id && isPublished(a, now()));
-    if (!owner || (!ownPreview && !published)) return res.status(404).send('Imagine inexistentă.');
+    const publishedOnPortal = adminOwner && db.data.portal_posts.some(post =>
+      internalImageId(post.imagine_url) === req.params.id && isPortalPostPublished(post));
+    if (!owner || (!ownPreview && !published && !publishedOnPortal)) return res.status(404).send('Imagine inexistentă.');
     const { bytes, mime } = imageBytes(image.base64);
     res.set({ 'Content-Type': mime, 'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': "default-src 'none'; sandbox" });

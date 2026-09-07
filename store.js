@@ -2,7 +2,10 @@ import path from 'path';
 import fs from 'fs/promises';
 
 const LOCAL_FILE = path.join(process.cwd(), 'data', 'db.json');
-const DEFAULT_DATA = { users: [], articole: [], nextUserId: 1, nextArticolId: 1 };
+const DEFAULT_DATA = {
+  users: [], articole: [], portal_posts: [],
+  nextUserId: 1, nextArticolId: 1, nextPortalPostId: 1,
+};
 
 // "process.env.NETLIFY" NU e setat garantat in interiorul unei functii Netlify -
 // detectam mediul serverless prin variabilele standard AWS Lambda (Netlify Functions
