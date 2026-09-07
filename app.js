@@ -5,6 +5,22 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId } from './db.js';
 import { requireRole } from './middleware/auth.js';
+import {
+  decryptSecret,
+  encryptSecret,
+  exchangeMetaCode,
+  exchangeTikTokCode,
+  fetchMetaPages,
+  metaAuthorizeUrl,
+  metaConfigured,
+  publicBaseUrl,
+  publishFacebook,
+  publishInstagram,
+  publishTikTokPhoto,
+  randomState,
+  tiktokAuthorizeUrl,
+  tiktokConfigured,
+} from './social.js';
 
 // Folosim process.cwd() in loc de fileURLToPath(import.meta.url): dupa ce Netlify
 // impacheteaza functia cu esbuild, import.meta.url poate deveni undefined si arunca
@@ -62,15 +78,27 @@ export async function createApp() {
       name: 'sesiune',
       keys: [process.env.SESSION_SECRET || 'schimba-acest-secret-in-productie'],
       maxAge: 1000 * 60 * 60 * 8, // 8 ore
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
     })
   );
 
   app.use((req, res, next) => {
+    req.session.csrfToken ||= randomState();
     res.locals.userId = req.session.userId || null;
     res.locals.rol = req.session.rol || null;
     res.locals.numeCandidat = req.session.numeCandidat || null;
+    res.locals.csrfToken = req.session.csrfToken;
     next();
   });
+
+  function requireCsrf(req, res, next) {
+    if (!req.body?.csrf_token || req.body.csrf_token !== req.session.csrfToken) {
+      return res.status(403).send('Cererea a expirat sau nu este valida. Reincarca pagina si incearca din nou.');
+    }
+    next();
+  }
 
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
 
@@ -174,6 +202,7 @@ export async function createApp() {
       instagram_url: '',
       tiktok_url: '',
       youtube_url: '',
+      social_connections: { meta: null, tiktok: null },
       status_cont: 'in_asteptare',
       activ: false,
       module: { site: true, statistici: true, social: true },
@@ -251,6 +280,182 @@ export async function createApp() {
     res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole });
   });
 
+  app.get('/dashboard/social', requireRole('candidate'), (req, res) => {
+    const user = db.data.users.find((u) => u.id === req.session.userId);
+    if (!user?.module?.social) return res.redirect('/dashboard');
+    const articole = db.data.articole
+      .filter((a) => a.user_id === user.id && a.status === 'publicat')
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    res.render('social-center', {
+      user,
+      articole,
+      metaEsteConfigurat: metaConfigured(),
+      tiktokEsteConfigurat: tiktokConfigured(),
+      mesaj: req.query.mesaj || '',
+      eroare: req.query.eroare || '',
+    });
+  });
+
+  app.get('/dashboard/social/meta/conecteaza', requireRole('candidate'), (req, res) => {
+    if (!metaConfigured()) {
+      return res.redirect('/dashboard/social?eroare=Integrarea%20Meta%20nu%20este%20inca%20configurata%20de%20administrator.');
+    }
+    const state = randomState();
+    req.session.oauth = { provider: 'meta', state, expires: Date.now() + 10 * 60 * 1000 };
+    const redirectUri = `${publicBaseUrl(req)}/oauth/meta/callback`;
+    res.redirect(metaAuthorizeUrl(redirectUri, state));
+  });
+
+  app.get('/oauth/meta/callback', requireRole('candidate'), async (req, res) => {
+    const oauth = req.session.oauth;
+    req.session.oauth = null;
+    if (!oauth || oauth.provider !== 'meta' || oauth.state !== req.query.state || oauth.expires < Date.now()) {
+      return res.redirect('/dashboard/social?eroare=Sesiunea%20de%20conectare%20Meta%20a%20expirat%20sau%20nu%20este%20valida.');
+    }
+    if (req.query.error || !req.query.code) {
+      return res.redirect(`/dashboard/social?eroare=${encodeURIComponent(req.query.error_description || 'Conectarea Meta a fost anulata.')}`);
+    }
+    try {
+      const redirectUri = `${publicBaseUrl(req)}/oauth/meta/callback`;
+      const token = await exchangeMetaCode(String(req.query.code), redirectUri);
+      const pages = await fetchMetaPages(token.access_token);
+      if (!pages.length) throw new Error('Nu am gasit nicio Pagina Facebook pe care o poti administra.');
+      const user = db.data.users.find((u) => u.id === req.session.userId);
+      user.social_connections ||= { meta: null, tiktok: null };
+      user.social_connections.meta = {
+        connected_at: new Date().toISOString(),
+        selected_page_id: pages[0].id,
+        pages,
+      };
+      await db.write();
+      res.redirect('/dashboard/social?mesaj=Meta%20a%20fost%20conectat.%20Alege%20Pagina%20pe%20care%20vrei%20sa%20publici.');
+    } catch (error) {
+      res.redirect(`/dashboard/social?eroare=${encodeURIComponent(error.message || 'Conectarea Meta a esuat.')}`);
+    }
+  });
+
+  app.post('/dashboard/social/meta/pagina', requireRole('candidate'), requireCsrf, async (req, res) => {
+    const user = db.data.users.find((u) => u.id === req.session.userId);
+    const meta = user?.social_connections?.meta;
+    const pageId = String(req.body.page_id || '');
+    if (meta?.pages?.some((page) => page.id === pageId)) {
+      meta.selected_page_id = pageId;
+      await db.write();
+      return res.redirect('/dashboard/social?mesaj=Pagina%20Meta%20a%20fost%20selectata.');
+    }
+    res.redirect('/dashboard/social?eroare=Pagina%20Meta%20selectata%20nu%20este%20valida.');
+  });
+
+  app.post('/dashboard/social/meta/deconecteaza', requireRole('candidate'), requireCsrf, async (req, res) => {
+    const user = db.data.users.find((u) => u.id === req.session.userId);
+    if (user?.social_connections) user.social_connections.meta = null;
+    await db.write();
+    res.redirect('/dashboard/social?mesaj=Meta%20a%20fost%20deconectat%20din%20platforma.');
+  });
+
+  app.get('/dashboard/social/tiktok/conecteaza', requireRole('candidate'), (req, res) => {
+    if (!tiktokConfigured()) {
+      return res.redirect('/dashboard/social?eroare=Integrarea%20TikTok%20nu%20este%20inca%20configurata%20de%20administrator.');
+    }
+    const state = randomState();
+    req.session.oauth = { provider: 'tiktok', state, expires: Date.now() + 10 * 60 * 1000 };
+    const redirectUri = `${publicBaseUrl(req)}/oauth/tiktok/callback`;
+    res.redirect(tiktokAuthorizeUrl(redirectUri, state));
+  });
+
+  app.get('/oauth/tiktok/callback', requireRole('candidate'), async (req, res) => {
+    const oauth = req.session.oauth;
+    req.session.oauth = null;
+    if (!oauth || oauth.provider !== 'tiktok' || oauth.state !== req.query.state || oauth.expires < Date.now()) {
+      return res.redirect('/dashboard/social?eroare=Sesiunea%20de%20conectare%20TikTok%20a%20expirat%20sau%20nu%20este%20valida.');
+    }
+    if (req.query.error || !req.query.code) {
+      return res.redirect(`/dashboard/social?eroare=${encodeURIComponent(req.query.error_description || 'Conectarea TikTok a fost anulata.')}`);
+    }
+    try {
+      const redirectUri = `${publicBaseUrl(req)}/oauth/tiktok/callback`;
+      const token = await exchangeTikTokCode(String(req.query.code), redirectUri);
+      const user = db.data.users.find((u) => u.id === req.session.userId);
+      user.social_connections ||= { meta: null, tiktok: null };
+      user.social_connections.tiktok = {
+        open_id: token.open_id,
+        scope: token.scope,
+        access_token_enc: encryptSecret(token.access_token),
+        refresh_token_enc: encryptSecret(token.refresh_token),
+        expires_at: new Date(Date.now() + Number(token.expires_in || 86400) * 1000).toISOString(),
+        refresh_expires_at: new Date(Date.now() + Number(token.refresh_expires_in || 31536000) * 1000).toISOString(),
+        connected_at: new Date().toISOString(),
+      };
+      await db.write();
+      res.redirect('/dashboard/social?mesaj=Contul%20TikTok%20a%20fost%20conectat.');
+    } catch (error) {
+      res.redirect(`/dashboard/social?eroare=${encodeURIComponent(error.message || 'Conectarea TikTok a esuat.')}`);
+    }
+  });
+
+  app.post('/dashboard/social/tiktok/deconecteaza', requireRole('candidate'), requireCsrf, async (req, res) => {
+    const user = db.data.users.find((u) => u.id === req.session.userId);
+    const connection = user?.social_connections?.tiktok;
+    if (connection && tiktokConfigured()) {
+      try {
+        const body = new URLSearchParams({
+          client_key: process.env.TIKTOK_CLIENT_KEY,
+          client_secret: process.env.TIKTOK_CLIENT_SECRET,
+          token: decryptSecret(connection.access_token_enc),
+        });
+        await fetch('https://open.tiktokapis.com/v2/oauth/revoke/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        });
+      } catch {
+        // Stergerea conexiunii locale ramane prioritara chiar daca furnizorul nu raspunde.
+      }
+    }
+    if (user?.social_connections) user.social_connections.tiktok = null;
+    await db.write();
+    res.redirect('/dashboard/social?mesaj=TikTok%20a%20fost%20deconectat%20din%20platforma.');
+  });
+
+  app.post('/dashboard/social/publica/:id', requireRole('candidate'), requireCsrf, async (req, res) => {
+    const user = db.data.users.find((u) => u.id === req.session.userId);
+    const articol = db.data.articole.find(
+      (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId && a.status === 'publicat'
+    );
+    const platforma = String(req.body.platforma || '').toLowerCase();
+    if (!user?.module?.social || !articol || !['facebook', 'instagram', 'tiktok'].includes(platforma)) {
+      return res.redirect('/dashboard/social?eroare=Articolul%20sau%20reteaua%20selectata%20nu%20este%20valida.');
+    }
+    const articolUrl = `${publicBaseUrl(req)}/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}?utm_source=${platforma}`;
+    const textScurt = String(articol.continut || '').replace(/\s+/g, ' ').trim().slice(0, 450);
+    try {
+      let rezultat;
+      if (platforma === 'facebook' || platforma === 'instagram') {
+        const meta = user.social_connections?.meta;
+        const page = meta?.pages?.find((item) => item.id === meta.selected_page_id);
+        if (!page) throw new Error('Conecteaza Meta si selecteaza o Pagina inainte de publicare.');
+        rezultat = platforma === 'facebook'
+          ? await publishFacebook(page, `${articol.titlu}\n\n${textScurt}`, articolUrl)
+          : await publishInstagram(page, `${articol.titlu}\n\n${textScurt}\n\n${articolUrl}`, articol.imagine_url);
+      } else {
+        const connection = user.social_connections?.tiktok;
+        if (!connection) throw new Error('Conecteaza contul TikTok inainte de publicare.');
+        rezultat = await publishTikTokPhoto(connection, articol.titlu, `${textScurt}\n\n${articolUrl}`, articol.imagine_url);
+      }
+      articol.distribuiri_sociale ||= [];
+      articol.distribuiri_sociale.push({
+        platforma,
+        data: new Date().toISOString(),
+        id_extern: rezultat.id || rezultat.data?.publish_id || '',
+        status: 'trimis',
+      });
+      await db.write();
+      res.redirect(`/dashboard/social?mesaj=${encodeURIComponent(`Articolul a fost trimis cu succes catre ${platforma}.`)}`);
+    } catch (error) {
+      res.redirect(`/dashboard/social?eroare=${encodeURIComponent(`${platforma}: ${error.message || 'publicarea a esuat.'}`)}`);
+    }
+  });
+
   app.post('/dashboard/profil', requireRole('candidate'), async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (!user) return res.redirect('/login');
@@ -289,7 +494,9 @@ export async function createApp() {
       categorie: categorie || 'Actualitate',
       status: status === 'publicat' ? 'publicat' : 'ciorna',
       generat_de_ai: generat_de_ai === 'true',
+      imagine_url: urlSigur(req.body.imagine_url),
       vizualizari: 0,
+      distribuiri_sociale: [],
       data_publicare: acum,
       updated_at: acum,
     });
@@ -308,6 +515,7 @@ export async function createApp() {
     articol.tip = tip || articol.tip;
     articol.categorie = categorie || articol.categorie;
     articol.generat_de_ai = generat_de_ai === 'true';
+    articol.imagine_url = urlSigur(req.body.imagine_url);
     const eraDejaPublicat = articol.status === 'publicat';
     articol.status = status === 'publicat' ? 'publicat' : 'ciorna';
     if (!eraDejaPublicat && articol.status === 'publicat') {

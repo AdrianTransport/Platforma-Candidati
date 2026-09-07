@@ -21,8 +21,10 @@ candidat are un site public în stil ziar local/tabloid modern.
 - Autentificarea se blochează temporar după 5 încercări greșite, iar Super Adminul își
   poate schimba parola din dashboard (minimum 12 caractere).
 
-Legăturile sociale și distribuirea sunt incluse. Publicarea automată pe conturile sociale
-nu este activată în acest lot; aceasta necesită OAuth și aprobările Meta/TikTok.
+Lotul „Centru social” adaugă OAuth pentru Meta și TikTok, alegerea Paginii Facebook,
+detectarea contului Instagram profesional asociat, publicare individuală pe rețea și
+istoricul distribuirilor. Tokenurile sunt criptate înainte de salvarea în Netlify Blobs.
+Funcțiile devin active după configurarea și aprobarea aplicațiilor Meta/TikTok.
 
 Codul e structurat să ruleze **și local** (`npm start`), **și pe Netlify** (GitHub → deploy
 automat), fără să fie nevoie de o bază de date externă separată.
@@ -49,8 +51,10 @@ cp .env.example .env
 npm start
 ```
 
-Deschide `http://localhost:3000`. Cont admin implicit: `admin@platforma.ro` / `admin123`
-(schimbă parola înainte de folosire reală).
+Deschide `http://localhost:3000`. La o instalare nouă, setează în `.env`
+`INITIAL_ADMIN_PASSWORD` la o parolă unică de minimum 12 caractere. Adresa implicită
+este `admin@platforma.ro` și poate fi schimbată cu `INITIAL_ADMIN_EMAIL`. Parola nu este
+scrisă în cod și nu este afișată în loguri.
 
 ## Deploy pe Netlify (prin GitHub)
 
@@ -62,6 +66,14 @@ Deschide `http://localhost:3000`. Cont admin implicit: `admin@platforma.ro` / `a
    build.
 4. La „Site settings → Environment variables”, adaugi:
    - `SESSION_SECRET` — un text lung, aleatoriu (necesar pentru sesiuni sigure)
+   - `INITIAL_ADMIN_PASSWORD` — numai pentru crearea Super Adminului la prima pornire;
+     minimum 12 caractere, păstrată ca secret
+   - `INITIAL_ADMIN_EMAIL` — opțional; implicit `admin@platforma.ro`
+   - `OAUTH_ENCRYPTION_KEY` — alt text lung, aleatoriu, de minimum 32 de caractere;
+     nu îl schimba după ce utilizatorii și-au conectat conturile
+   - `META_APP_ID` și `META_APP_SECRET` — din aplicația Meta
+   - `META_GRAPH_VERSION` — opțional; implicit `v26.0`
+   - `TIKTOK_CLIENT_KEY` și `TIKTOK_CLIENT_SECRET` — din aplicația TikTok
    - `ANTHROPIC_API_KEY` — cheia ta de la https://console.anthropic.com/settings/keys
      (opțional — fără ea, doar butonul „Genereaza draft” nu va funcționa)
 5. Apeși „Deploy site”. La fiecare `git push` ulterior, Netlify redeploy-ează automat.
@@ -90,12 +102,25 @@ primul test real pe Netlify (după primul deploy) merită verificat: creezi un c
 test, publici un articol, apoi reîmprospătezi pagina, ca să confirmi că datele au rămas
 salvate.
 
+## Configurarea furnizorilor sociali
+
+- În Meta for Developers înregistrezi exact callback-ul public
+  `https://DOMENIUL-TAU/oauth/meta/callback` și soliciți permisiunile
+  `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `instagram_basic` și
+  `instagram_content_publish`. Instagram trebuie să fie cont profesional asociat Paginii.
+- În TikTok for Developers înregistrezi exact callback-ul
+  `https://DOMENIUL-TAU/oauth/tiktok/callback`, activezi Login Kit și Content Posting API
+  și soliciți `user.info.basic` și `video.publish`. Domeniul imaginilor trimise prin URL
+  trebuie verificat la TikTok. Clienții neauditați sunt limitați la publicare privată.
+- Candidații intră în `Dashboard → Centru social`, conectează conturile și confirmă
+  fiecare publicare. Nu există postare automată fără acțiunea candidatului.
+
 ## Ce NU este încă inclus (pași următori)
 
 - Conectarea domeniilor proprii ale candidaților (`anamarinescu.ro` → subdomeniul
   platformei) — se face din Netlify, „Domain settings → Add custom domain”, per candidat.
-- Postare automată pe Facebook/TikTok — necesită OAuth per candidat și, pentru TikTok,
-  auditul lor de conformitate.
+- Programarea publicărilor și încărcarea directă de fișiere media. Lotul curent folosește
+  URL-uri publice de imagine și publicare manuală, confirmată pentru fiecare articol.
 - Auto-înregistrare / plăți — conturile sunt create manual de admin, cum ați cerut pentru
   pilotul de 10 candidați.
 - Verificare juridică (AEP, GDPR) — de confirmat cu un avocat înainte de lansarea reală.

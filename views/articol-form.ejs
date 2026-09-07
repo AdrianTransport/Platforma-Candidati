@@ -56,6 +56,10 @@
         <label>Continut</label>
         <textarea name="continut" id="continut" rows="10" required><%= articol ? articol.continut : '' %></textarea>
 
+        <label>URL imagine publică (opțional)</label>
+        <input type="url" name="imagine_url" value="<%= articol ? (articol.imagine_url || '') : '' %>" placeholder="https://exemplu.ro/imagine-campanie.jpg">
+        <p class="note">Imaginea apare în articol și este obligatorie pentru publicarea prin API pe Instagram sau TikTok. Folosește numai imagini pentru care ai drepturi.</p>
+
         <label style="display:flex; align-items:center; gap:8px; font-weight:400">
           <input type="checkbox" name="generat_de_ai" id="generat_de_ai" value="true" style="width:auto; margin:0"
             <%= articol && articol.generat_de_ai ? 'checked' : '' %>>

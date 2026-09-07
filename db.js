@@ -60,6 +60,11 @@ export async function initDB() {
     user.instagram_url ||= '';
     user.tiktok_url ||= '';
     user.youtube_url ||= '';
+    user.social_connections = {
+      meta: null,
+      tiktok: null,
+      ...(user.social_connections || {}),
+    };
     user.module = { site: true, statistici: true, social: true, ...(user.module || {}) };
     user.statistici = {
       vizite_site: user.statistici?.vizite_site || 0,
@@ -83,14 +88,20 @@ export async function initDB() {
 
   for (const articol of db.data.articole) {
     articol.vizualizari ||= 0;
+    articol.imagine_url ||= '';
+    articol.distribuiri_sociale ||= [];
   }
 
   const areAdmin = db.data.users.some((u) => u.role === 'admin');
   if (!areAdmin) {
+    const parolaInitiala = String(process.env.INITIAL_ADMIN_PASSWORD || '');
+    if (parolaInitiala.length < 12) {
+      throw new Error('La prima pornire, configureaza INITIAL_ADMIN_PASSWORD cu minimum 12 caractere.');
+    }
     db.data.users.push({
       id: db.data.nextUserId++,
-      email: 'admin@platforma.ro',
-      password_hash: bcrypt.hashSync('admin123', 10),
+      email: String(process.env.INITIAL_ADMIN_EMAIL || 'admin@platforma.ro').trim().toLowerCase(),
+      password_hash: bcrypt.hashSync(parolaInitiala, 12),
       role: 'admin',
       nume_candidat: null,
       zona: null,
@@ -104,7 +115,6 @@ export async function initDB() {
       created_at: new Date().toISOString(),
     });
     await db.write();
-    console.log('Cont admin implicit creat: admin@platforma.ro / admin123 (schimba parola dupa prima logare)');
   }
 }
 

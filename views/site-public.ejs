@@ -19,7 +19,7 @@
     <% const principal = candidatura || fluxIdei[0]; %>
     <% if (principal) { %>
       <section class="lead-story">
-        <a class="lead-visual" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><span><%= principal.categorie %></span><b><%= user.slogan || 'Un mesaj direct pentru comunitate' %></b></a>
+        <a class="lead-visual<%= principal.imagine_url ? ' has-image' : '' %>" <% if (principal.imagine_url) { %>style="background-image:linear-gradient(0deg,rgba(17,24,19,.74),rgba(17,24,19,.08)),url('<%= principal.imagine_url %>')"<% } %> href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><span><%= principal.categorie %></span><b><%= user.slogan || 'Un mesaj direct pentru comunitate' %></b></a>
         <div class="lead-copy"><span class="article-label"><%= principal.categorie %></span><h1><a href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>"><%= principal.titlu %></a></h1><p><%= principal.continut.slice(0, 300) %><%= principal.continut.length > 300 ? '…' : '' %></p><div class="story-meta"><span><%= new Date(principal.data_publicare).toLocaleDateString('ro-RO') %></span><span><%= principal.vizualizari || 0 %> citiri</span></div><a class="read-more" href="/site/<%= user.subdomeniu %>/articol/<%= principal.id %>">Citește articolul →</a></div>
       </section>
     <% } else { %><div class="newspaper-empty"><h1><%= user.slogan || 'Publicația este pregătită.' %></h1><p>Primele articole vor apărea în curând.</p></div><% } %>

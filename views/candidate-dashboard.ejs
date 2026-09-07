@@ -10,7 +10,7 @@
   <div class="app-shell app-shell-wide">
     <div class="topbar">
       <div><span class="eyebrow"><%= user.functie_candidatura || 'Candidat' %> · <%= user.zona || 'Zona necompletată' %></span><h1><%= user.nume_candidat %></h1></div>
-      <div class="topbar-actions"><% if (user.module?.site) { %><a class="btn secondary" href="/site/<%= user.subdomeniu %>" target="_blank">Vezi publicația</a><% } %><form method="POST" action="/logout"><button class="secondary" type="submit">Ieșire</button></form></div>
+      <div class="topbar-actions"><% if (user.module?.social) { %><a class="btn" href="/dashboard/social">Centru social</a><% } %><% if (user.module?.site) { %><a class="btn secondary" href="/site/<%= user.subdomeniu %>" target="_blank">Vezi publicația</a><% } %><form method="POST" action="/logout"><button class="secondary" type="submit">Ieșire</button></form></div>
     </div>
 
     <% if (user.module?.statistici) { %>
@@ -46,7 +46,7 @@
     <div class="card table-card">
       <% if (articole.length === 0) { %><p class="note">Nu ai niciun articol încă.</p><% } else { %>
         <div class="responsive-table"><table><thead><tr><th>Titlu</th><th>Categorie</th><th>Status</th><th>Citiri</th><th>Acțiuni</th></tr></thead><tbody>
-          <% articole.forEach(a => { %><tr><td><strong><%= a.titlu %></strong><% if (a.generat_de_ai) { %> <span class="pill ai">AI</span><% } %></td><td><%= a.categorie %></td><td><span class="pill <%= a.status %>"><%= a.status === 'publicat' ? 'Publicat' : 'Ciornă' %></span></td><td><%= a.vizualizari || 0 %></td><td class="actions-cell"><a class="btn secondary" href="/dashboard/articol/<%= a.id %>/edit">Editează</a><form method="POST" action="/dashboard/articol/<%= a.id %>/sterge" onsubmit="return confirm('Sigur ștergi acest articol?')"><button class="danger" type="submit">Șterge</button></form></td></tr><% }) %>
+          <% articole.forEach(a => { %><tr><td><strong><%= a.titlu %></strong><% if (a.generat_de_ai) { %> <span class="pill ai">AI</span><% } %><% if (a.distribuiri_sociale?.length) { %> <span class="pill social-count"><%= a.distribuiri_sociale.length %> distribuiri</span><% } %></td><td><%= a.categorie %></td><td><span class="pill <%= a.status %>"><%= a.status === 'publicat' ? 'Publicat' : 'Ciornă' %></span></td><td><%= a.vizualizari || 0 %></td><td class="actions-cell"><a class="btn secondary" href="/dashboard/articol/<%= a.id %>/edit">Editează</a><form method="POST" action="/dashboard/articol/<%= a.id %>/sterge" onsubmit="return confirm('Sigur ștergi acest articol?')"><button class="danger" type="submit">Șterge</button></form></td></tr><% }) %>
         </tbody></table></div>
       <% } %>
     </div>
