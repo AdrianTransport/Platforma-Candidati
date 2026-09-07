@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cont candidat creat — Super Admin</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="card credential-card">
+      <span class="eyebrow">Cont în așteptare</span>
+      <h1>Contul lui <%= candidate.nume_candidat %> a fost creat</h1>
+      <p>Transmite separat candidatului datele de mai jos. Parola este afișată numai în acest răspuns și nu apare în URL.</p>
+      <dl class="legal-data-grid">
+        <div><dt>Email de autentificare</dt><dd><strong><%= candidate.email %></strong></dd></div>
+        <div><dt>Parolă temporară</dt><dd><strong class="credential-value"><%= parola %></strong></dd></div>
+      </dl>
+      <div class="legal-warning"><strong>Contul nu este încă activ.</strong> Candidatul se autentifică, confirmă datele și termenii, apoi Super Adminul aplică starea „Activ”.</div>
+      <p><a class="btn" href="/admin">Înapoi la administrare</a></p>
+    </section>
+  </main>
+</body>
+</html>

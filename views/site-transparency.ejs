@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transparență — <%= user.nume_candidat %></title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/newspaper.css">
+</head>
+<body class="newspaper-body">
+  <main class="newspaper-shell transparency-page">
+    <div class="newspaper-kicker"><span>INFORMAȚII DE TRANSPARENȚĂ</span><span>PUBLICITATE POLITICĂ</span></div>
+    <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo"><span><%= user.nume_candidat.split(' ')[0] %></span><strong>JURNAL</strong></a><a class="back-link" href="<%= articol ? `/site/${user.subdomeniu}/articol/${articol.id}` : `/site/${user.subdomeniu}` %>">← Înapoi</a></header>
+    <section class="transparency-content">
+      <span class="article-label"><%= articol ? 'Material individual' : 'Publicația candidatului' %></span>
+      <h1><%= articol?.titlu || user.nume_candidat %></h1>
+      <dl class="legal-data-grid">
+        <div><dt>Material</dt><dd>Publicitate politică / material electoral</dd></div>
+        <div><dt>Publicat de</dt><dd><%= transparenta.publicat_de %></dd></div>
+        <div><dt>Responsabil editorial</dt><dd><%= transparenta.responsabil_editorial %></dd></div>
+        <div><dt>Finanțat de</dt><dd><%= transparenta.finantat_de %></dd></div>
+        <div><dt>Scrutin</dt><dd><%= transparenta.scrutin || 'Nespecificat' %></dd></div>
+        <div><dt>Cod mandatar financiar</dt><dd><%= transparenta.cod_mandatar_financiar || 'Nespecificat' %></dd></div>
+        <div><dt>Serviciul platformei</dt><dd><%= transparenta.tip_contract === 'gratuit' ? 'Oferit gratuit, declarat în contract' : 'Serviciu plătit de campanie' %></dd></div>
+        <div><dt>Referință contractuală</dt><dd><%= transparenta.numar_contract || 'Nespecificată' %></dd></div>
+        <div><dt>Valoarea serviciului</dt><dd><%= transparenta.tip_contract === 'gratuit' ? '0' : transparenta.valoare_contract %> <%= transparenta.moneda_contract %></dd></div>
+        <div><dt>Furnizor tehnic</dt><dd><%= platform.operatorName || platform.name %> — găzduire și instrumente tehnice, fără asumarea mesajului candidatului</dd></div>
+      </dl>
+      <p class="legal-warning">Furnizorul tehnic nu redactează și nu aprobă mesajul. Această delimitare nu împiedică platforma să suspende un material reclamat sau aparent ilegal.</p>
+      <% if (articol) { %><p><a class="btn secondary" href="/site/<%= user.subdomeniu %>/articol/<%= articol.id %>/raporteaza">Raportează acest material</a></p><% } %>
+    </section>
+    <footer class="newspaper-footer"><p><%= articol && !articol.transparenta ? 'Material publicat înaintea funcției de arhivare: sunt afișate datele curente ale candidatului.' : 'Versiunea informațiilor este păstrată la momentul publicării materialului.' %></p><nav class="footer-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a></nav></footer>
+  </main>
+</body>
+</html>

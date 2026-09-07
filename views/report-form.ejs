@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raportează materialul — <%= user.nume_candidat %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <a class="back-home" href="/site/<%= user.subdomeniu %>/articol/<%= articol.id %>">← Înapoi la articol</a>
+    <section class="card report-public-card">
+      <span class="eyebrow">Procedură gratuită</span><h1>Raportează materialul</h1>
+      <p>Sesizarea privește articolul: <strong><%= articol.titlu %></strong>.</p>
+      <% if (trimis) { %><p class="mesaj-succes" role="status">Sesizarea a fost înregistrată. Super Adminul o va analiza și poate suspenda materialul pe durata verificării.</p><% if (reportId) { %><p>Număr de referință: <code class="report-reference"><%= reportId %></code></p><% } %><p><a class="btn" href="/site/<%= user.subdomeniu %>">Înapoi la publicație</a></p><% } else { %>
+        <% if (eroare) { %><p class="eroare" role="alert"><%= eroare %></p><% } %>
+        <form method="POST">
+          <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+          <div class="spam-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>
+          <label>Motivul sesizării<select name="motiv" required><option value="">Alege motivul</option><% [['defaimare','Defăimare'],['amenintare','Amenințare sau hărțuire'],['discriminare','Discriminare'],['date_personale','Date personale'],['drepturi_autor','Drepturi de autor'],['informatii_false','Informații factuale posibil false'],['electoral','Reguli electorale sau finanțare'],['altul','Alt motiv']].forEach(([key,label]) => { %><option value="<%= key %>" <%= values.motiv === key ? 'selected' : '' %>><%= label %></option><% }) %></select></label>
+          <label>Explică problema<textarea name="descriere" rows="7" minlength="20" maxlength="4000" required><%= values.descriere || '' %></textarea></label>
+          <label>Nume (opțional)<input name="nume" maxlength="100" value="<%= values.nume || '' %>"></label>
+          <label>Email pentru răspuns (opțional)<input type="email" name="email" maxlength="254" value="<%= values.email || '' %>"></label>
+          <label class="consent-label"><input type="checkbox" name="acord_contact"> Dacă am completat emailul, sunt de acord să fie folosit numai pentru soluționarea sesizării.</label>
+          <label class="consent-label"><input type="checkbox" name="buna_credinta" required> Confirm că trimit această sesizare cu bună-credință și că informațiile oferite sunt corecte după cunoștința mea.</label>
+          <button type="submit">Trimite sesizarea</button>
+        </form>
+      <% } %>
+      <p class="note">Sesizarea nu este publică. Pentru pericol imediat, contactează autoritatea competentă. Citește <a href="/legal/raportare">procedura completă</a> și <a href="/legal/confidentialitate">politica de confidențialitate</a>.</p>
+    </section>
+  </main>
+</body>
+</html>

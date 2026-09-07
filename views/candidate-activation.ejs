@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Activarea contului — <%= platform.name %></title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <div class="topbar">
+      <div><span class="eyebrow">Verificare contractuală</span><h1>Activarea contului</h1></div>
+      <form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Ieșire</button></form>
+    </div>
+    <% if (mesaj) { %><p class="mesaj-succes" role="status"><%= mesaj %></p><% } %>
+    <% if (eroare) { %><p class="eroare" role="alert"><%= eroare %></p><% } %>
+    <% if (!platform.complete) { %><p class="eroare">Super Adminul trebuie să configureze datele juridice ale operatorului înainte ca acest cont să poată fi activat.</p><% } %>
+
+    <section class="card activation-card">
+      <h2>Datele pe care le confirmi</h2>
+      <dl class="legal-data-grid">
+        <div><dt>Candidat</dt><dd><%= user.nume_candidat %></dd></div>
+        <div><dt>Tip</dt><dd><%= user.tip_candidat || '—' %></dd></div>
+        <div><dt>Funcție</dt><dd><%= user.functie_candidatura || '—' %></dd></div>
+        <div><dt>Zonă</dt><dd><%= [user.zona, user.judet].filter(Boolean).join(', ') || '—' %></dd></div>
+        <div><dt>Scrutin</dt><dd><%= user.scrutin || '—' %></dd></div>
+        <div><dt>Responsabil editorial</dt><dd><%= user.entitate_responsabila || '—' %></dd></div>
+        <div><dt>Finanțator</dt><dd><%= user.finantator_materiale || '—' %></dd></div>
+        <div><dt>Cod mandatar financiar</dt><dd><%= user.cod_mandatar_financiar || '—' %></dd></div>
+        <div><dt>Contract</dt><dd><%= user.numar_contract || '—' %> · <%= user.tip_contract === 'gratuit' ? 'serviciu oferit gratuit' : 'serviciu plătit' %></dd></div>
+        <div><dt>Valoare</dt><dd><%= user.tip_contract === 'gratuit' ? '0' : (user.valoare_contract || '—') %> <%= user.moneda_contract || 'RON' %></dd></div>
+      </dl>
+      <% if (lipsuri.length) { %><div class="legal-warning"><strong>Contul nu este încă pregătit:</strong><ul><% lipsuri.forEach(item => { %><li><%= item %></li><% }) %></ul></div><% } %>
+    </section>
+
+    <section class="card">
+      <h2>Confirmare obligatorie</h2>
+      <p class="note">Versiunea termenilor: <%= termsVersion %>. Dacă datele de mai sus nu sunt corecte, nu confirma și contactează Super Adminul.</p>
+      <form method="POST" action="/activare">
+        <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+        <label class="consent-label"><input type="checkbox" name="accepta_termeni" required> Am citit și accept <a href="/legal/termeni" target="_blank">Termenii de utilizare</a> și <a href="/legal/continut" target="_blank">Politica de conținut</a>.</label>
+        <label class="consent-label"><input type="checkbox" name="accepta_responsabilitate" required> Confirm că eu sau entitatea indicată în contract decidem ce se publică și ne asumăm responsabilitatea editorială, legalitatea materialelor și corectitudinea finanțatorului declarat.</label>
+        <button type="submit" <%= lipsuri.filter(item => item !== 'acceptarea termenilor și a responsabilității editoriale').length ? 'disabled' : '' %>>Confirmă datele și responsabilitatea</button>
+      </form>
+      <% if (user.status_cont === 'activ') { %><p><a class="btn secondary" href="/dashboard">Continuă la dashboard</a></p><% } %>
+    </section>
+  </main>
+</body>
+</html>

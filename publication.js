@@ -47,6 +47,7 @@ export function parseScheduledDate(value, now = Date.now()) {
 }
 
 export function isPublished(article, now = Date.now()) {
+  if (article.moderation_status === 'suspendat') return false;
   if (article.status === 'publicat') return true;
   return article.status === 'programat' && Number.isFinite(Date.parse(article.data_programata))
     && Date.parse(article.data_programata) <= now;

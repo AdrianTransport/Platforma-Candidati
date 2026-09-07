@@ -26,6 +26,7 @@ test('Vizibilitate exact la termen, fără a modifica înregistrarea', () => {
   assert.equal(isPublished({ status: 'ciorna' }, now), false);
   assert.equal(isPublished({ status: 'programat', data_programata: 'invalid' }, now), false);
   assert.equal(isPublished({ status: 'publicat' }, now), true);
+  assert.equal(isPublished({ status: 'publicat', moderation_status: 'suspendat' }, now), false);
 });
 test('Ciornă, publicare imediată, retragere și reprogramare', () => {
   const draft = articleInput({ ...body, status: 'ciorna', data_programata: 'invalid' }, null, now);

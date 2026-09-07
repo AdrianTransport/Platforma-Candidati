@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sesizări — Super Admin</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="app-shell app-shell-wide">
+    <div class="topbar"><div><span class="eyebrow">Conținut raportat</span><h1>Sesizări juridice</h1></div><a class="btn secondary" href="/admin">Înapoi la administrare</a></div>
+    <% const labels = { noua:'Noi', in_analiza:'În analiză', continut_suspendat:'Conținut suspendat', respinsa:'Respinse', inchisa:'Închise' }; %>
+    <nav class="moderation-tabs" aria-label="Filtre sesizări"><% Object.entries(labels).forEach(([key,label]) => { %><a class="btn <%= status === key ? '' : 'secondary' %>" href="/admin/sesizari?status=<%= key %>" <%- status === key ? 'aria-current="page"' : '' %>><%= label %> (<%= counts[key] || 0 %>)</a><% }) %></nav>
+    <p class="note"><%= total %> sesizări în această categorie. Datele de contact ale persoanei care raportează nu sunt publice.</p>
+    <% if (!lista.length) { %><section class="card"><p>Nu există sesizări în această categorie.</p></section><% } %>
+    <% lista.forEach(report => { %><article class="card report-card">
+      <header class="report-head"><div><span class="pill <%= report.status === 'noua' ? 'programat' : 'ciorna' %>"><%= labels[report.status] %></span><h2><%= report.evidence.titlu %></h2><p class="note"><%= report.candidat?.nume_candidat || `Candidat #${report.user_id}` %> · <%= displayDate(report.created_at) %> · motiv: <%= report.motiv %></p></div>
+        <% if (report.articol && isPublished(report.articol)) { %><a class="btn secondary" target="_blank" href="/site/<%= report.candidat.subdomeniu %>/articol/<%= report.articol_id %>">Vezi articolul</a><% } %></header>
+      <blockquote class="report-description"><%= report.descriere %></blockquote>
+      <% if (report.nume || report.email) { %><p class="note"><strong>Persoană de contact:</strong> <%= report.nume || 'nume necompletat' %><% if (report.email) { %> · <a href="mailto:<%= report.email %>"><%= report.email %></a><% } %></p><% } %>
+      <details><summary>Dovada păstrată la momentul sesizării</summary><p><strong><%= report.evidence.titlu %></strong></p><div class="evidence-text"><%= report.evidence.continut %></div></details>
+      <% if (report.history.length) { %><ol class="moderation-history"><% report.history.forEach(event => { %><li><%= displayDate(event.created_at) %> — <strong><%= labels[event.status] %></strong>: <%= event.note %> (<%= event.action %>)</li><% }) %></ol><% } %>
+      <form method="POST" action="/admin/sesizari/<%= report.user_id %>/<%= report.articol_id %>/<%= report.id %>" class="form-grid form-grid-3 report-resolution">
+        <input type="hidden" name="csrf_token" value="<%= csrfToken %>"><input type="hidden" name="version" value="<%= report.version %>">
+        <label>Starea sesizării<select name="status" required><% Object.entries(labels).filter(([key]) => key !== 'noua').forEach(([key,label]) => { %><option value="<%= key %>"><%= label %></option><% }) %></select></label>
+        <label>Acțiunea asupra articolului<select name="action"><option value="none">Nicio modificare</option><option value="suspend">Suspendă articolul</option><option value="restore">Restabilește articolul</option></select></label>
+        <label class="full-field">Motivarea deciziei<textarea name="note" minlength="5" maxlength="2000" required></textarea></label>
+        <div class="form-actions"><button type="submit">Înregistrează decizia</button></div>
+      </form>
+    </article><% }) %>
+    <nav class="moderation-tabs" aria-label="Paginare sesizări"><% if (page > 1) { %><a class="btn secondary" href="/admin/sesizari?status=<%= status %>&pagina=<%= page - 1 %>">← Pagina anterioară</a><% } %><% if (page < pages) { %><a class="btn secondary" href="/admin/sesizari?status=<%= status %>&pagina=<%= page + 1 %>">Pagina următoare →</a><% } %></nav>
+  </main>
+</body>
+</html>

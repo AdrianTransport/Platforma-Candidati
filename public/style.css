@@ -37,6 +37,7 @@ button, .btn{
 }
 button.secondary, .btn.secondary{background:#fff; color:var(--ink); border:1.5px solid var(--ink);}
 button.danger{background:#fff; color:var(--red); border:1.5px solid var(--red);}
+button:disabled{opacity:.55;cursor:not-allowed;}
 .pill{display:inline-block; font-size:11px; font-weight:800; text-transform:uppercase; padding:3px 9px; border-radius:20px;}
 .pill.publicat{background:#DDF3E8; color:#127A4C;}
 .pill.ciorna{background:#F1F1EE; color:#767676;}
@@ -104,6 +105,16 @@ button.danger{background:#fff; color:var(--red); border:1.5px solid var(--red);}
 .comments-section{border-top:3px solid #173c2c;margin-top:40px;padding-top:24px}.public-comment{padding:18px 0;border-bottom:1px solid #d8d5ce}.public-comment header{display:flex;gap:12px;flex-wrap:wrap}.public-comment time{font-size:11px;color:#626962}.public-comment p,.comment-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}
 .comment-form{margin-top:26px}.consent-label{display:flex;gap:10px;align-items:flex-start;font-size:12px;line-height:1.5}.consent-label input{width:auto;margin:3px 0;flex-shrink:0}
 .spam-trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}.moderation-card h2{font-size:18px;margin-bottom:8px}.comment-text{margin:18px 0;padding:16px;border-left:3px solid #173c2c;background:#f4f5f2}.moderation-history{margin-top:18px;font-size:12px}.moderation-history li{padding:5px 0}
+.marketing-footer .legal-links{justify-content:flex-end}
+.admin-tools-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.admin-tools-grid .card{display:flex;flex-direction:column}.admin-tools-grid .card p{flex:1;font-size:12px;line-height:1.55;color:#666f68}
+.legal-warning{background:#fff5da;color:#694f0b;border:1px solid #e7c96d;padding:14px 16px;border-radius:8px;line-height:1.55}.legal-warning ul{margin:8px 0 0;padding-left:20px}.legal-ready{border-left:4px solid #168457;display:flex;justify-content:space-between;gap:20px;align-items:center}
+.legal-data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:#dfe4e0;border:1px solid #dfe4e0;margin:20px 0}.legal-data-grid>div{background:#fff;padding:14px;min-width:0}.legal-data-grid dt{font-size:11px;text-transform:uppercase;color:#68716b;font-weight:800}.legal-data-grid dd{margin:6px 0 0;overflow-wrap:anywhere}
+.activation-card h2,.report-card h2{margin-top:0}.report-card{overflow:hidden}.report-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}.report-description,.evidence-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}.report-description{margin:20px 0;padding:16px;border-left:4px solid #8f3035;background:#fff7f5}.evidence-text{max-height:320px;overflow:auto;background:#f4f5f2;padding:16px}.report-resolution{margin-top:20px;border-top:1px solid var(--line);padding-top:20px}.report-public-card{max-width:720px;margin:20px auto}.pill.suspendat{background:#fdeaea;color:#a61d2d}
+.audit-table code{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px}.legal-page-shell{max-width:860px;margin:0 auto;padding:50px 24px 80px}.legal-page-shell>h1{font-size:44px;line-height:1.1}.legal-intro{font-size:19px;line-height:1.65;color:#536057}.legal-page-shell section{border-top:1px solid #d9ddd9;padding:22px 0}.legal-page-shell section h2{font-size:21px}.legal-page-shell section p{line-height:1.7}.operator-box{background:#fff;padding:24px!important;border:1px solid #d9ddd9!important}.legal-links{display:flex;gap:16px;flex-wrap:wrap}.legal-links a{font-weight:700}.editor-compliance{margin:28px 0;padding:18px;border-left:4px solid #0e6264;background:#f3f8f8}.editor-compliance>strong{display:block;font-size:16px;margin-bottom:8px}
+.credential-card{max-width:720px;margin:40px auto}.credential-card h1{font-size:30px}.credential-value{font-family:monospace;font-size:18px;overflow-wrap:anywhere}
+.report-reference{display:inline-block;padding:6px 9px;background:#eef1ed;border-radius:5px;overflow-wrap:anywhere}
+@media(max-width:800px){.admin-tools-grid{grid-template-columns:1fr}.marketing-footer .legal-links{justify-content:flex-start}}
+@media(max-width:600px){.legal-data-grid{grid-template-columns:1fr}.legal-page-shell>h1{font-size:34px}.report-head,.legal-ready{align-items:flex-start;flex-direction:column}}
 @media(max-width:600px){.newspaper-search{padding:16px}.newspaper-search label{flex-basis:100%}.contact-page{padding:32px 20px}.moderation-tabs .btn{font-size:11px}.publication-actions button{max-width:100%}}
 
 @media (max-width:800px){

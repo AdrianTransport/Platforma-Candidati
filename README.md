@@ -21,6 +21,35 @@ candidat are un site public în stil ziar local/tabloid modern.
 - Autentificarea se blochează temporar după 5 încercări greșite, iar Super Adminul își
   poate schimba parola din dashboard (minimum 12 caractere).
 
+## Lot: activare contractuală, transparență și sesizări
+
+- Conturile noi pornesc `în așteptare`. Candidatul se poate autentifica numai în pagina
+  de activare, verifică finanțatorul, responsabilul editorial, scrutinul, mandatarul și
+  contractul, apoi acceptă versiunea curentă a termenilor. Super Adminul poate activa
+  contul numai după această confirmare.
+- Modificarea funcției, zonei sau datelor juridice/contractuale anulează acceptarea
+  anterioară. Publicarea și programarea rămân blocate până la o nouă confirmare; ciornele
+  pot fi păstrate.
+- Fiecare articol publicat păstrează un instantaneu al datelor de transparență valabile
+  la acel moment. Publicația și articolul afișează explicit finanțatorul, responsabilul
+  editorial și accesul la informațiile contractuale. Pentru articolele vechi, create
+  înaintea acestui lot, pagina marchează explicit că afișează profilul juridic curent,
+  deoarece nu există un instantaneu istoric.
+- Orice cititor poate raporta gratuit un articol. Sesizarea păstrează dovada materialului
+  de la momentul trimiterii. Super Adminul poate motiva decizia, suspenda sau restabili
+  articolul, iar evenimentele sunt păstrate separat, cu chei unice, în
+  `campanie-compliance` din Netlify Blobs.
+- `/admin/jurnal` afișează ultimele 100 de evenimente de conformitate. Adresele IP brute,
+  parolele și datele de contact ale persoanelor care raportează nu sunt incluse în jurnal.
+- Platforma poate fi oferită contra cost sau gratuit, așa cum este consemnat în contract.
+  Varianta gratuită este etichetată distinct; tratamentul ei contabil și electoral
+  trebuie confirmat de candidat/mandatar.
+
+Separarea contractuală a rolurilor nu înlătură obligațiile legale proprii ale
+operatorului platformei. Procedura de sesizare și suspendare este o măsură operațională,
+nu o garanție de exonerare. Termenii, contractul, retenția datelor și etichetele trebuie
+validate de un avocat român înainte de comercializare sau de o campanie reală.
+
 Lotul „Centru social” adaugă OAuth pentru Meta și TikTok, alegerea Paginii Facebook,
 detectarea contului Instagram profesional asociat, publicare individuală pe rețea și
 istoricul distribuirilor. Tokenurile sunt criptate înainte de salvarea în Netlify Blobs.
@@ -148,6 +177,11 @@ scrisă în cod și nu este afișată în loguri.
    build.
 4. La „Site settings → Environment variables”, adaugi:
    - `SESSION_SECRET` — un text lung, aleatoriu (necesar pentru sesiuni sigure)
+   - `PLATFORM_NAME` — denumirea comercială a platformei
+   - `PLATFORM_OPERATOR_NAME` — numele/denumirea juridică a operatorului
+   - `PLATFORM_OPERATOR_ID` — CUI/CIF sau alt identificator legal aplicabil
+   - `PLATFORM_LEGAL_EMAIL` — adresa pentru notificări juridice și drepturi privind datele
+   - `PLATFORM_LEGAL_ADDRESS` — sediul/adresa juridică publică
    - `INITIAL_ADMIN_PASSWORD` — numai pentru crearea Super Adminului la prima pornire;
      minimum 12 caractere, păstrată ca secret
    - `INITIAL_ADMIN_EMAIL` — opțional; implicit `admin@platforma.ro`
@@ -161,6 +195,9 @@ scrisă în cod și nu este afișată în loguri.
 5. Apeși „Deploy site”. La fiecare `git push` ulterior, Netlify redeploy-ează automat.
 6. **Netlify Blobs** e activat automat pentru orice site Netlify — nu trebuie creat sau
    configurat separat, funcționează din prima odată ce funcția rulează pe Netlify.
+
+Fără toate cele patru date juridice ale operatorului, aplicația blochează confirmarea
+și activarea juridică a candidaților. Nu folosi valori demonstrative într-un deploy real.
 
 ## Editorul cu imagini și OpenAI
 

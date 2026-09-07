@@ -10,7 +10,7 @@
   <div class="app-shell app-shell-wide">
     <div class="topbar">
       <div><span class="eyebrow">Distribuire controlată</span><h1>Centru social</h1></div>
-      <div class="topbar-actions"><a class="btn secondary" href="/dashboard">Înapoi la dashboard</a><form method="POST" action="/logout"><button class="secondary" type="submit">Ieșire</button></form></div>
+      <div class="topbar-actions"><a class="btn secondary" href="/dashboard">Înapoi la dashboard</a><form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Ieșire</button></form></div>
     </div>
 
     <% if (mesaj) { %><div class="mesaj-succes"><%= mesaj %></div><% } %>

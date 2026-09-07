@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import { createComments } from '../comments.js';
 import { createLocalCommentStore } from '../comment-store.js';
 import { createEditorial } from '../editorial.js';
+import { createCompliance, TERMS_VERSION } from '../compliance.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const csrf = html => html.match(/name="csrf_token" value="([^"]+)"/)?.[1];
@@ -17,13 +18,22 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   process.chdir(dir);
   process.env.NODE_ENV = 'test';
   process.env.SESSION_SECRET = 'test-only-session-secret-0123456789-abcdefghijklmnopqrstuvwxyz';
+  process.env.PLATFORM_OPERATOR_NAME = 'Operator Test SRL';
+  process.env.PLATFORM_OPERATOR_ID = 'RO12345678';
+  process.env.PLATFORM_LEGAL_EMAIL = 'juridic@example.test';
+  process.env.PLATFORM_LEGAL_ADDRESS = 'Strada Test 1, Timișoara';
   // Datele fixture nu sunt conturi de producție.
   const password = 'test-only-password-123456789';
   const hash = bcrypt.hashSync(password, 4);
   await fs.mkdir(path.join(dir, 'data'));
   const candidate = (id, name) => ({ id, role: 'candidate', activ: true, status_cont: 'activ',
     email: `${name}@example.test`, password_hash: hash, nume_candidat: name, subdomeniu: name,
-    zona: 'Timișoara', created_at: '2026-01-01T00:00:00Z' });
+    functie_candidatura: 'Consilier local', zona: 'Timișoara', judet: 'Timiș', partid: 'Independent',
+    tip_candidat: 'independent', entitate_responsabila: name, finantator_materiale: name,
+    scrutin: 'Alegeri locale de test', cod_mandatar_financiar: `MANDAT-${id}`, tip_contract: 'platit',
+    numar_contract: `TEST-${id}`, data_contract: '2026-01-01', valoare_contract: 1000, moneda_contract: 'RON',
+    confirmare_mandatar: true, terms_version: TERMS_VERSION, terms_accepted_at: '2026-01-01T00:00:00Z',
+    editorial_responsibility_accepted_at: '2026-01-01T00:00:00Z', created_at: '2026-01-01T00:00:00Z' });
   await fs.writeFile(path.join(dir, 'data', 'db.json'), JSON.stringify({
     users: [{ id: 1, role: 'admin', activ: true, email: 'admin@example.test', password_hash: hash }, candidate(2, 'ana'), candidate(3, 'bogdan')],
     articole: [{ id: 1, user_id: 2, titlu: 'Școala publică', continut: 'Informații pentru Timișoara', tip: 'idee', categorie: 'Proiecte', status: 'publicat', data_publicare: '2026-01-01T12:00:00Z' },
@@ -35,9 +45,11 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   const comments = createComments({ store: createLocalCommentStore(path.join(dir, 'comments')), now: () => clock });
   const editorial = createEditorial({ store: createLocalCommentStore(path.join(dir, 'editorial')), env: {},
     fetcher: async () => { throw new Error('AI network must not be called'); }, now: () => clock });
+  const compliance = createCompliance({ store: createLocalCommentStore(path.join(dir, 'compliance')),
+    now: () => clock, secret: process.env.SESSION_SECRET });
   const { createApp } = await import('../app.js');
   const { db } = await import('../db.js');
-  const app = await createApp({ comments, editorial, now: () => clock });
+  const app = await createApp({ comments, editorial, compliance, now: () => clock });
   app.set('views', path.join(root, 'views'));
   const server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
@@ -66,7 +78,7 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   const guest = browser();
   const cand = browser();
   const admin = browser();
-  const articleBody = { titlu: 'Articol programat', continut: 'Eveniment pentru comunitate', tip: 'idee', categorie: 'Evenimente', status: 'programat', data_programata: '2026-07-10T12:30' };
+  const articleBody = { titlu: 'Articol programat', continut: 'Eveniment pentru comunitate', tip: 'idee', categorie: 'Evenimente', status: 'programat', data_programata: '2026-07-10T12:30', confirmare_responsabilitate: 'on' };
   let candidateToken;
   let guestToken;
   let adminToken;
@@ -83,6 +95,21 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.ok(candidateToken);
     assert.equal((await cand('/dashboard/social')).status, 200);
     assert.equal((await cand('/admin/comentarii')).status, 403);
+  });
+  await t.test('Etichetele electorale, transparența și paginile juridice sunt publice', async () => {
+    const listing = await guest('/site/ana');
+    assert.match(listing.html, /Material electoral · publicitate politică/);
+    assert.match(listing.html, /Finanțat de ana/);
+    assert.match(listing.html, /Vezi transparența completă/);
+    const article = await guest('/site/ana/articol/1');
+    assert.match(article.html, /responsabil editorial/);
+    assert.match(article.html, /Raportează materialul/);
+    const transparency = await guest('/site/ana/transparenta?articol=1');
+    assert.equal(transparency.status, 200);
+    assert.match(transparency.html, /Operator Test SRL/);
+    assert.match(transparency.html, /TEST-2/);
+    assert.match((await guest('/legal/termeni')).html, /Operator Test SRL/);
+    assert.equal((await guest('/legal/inexistent')).status, 404);
   });
   await t.test('Profil și contact opțional, fără expunerea adresei de login', async () => {
     let contact = await guest('/site/ana/contact');
@@ -177,6 +204,90 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     clock += 1000;
     assert.equal((await admin(url, { csrf_token: adminToken, status: 'sters', version: current.version })).status, 303);
     assert.match((await admin('/admin/comentarii?status=sters')).html, /Istoric moderare \(3\)/);
+  });
+  await t.test('Activare contractuală: cont în așteptare, acceptare și activare de Super Admin', async () => {
+    const created = await admin('/admin/candidati', {
+      csrf_token: adminToken, nume_candidat: 'Candidat Nou', email: 'nou@example.test',
+      functie_candidatura: 'Primar', zona: 'Lugoj', judet: 'Timiș', partid: 'Independent',
+      tip_candidat: 'independent', scrutin: 'Alegeri locale de test', entitate_responsabila: 'Candidat Nou',
+      finantator_materiale: 'Candidat Nou', cod_mandatar_financiar: 'MANDAT-NOU', tip_contract: 'platit',
+      numar_contract: 'CONTRACT-NOU', data_contract: '2026-07-01', valoare_contract: '2500', moneda_contract: 'RON',
+      confirmare_mandatar: 'on', modul_site: 'on', modul_statistici: 'on', modul_social: 'on',
+    });
+    assert.equal(created.status, 201);
+    assert.equal(created.headers.get('location'), null);
+    assert.ok(!created.html.includes('parolaNoua='));
+    const temporaryPassword = created.html.match(/class="credential-value">([^<]+)</)?.[1];
+    assert.equal(temporaryPassword?.length, 16);
+    const pending = browser();
+    const login = await pending('/login', { email: 'nou@example.test', parola: temporaryPassword });
+    assert.equal(login.headers.get('location'), '/activare');
+    const activation = await pending('/activare');
+    const activationToken = csrf(activation.html);
+    assert.ok(activationToken);
+    assert.equal((await pending('/dashboard')).status, 403);
+    assert.equal((await pending('/activare', { accepta_termeni: 'on', accepta_responsabilitate: 'on' })).status, 403);
+    const accepted = await pending('/activare', { csrf_token: activationToken, accepta_termeni: 'on', accepta_responsabilitate: 'on' });
+    assert.equal(accepted.status, 302);
+    const newCandidate = db.data.users.find(user => user.email === 'nou@example.test');
+    assert.equal(newCandidate.terms_version, TERMS_VERSION);
+    assert.equal(newCandidate.status_cont, 'in_asteptare');
+    assert.equal(newCandidate.activ, false);
+    const activated = await admin(`/admin/candidati/${newCandidate.id}/status`, { csrf_token: adminToken, status_cont: 'activ' });
+    assert.equal(activated.status, 302);
+    assert.equal(newCandidate.activ, true);
+    let newDashboard = await pending('/dashboard');
+    assert.equal(newDashboard.status, 200);
+    const changed = await admin(`/admin/candidati/${newCandidate.id}/configurare`, {
+      csrf_token: adminToken, functie_candidatura: 'Primar', zona: 'Lugoj', judet: 'Timiș', partid: 'Independent',
+      tip_candidat: 'independent', scrutin: 'Alegeri locale de test', entitate_responsabila: 'Candidat Nou',
+      finantator_materiale: 'Candidat Nou — campanie', cod_mandatar_financiar: 'MANDAT-NOU', tip_contract: 'platit',
+      numar_contract: 'CONTRACT-NOU', data_contract: '2026-07-01', valoare_contract: '2500', moneda_contract: 'RON',
+      confirmare_mandatar: 'on', modul_site: 'on', modul_statistici: 'on', modul_social: 'on',
+    });
+    assert.equal(changed.status, 302);
+    assert.equal(newCandidate.terms_version, '');
+    const newCandidateToken = csrf(newDashboard.html);
+    const blockedPublication = await pending('/dashboard/articol', { ...articleBody, status: 'publicat', csrf_token: newCandidateToken });
+    assert.equal(blockedPublication.status, 400);
+    assert.match(blockedPublication.html, /Publicarea este blocată/);
+    const repeatActivation = await pending('/activare');
+    const repeatToken = csrf(repeatActivation.html);
+    const repeated = await pending('/activare', { csrf_token: repeatToken, accepta_termeni: 'on', accepta_responsabilitate: 'on' });
+    assert.equal(repeated.headers.get('location'), '/dashboard?activare=confirmata');
+    assert.equal(newCandidate.terms_version, TERMS_VERSION);
+  });
+  await t.test('Sesizare: dovadă, suspendare, protecție la concurență, restabilire și jurnal', async () => {
+    const reportUrl = '/site/ana/articol/1/raporteaza';
+    const reportPage = await guest(reportUrl);
+    const reportToken = csrf(reportPage.html);
+    const body = { csrf_token: reportToken, motiv: 'electoral', descriere: 'Acest material trebuie verificat deoarece datele de finanțare par neclare.',
+      nume: 'Cititor Test', email: 'cititor@example.test', acord_contact: 'on', buna_credinta: 'on' };
+    assert.equal((await guest(reportUrl, { ...body, csrf_token: 'invalid' })).status, 403);
+    const submitted = await guest(reportUrl, body);
+    assert.equal(submitted.status, 303);
+    assert.match(submitted.headers.get('location'), /sesizare=[a-f0-9-]{36}/);
+    let report = (await compliance.listReports())[0];
+    assert.equal(report.status, 'noua');
+    assert.equal(report.evidence.titlu, db.data.articole.find(article => article.id === 1).titlu);
+    const confirmation = await guest(submitted.headers.get('location'));
+    assert.match(confirmation.html, new RegExp(report.id));
+    const moderation = await admin('/admin/sesizari');
+    assert.match(moderation.html, /Cititor Test/);
+    assert.equal((await cand(`/admin/sesizari/2/1/${report.id}`, { csrf_token: candidateToken, status: 'continut_suspendat', action: 'suspend', note: 'Verificare juridică necesară.', version: report.version })).status, 403);
+    assert.equal((await admin(`/admin/sesizari/2/1/${report.id}`, { csrf_token: adminToken, status: 'in_analiza', action: 'suspend', note: 'Stare incompatibilă.', version: report.version })).status, 400);
+    assert.equal((await admin(`/admin/sesizari/2/1/${report.id}`, { csrf_token: adminToken, status: 'continut_suspendat', action: 'suspend', note: 'Verificare juridică necesară.', version: report.version })).status, 303);
+    assert.equal((await guest('/site/ana/articol/1')).status, 404);
+    assert.equal((await cand('/dashboard/articol/1/sterge', { csrf_token: candidateToken })).status, 409);
+    assert.equal((await cand('/dashboard/articol/1', { ...articleBody, status: 'publicat', csrf_token: candidateToken })).status, 400);
+    report = (await compliance.listReports())[0];
+    assert.equal((await admin(`/admin/sesizari/2/1/${report.id}`, { csrf_token: adminToken, status: 'inchisa', action: 'restore', note: 'Verificarea s-a încheiat; materialul poate reveni.', version: report.version })).status, 303);
+    assert.equal((await guest('/site/ana/articol/1')).status, 200);
+    const journal = await admin('/admin/jurnal');
+    assert.equal(journal.status, 200);
+    assert.match(journal.html, /Conținut suspendat/);
+    assert.match(journal.html, /Sesizare închisă/);
+    assert.ok(!journal.html.includes('cititor@example.test'));
   });
   await t.test('O cădere a stocării comentariilor nu ascunde articolul sau pretinde succes', async () => {
     const list = comments.list;

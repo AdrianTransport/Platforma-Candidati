@@ -26,7 +26,7 @@ export function slugify(text) {
 export function generateazaParola() {
   const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let parola = '';
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 16; i++) {
     parola += chars[Math.floor(Math.random() * chars.length)];
   }
   return parola;
@@ -60,6 +60,22 @@ export async function initDB() {
     user.instagram_url ||= '';
     user.tiktok_url ||= '';
     user.youtube_url ||= '';
+    user.tip_candidat ||= '';
+    user.entitate_responsabila ||= '';
+    user.finantator_materiale ||= '';
+    user.scrutin ||= '';
+    user.cod_mandatar_financiar ||= '';
+    user.tip_contract ||= '';
+    user.numar_contract ||= '';
+    user.data_contract ||= '';
+    user.valoare_contract = Number(user.valoare_contract) || 0;
+    user.moneda_contract ||= 'RON';
+    user.campanie_start ||= '';
+    user.campanie_end ||= '';
+    user.confirmare_mandatar ||= false;
+    user.terms_version ||= '';
+    user.terms_accepted_at ||= null;
+    user.editorial_responsibility_accepted_at ||= null;
     user.social_connections = {
       meta: null,
       tiktok: null,
@@ -90,6 +106,8 @@ export async function initDB() {
     articol.vizualizari ||= 0;
     articol.imagine_url ||= '';
     articol.distribuiri_sociale ||= [];
+    articol.moderation_status ||= 'normal';
+    articol.transparenta ||= null;
   }
 
   const areAdmin = db.data.users.some((u) => u.role === 'admin');

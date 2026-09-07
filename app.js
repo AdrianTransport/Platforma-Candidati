@@ -9,6 +9,17 @@ import { articleInput, profileInput, filterArticles, isPublished, publicationDat
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
 import { attachEditorialRoutes } from './editorial-routes.js';
+import { LEGAL_PAGES } from './legal-pages.js';
+import {
+  TERMS_VERSION,
+  REPORT_STATUS,
+  candidateComplianceMissing,
+  createCompliance,
+  legalProfileInput,
+  platformInfo,
+  publicTransparency,
+  transparencySnapshot,
+} from './compliance.js';
 import {
   decryptSecret,
   encryptSecret,
@@ -34,6 +45,22 @@ const baseDir = process.cwd();
 
 const STATUS_CONT = new Set(['in_asteptare', 'activ', 'suspendat', 'expirat']);
 const RETELE_SOCIALE = new Set(['facebook', 'instagram', 'tiktok', 'youtube']);
+const ACCEPTANCE_FIELDS = [
+  'functie_candidatura', 'zona', 'judet', 'partid', 'tip_candidat', 'entitate_responsabila',
+  'finantator_materiale', 'scrutin', 'cod_mandatar_financiar', 'tip_contract', 'numar_contract',
+  'data_contract', 'valoare_contract', 'moneda_contract', 'campanie_start', 'campanie_end',
+  'confirmare_mandatar',
+];
+
+function acceptanceChanged(before, after) {
+  return ACCEPTANCE_FIELDS.some(field => String(before[field] ?? '') !== String(after[field] ?? ''));
+}
+
+function invalidateAcceptance(user) {
+  user.terms_version = '';
+  user.terms_accepted_at = null;
+  user.editorial_responsibility_accepted_at = null;
+}
 
 function urlSigur(value) {
   const text = String(value || '').trim();
@@ -61,8 +88,14 @@ function poatePublicaSite(user) {
   return user?.role === 'candidate' && user.activ && user.status_cont === 'activ' && user.module?.site;
 }
 
-export async function createApp({ comments = createComments(), now = () => Date.now(), editorial = createEditorial({ now }) } = {}) {
+export async function createApp({
+  comments = createComments(),
+  now = () => Date.now(),
+  editorial = createEditorial({ now }),
+  compliance = createCompliance({ now }),
+} = {}) {
   await initDB();
+  const platform = platformInfo();
 
   const app = express();
   // Inregistram motorul explicit (in loc sa lasam Express sa faca un require
@@ -74,6 +107,9 @@ export async function createApp({ comments = createComments(), now = () => Date.
   app.locals.isPublished = article => isPublished(article, now());
   app.locals.publicationDate = publicationDate;
   app.locals.displayDate = displayDate;
+  app.locals.publicTransparency = publicTransparency;
+  app.locals.platform = platform;
+  app.locals.termsVersion = TERMS_VERSION;
   app.use(express.static(path.join(baseDir, 'public')));
   app.use(express.urlencoded({ extended: true }));
   app.use('/dashboard/media', express.json({ limit: '4300kb' }));
@@ -116,6 +152,11 @@ export async function createApp({ comments = createComments(), now = () => Date.
     }
     next();
   }
+  function requestIp(req) {
+    return (process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME)
+      ? req.get('x-nf-client-connection-ip') || req.socket.remoteAddress || 'unknown'
+      : req.socket.remoteAddress || 'unknown';
+  }
   function publicArticle(req) {
     const user = db.data.users.find(u => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
     const articol = user && db.data.articole.find(a => a.id === Number(req.params.id)
@@ -136,6 +177,12 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.render('login', { eroare: null });
   });
 
+  app.get('/legal/:page', (req, res) => {
+    const page = LEGAL_PAGES[req.params.page];
+    if (!page) return res.status(404).send('Pagina nu există.');
+    res.render('legal-page', { page });
+  });
+
   app.post('/login', async (req, res) => {
     const email = String(req.body.email || '').trim().toLowerCase();
     const parola = String(req.body.parola || '');
@@ -143,7 +190,9 @@ export async function createApp({ comments = createComments(), now = () => Date.
     if (user?.locked_until && new Date(user.locked_until) > new Date()) {
       return res.render('login', { eroare: 'Cont blocat temporar după prea multe încercări. Încearcă din nou peste 15 minute.' });
     }
-    const contPermis = user?.activ && (user.role === 'admin' || user.status_cont === 'activ');
+    const contPermis = user?.role === 'admin'
+      ? user.activ
+      : user?.role === 'candidate' && ['in_asteptare', 'activ'].includes(user.status_cont);
     if (!user || !contPermis || !bcrypt.compareSync(parola, user.password_hash)) {
       if (user) {
         user.login_attempts = (user.login_attempts || 0) + 1;
@@ -163,17 +212,54 @@ export async function createApp({ comments = createComments(), now = () => Date.
     req.session.rol = user.role;
     req.session.numeCandidat = user.nume_candidat;
     if (user.role === 'admin') return res.redirect('/admin');
+    if (user.status_cont === 'in_asteptare') return res.redirect('/activare');
     return res.redirect('/dashboard');
   });
 
-  app.post('/logout', (req, res) => {
+  app.post('/logout', requireCsrf, (req, res) => {
     req.session = null;
     res.redirect('/login');
   });
 
+  /* ----------------------- ACTIVAREA CANDIDATULUI ----------------------- */
+
+  app.get('/activare', requireRole('candidate'), (req, res) => {
+    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
+    if (!user || ['suspendat', 'expirat'].includes(user.status_cont)) return res.status(403).send('Contul nu poate fi activat.');
+    res.render('candidate-activation', {
+      user,
+      lipsuri: candidateComplianceMissing(user, platform),
+      mesaj: req.query.mesaj || '',
+      eroare: req.query.eroare || '',
+    });
+  });
+
+  app.post('/activare', requireRole('candidate'), requireCsrf, safely(async (req, res) => {
+    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
+    if (!user || ['suspendat', 'expirat'].includes(user.status_cont)) throw new ValidationError('Contul nu poate fi activat.', 403);
+    if (req.body.accepta_termeni !== 'on' || req.body.accepta_responsabilitate !== 'on') {
+      throw new ValidationError('Trebuie să accepți termenii și responsabilitatea editorială.');
+    }
+    const temporary = { ...user, terms_version: TERMS_VERSION, terms_accepted_at: 'pending', editorial_responsibility_accepted_at: 'pending' };
+    const otherMissing = candidateComplianceMissing(temporary, platform);
+    if (otherMissing.length) throw new ValidationError(`Activarea nu poate continua. Lipsesc: ${otherMissing.join(', ')}.`);
+    const acceptance = await compliance.acceptTerms({ candidateId: user.id, ip: requestIp(req) });
+    user.terms_version = acceptance.terms_version;
+    user.terms_accepted_at = acceptance.accepted_at;
+    user.editorial_responsibility_accepted_at = acceptance.editorial_responsibility_accepted_at;
+    await db.write();
+    await compliance.audit({ actorId: user.id, actorRole: 'candidate', action: 'terms_accepted',
+      targetType: 'candidate', targetId: user.id, details: { terms_version: TERMS_VERSION } });
+    if (user.status_cont === 'activ') return res.redirect('/dashboard?activare=confirmata');
+    res.redirect('/activare?mesaj=Datele%20au%20fost%20confirmate.%20Super%20Adminul%20poate%20activa%20acum%20contul.');
+  }));
+
+  // Niciun instrument editorial nu este disponibil unui cont aflat în așteptare.
+  app.use('/dashboard', requireRole('candidate'), requireActiveAccount);
+
   /* -------------------------------- ADMIN -------------------------------- */
 
-  app.get('/admin', requireRole('admin'), (req, res) => {
+  app.get('/admin', requireRole('admin'), requireActiveAccount, (req, res) => {
     const candidati = db.data.users
       .filter((u) => u.role === 'candidate')
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -190,14 +276,15 @@ export async function createApp({ comments = createComments(), now = () => Date.
         .map(a => ({ ...a, candidat: candidati.find(c => c.id === a.user_id) }))
         .filter(a => a.candidat && poatePublicaSite(a.candidat))
         .sort((a, b) => (b.vizualizari || 0) - (a.vizualizari || 0)).slice(0, 10),
-      parolaNoua: req.query.parolaNoua || null,
-      emailNou: req.query.emailNou || null,
       mesaj: req.query.mesaj || null,
       eroare: req.query.eroare || null,
+      platform,
+      complianceMissing: Object.fromEntries(candidati.map(candidate =>
+        [candidate.id, candidateComplianceMissing(candidate, platform)])),
     });
   });
 
-  app.post('/admin/candidati', requireRole('admin'), async (req, res) => {
+  app.post('/admin/candidati', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const { nume_candidat, email, zona, judet, functie_candidatura, partid } = req.body;
     const emailNormalizat = String(email || '').trim().toLowerCase();
     if (!nume_candidat || !emailNormalizat) return res.redirect('/admin');
@@ -210,7 +297,8 @@ export async function createApp({ comments = createComments(), now = () => Date.
       subdomeniu = `${slugify(nume_candidat)}-${contor++}`;
     }
     const parola = generateazaParola();
-    db.data.users.push({
+    const legal = legalProfileInput(req.body);
+    const candidate = {
       id: nextUserId(),
       email: emailNormalizat,
       password_hash: bcrypt.hashSync(parola, 10),
@@ -229,6 +317,10 @@ export async function createApp({ comments = createComments(), now = () => Date.
       instagram_url: '',
       tiktok_url: '',
       youtube_url: '',
+      ...legal,
+      terms_version: '',
+      terms_accepted_at: null,
+      editorial_responsibility_accepted_at: null,
       social_connections: { meta: null, tiktok: null },
       status_cont: 'in_asteptare',
       activ: false,
@@ -242,12 +334,15 @@ export async function createApp({ comments = createComments(), now = () => Date.
       locked_until: null,
       last_login_at: null,
       created_at: new Date().toISOString(),
-    });
+    };
+    db.data.users.push(candidate);
     await db.write();
-    res.redirect(`/admin?parolaNoua=${encodeURIComponent(parola)}&emailNou=${encodeURIComponent(emailNormalizat)}`);
-  });
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_created',
+      targetType: 'candidate', targetId: candidate.id, details: { contract_type: legal.tip_contract, contract_number: legal.numar_contract } });
+    res.status(201).render('candidate-created', { candidate, parola });
+  }));
 
-  app.post('/admin/securitate', requireRole('admin'), async (req, res) => {
+  app.post('/admin/securitate', requireRole('admin'), requireActiveAccount, requireCsrf, async (req, res) => {
     const admin = db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin');
     const parolaActuala = String(req.body.parola_actuala || '');
     const parolaNoua = String(req.body.parola_noua || '');
@@ -263,34 +358,50 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.redirect('/admin?mesaj=Parola%20Super%20Adminului%20a%20fost%20schimbata.');
   });
 
-  app.post('/admin/candidati/:id/status', requireRole('admin'), async (req, res) => {
+  app.post('/admin/candidati/:id/status', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === Number(req.params.id));
     const status = String(req.body.status_cont || '');
     if (user?.role === 'candidate' && STATUS_CONT.has(status)) {
+      if (status === 'activ') {
+        const missing = candidateComplianceMissing(user, platform);
+        if (missing.length) {
+          return res.redirect(`/admin?eroare=${encodeURIComponent(`Contul nu poate fi activat. Lipsesc: ${missing.join(', ')}.`)}`);
+        }
+      }
+      const previous = user.status_cont;
       user.status_cont = status;
       user.activ = status === 'activ';
       user.activated_at = status === 'activ' ? new Date().toISOString() : user.activated_at || null;
       await db.write();
+      await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_status_changed',
+        targetType: 'candidate', targetId: user.id, details: { previous, status } });
     }
     res.redirect('/admin');
-  });
+  }));
 
-  app.post('/admin/candidati/:id/configurare', requireRole('admin'), async (req, res) => {
+  app.post('/admin/candidati/:id/configurare', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === Number(req.params.id));
     if (user?.role === 'candidate') {
+      const before = Object.fromEntries(ACCEPTANCE_FIELDS.map(field => [field, user[field]]));
       user.functie_candidatura = String(req.body.functie_candidatura || '').trim();
       user.zona = String(req.body.zona || '').trim();
       user.judet = String(req.body.judet || '').trim();
       user.partid = String(req.body.partid || '').trim();
+      Object.assign(user, legalProfileInput(req.body));
+      const requiresNewAcceptance = acceptanceChanged(before, user);
+      if (requiresNewAcceptance) invalidateAcceptance(user);
       user.module = {
         site: req.body.modul_site === 'on',
         statistici: req.body.modul_statistici === 'on',
         social: req.body.modul_social === 'on',
       };
       await db.write();
+      await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_configuration_changed',
+        targetType: 'candidate', targetId: user.id, details: { contract_type: user.tip_contract,
+          contract_number: user.numar_contract, acceptance_invalidated: requiresNewAcceptance } });
     }
     res.redirect('/admin');
-  });
+  }));
 
   /* ------------------------------ CANDIDAT ------------------------------- */
 
@@ -319,6 +430,54 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.redirect(303, '/admin/comentarii');
   }));
 
+  app.get('/admin/sesizari', requireRole('admin'), requireActiveAccount, safely(async (req, res) => {
+    const status = typeof req.query.status === 'string' ? req.query.status : 'noua';
+    if (!REPORT_STATUS.has(status)) throw new ValidationError('Filtru de sesizări invalid.');
+    const all = await compliance.listReports();
+    const filtered = all.filter(report => report.status === status);
+    const pages = Math.max(1, Math.ceil(filtered.length / 25));
+    const page = Math.min(pages, Math.max(1, Number.parseInt(req.query.pagina, 10) || 1));
+    const lista = filtered.slice((page - 1) * 25, page * 25).map(report => ({
+      ...report,
+      candidat: db.data.users.find(candidate => candidate.id === report.user_id),
+      articol: db.data.articole.find(article => article.id === report.articol_id && article.user_id === report.user_id),
+    }));
+    res.render('admin-reports', { lista, status, page, pages, total: filtered.length,
+      counts: Object.fromEntries([...REPORT_STATUS].map(value => [value, all.filter(report => report.status === value).length])) });
+  }));
+
+  app.post('/admin/sesizari/:candidateId/:articleId/:id', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const candidateId = Number(req.params.candidateId);
+    const articleId = Number(req.params.articleId);
+    if (![candidateId, articleId].every(id => Number.isSafeInteger(id) && id > 0)) throw new ValidationError('Identificator invalid.');
+    const article = db.data.articole.find(item => item.id === articleId && item.user_id === candidateId);
+    if (!article) throw new ValidationError('Articolul sesizat nu mai există în lista activă.', 404);
+    const action = String(req.body.action || 'none');
+    const event = await compliance.resolveReport({ candidateId, articleId, id: req.params.id,
+      status: req.body.status, note: req.body.note, action, adminId: req.session.userId, version: req.body.version });
+    if (action === 'suspend') {
+      article.moderation_status = 'suspendat';
+      article.moderation_reason = event.note;
+      article.moderated_at = event.created_at;
+      article.moderated_by = req.session.userId;
+      await db.write();
+    } else if (action === 'restore') {
+      article.moderation_status = 'normal';
+      article.moderation_reason = '';
+      article.moderated_at = event.created_at;
+      article.moderated_by = req.session.userId;
+      await db.write();
+    }
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: `report_${event.status}`,
+      targetType: 'article', targetId: articleId, details: { report_id: req.params.id, moderation_action: action } });
+    res.redirect(303, `/admin/sesizari?status=${encodeURIComponent(event.status)}`);
+  }));
+
+  app.get('/admin/jurnal', requireRole('admin'), requireActiveAccount, safely(async (req, res) => {
+    const events = await compliance.listAudit(100);
+    res.render('admin-audit', { events });
+  }));
+
   app.get('/dashboard', requireRole('candidate'), (req, res) => {
     const articole = db.data.articole
       .filter((a) => a.user_id === req.session.userId)
@@ -329,7 +488,8 @@ export async function createApp({ comments = createComments(), now = () => Date.
       .filter((articol) => isPublished(articol, now()))
       .sort((a, b) => (b.vizualizari || 0) - (a.vizualizari || 0))
       .slice(0, 5);
-    res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole });
+    res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole,
+      lipsuriJuridice: candidateComplianceMissing(user, platform) });
   });
 
   app.get('/dashboard/social', requireRole('candidate'), (req, res) => {
@@ -358,7 +518,7 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.redirect(metaAuthorizeUrl(redirectUri, state));
   });
 
-  app.get('/oauth/meta/callback', requireRole('candidate'), async (req, res) => {
+  app.get('/oauth/meta/callback', requireRole('candidate'), requireActiveAccount, async (req, res) => {
     const oauth = req.session.oauth;
     req.session.oauth = null;
     if (!oauth || oauth.provider !== 'meta' || oauth.state !== req.query.state || oauth.expires < Date.now()) {
@@ -415,7 +575,7 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.redirect(tiktokAuthorizeUrl(redirectUri, state));
   });
 
-  app.get('/oauth/tiktok/callback', requireRole('candidate'), async (req, res) => {
+  app.get('/oauth/tiktok/callback', requireRole('candidate'), requireActiveAccount, async (req, res) => {
     const oauth = req.session.oauth;
     req.session.oauth = null;
     if (!oauth || oauth.provider !== 'tiktok' || oauth.state !== req.query.state || oauth.expires < Date.now()) {
@@ -513,7 +673,10 @@ export async function createApp({ comments = createComments(), now = () => Date.
   app.post('/dashboard/profil', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (!user) return res.redirect('/login');
+    const before = Object.fromEntries(ACCEPTANCE_FIELDS.map(field => [field, user[field]]));
     Object.assign(user, profileInput(req.body));
+    const requiresNewAcceptance = acceptanceChanged(before, user);
+    if (requiresNewAcceptance) invalidateAcceptance(user);
     if (user.module?.social) {
       user.facebook_url = urlSigur(req.body.facebook_url);
       user.instagram_url = urlSigur(req.body.instagram_url);
@@ -521,11 +684,13 @@ export async function createApp({ comments = createComments(), now = () => Date.
       user.youtube_url = urlSigur(req.body.youtube_url);
     }
     await db.write();
-    res.redirect('/dashboard?profil=salvat');
+    await compliance.audit({ actorId: user.id, actorRole: 'candidate', action: 'candidate_profile_changed',
+      targetType: 'candidate', targetId: user.id, details: { acceptance_invalidated: requiresNewAcceptance } });
+    res.redirect(requiresNewAcceptance ? '/activare?mesaj=Datele%20publice%20s-au%20schimbat.%20Confirm%C4%83%20din%20nou%20termenii.' : '/dashboard?profil=salvat');
   }));
 
   app.get('/dashboard/articol/nou', requireRole('candidate'), (req, res) => {
-    res.render('articol-form', { articol: null, eroare: '', dataProgramata: '' });
+    res.render('articol-form', { articol: null, eroare: '', dataProgramata: '', confirmareResponsabilitate: false });
   });
 
   app.get('/dashboard/articol/:id/edit', requireRole('candidate'), (req, res) => {
@@ -533,12 +698,24 @@ export async function createApp({ comments = createComments(), now = () => Date.
       (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId
     );
     if (!articol) return res.redirect('/dashboard');
-    res.render('articol-form', { articol, eroare: '', dataProgramata: localDateTime(articol.data_programata) });
+    res.render('articol-form', { articol, eroare: '', dataProgramata: localDateTime(articol.data_programata), confirmareResponsabilitate: false });
   });
 
   async function validateArticle(req, res, previous) {
     try {
       const fields = articleInput(req.body, previous, now());
+      const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
+      if (previous?.moderation_status === 'suspendat' && ['publicat', 'programat'].includes(fields.status)) {
+        throw new ValidationError('Articolul este suspendat de Super Admin și nu poate fi republicat până la soluționarea sesizării.');
+      }
+      if (['publicat', 'programat'].includes(fields.status)) {
+        const missing = candidateComplianceMissing(user, platform);
+        if (missing.length) throw new ValidationError(`Publicarea este blocată. Lipsesc: ${missing.join(', ')}.`);
+        if (req.body.confirmare_responsabilitate !== 'on') {
+          throw new ValidationError('Confirmă responsabilitatea editorială și exactitatea datelor de transparență.');
+        }
+        fields.transparenta = transparencySnapshot(user, new Date(now()).toISOString());
+      }
       fields.imagine_url = editorialImageUrl(req.body.imagine_url);
       const imageId = internalImageId(fields.imagine_url);
       if (imageId) {
@@ -553,7 +730,8 @@ export async function createApp({ comments = createComments(), now = () => Date.
       const form = Object.fromEntries(['titlu', 'continut', 'tip', 'categorie', 'imagine_url', 'rezumat', 'imagine_alt', 'imagine_legenda', 'imagine_credit'].map(key =>
         [key, typeof req.body[key] === 'string' ? req.body[key] : '']));
       res.status(400).render('articol-form', { articol: { ...form, id: previous?.id, generat_de_ai: req.body.generat_de_ai === 'true', imagine_generata_ai: req.body.imagine_generata_ai === 'true' },
-        eroare: error.message, dataProgramata: typeof req.body.data_programata === 'string' ? req.body.data_programata : '' });
+        eroare: error.message, dataProgramata: typeof req.body.data_programata === 'string' ? req.body.data_programata : '',
+        confirmareResponsabilitate: req.body.confirmare_responsabilitate === 'on' });
       return null;
     }
   }
@@ -561,14 +739,18 @@ export async function createApp({ comments = createComments(), now = () => Date.
   app.post('/dashboard/articol', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const fields = await validateArticle(req, res, null);
     if (!fields) return;
-    db.data.articole.push({
+    const article = {
       id: nextArticolId(),
       user_id: req.session.userId,
       ...fields,
       vizualizari: 0,
       distribuiri_sociale: [],
-    });
+      moderation_status: 'normal',
+    };
+    db.data.articole.push(article);
     await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'candidate', action: 'article_created',
+      targetType: 'article', targetId: article.id, details: { status: article.status, title: article.titlu.slice(0, 200) } });
     res.redirect('/dashboard');
   }));
 
@@ -581,14 +763,22 @@ export async function createApp({ comments = createComments(), now = () => Date.
     if (!fields) return;
     Object.assign(articol, fields);
     await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'candidate', action: 'article_updated',
+      targetType: 'article', targetId: articol.id, details: { status: articol.status, title: articol.titlu.slice(0, 200) } });
     res.redirect('/dashboard');
   }));
 
   app.post('/dashboard/articol/:id/sterge', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const articol = db.data.articole.find(a => a.id === Number(req.params.id) && a.user_id === req.session.userId);
+    if (articol?.moderation_status === 'suspendat') {
+      throw new ValidationError('Un articol suspendat nu poate fi șters până la soluționarea sesizării.', 409);
+    }
     db.data.articole = db.data.articole.filter(
       (a) => !(a.id === Number(req.params.id) && a.user_id === req.session.userId)
     );
     await db.write();
+    if (articol) await compliance.audit({ actorId: req.session.userId, actorRole: 'candidate', action: 'article_deleted',
+      targetType: 'article', targetId: articol.id, details: { status: articol.status, title: articol.titlu.slice(0, 200) } });
     res.redirect('/dashboard');
   }));
 
@@ -632,6 +822,40 @@ export async function createApp({ comments = createComments(), now = () => Date.
     res.render('site-contact', { user });
   });
 
+  app.get('/site/:subdomeniu/transparenta', (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    const user = db.data.users.find(candidate => candidate.subdomeniu === req.params.subdomeniu && poatePublicaSite(candidate));
+    if (!user) return res.status(404).send('Pagina nu există.');
+    const articleId = Number(req.query.articol);
+    const articol = Number.isSafeInteger(articleId) && articleId > 0
+      ? db.data.articole.find(item => item.id === articleId && item.user_id === user.id && isPublished(item, now()))
+      : null;
+    res.render('site-transparency', { user, articol, transparenta: publicTransparency(user, articol) });
+  });
+
+  app.get('/site/:subdomeniu/articol/:id/raporteaza', (req, res) => {
+    res.set('Cache-Control', 'private, no-store');
+    const { user, articol } = publicArticle(req);
+    if (!articol) return res.status(404).send('Articolul nu există sau nu este publicat.');
+    const reportId = /^[a-f0-9-]{36}$/.test(String(req.query.sesizare || '')) ? String(req.query.sesizare) : '';
+    res.render('report-form', { user, articol, eroare: '', values: {}, trimis: req.query.trimis === 'da', reportId });
+  });
+
+  app.post('/site/:subdomeniu/articol/:id/raporteaza', requireCsrf, safely(async (req, res) => {
+    const { user, articol } = publicArticle(req);
+    if (!articol) return res.status(404).send('Articolul nu există sau nu este publicat.');
+    try {
+      const report = await compliance.submitReport({ candidate: user, article: articol, body: req.body, ip: requestIp(req) });
+      return res.redirect(303, `/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}/raporteaza?trimis=da&sesizare=${encodeURIComponent(report.id)}`);
+    } catch (error) {
+      if (!(error instanceof ValidationError)) throw error;
+      if (error.status === 429) res.set('Retry-After', '60');
+      return res.status(error.status).render('report-form', { user, articol, eroare: error.message,
+        values: Object.fromEntries(['motiv', 'descriere', 'nume', 'email'].map(key =>
+          [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), trimis: false, reportId: '' });
+    }
+  }));
+
   async function renderPublicArticle(req, res, { error = '', values = {}, status = 200, count = false } = {}) {
     res.set('Cache-Control', 'private, no-store');
     const { user, articol } = publicArticle(req);
@@ -649,7 +873,7 @@ export async function createApp({ comments = createComments(), now = () => Date.
     }
     const bazaPublica = process.env.URL || `${req.protocol}://${req.get('host')}`;
     const articolUrl = new URL(`/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}`, bazaPublica).toString();
-    res.status(status).render('site-articol', { user, articol, articolUrl, comentarii, commentsAvailable, commentError: error,
+    res.status(status).render('site-articol', { user, articol, articolUrl, transparenta: publicTransparency(user, articol), comentarii, commentsAvailable, commentError: error,
       commentValues: values, commentSent: req.query.comentariu === 'trimis' });
   }
 
@@ -661,9 +885,7 @@ export async function createApp({ comments = createComments(), now = () => Date.
     try {
       await comments.submit({ candidateId: user.id, articleId: articol.id, body: req.body,
         // Nu avem încredere în X-Forwarded-For trimis direct de client.
-        ip: (process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME)
-          ? req.get('x-nf-client-connection-ip') || req.socket.remoteAddress || 'unknown'
-          : req.socket.remoteAddress || 'unknown' });
+        ip: requestIp(req) });
     } catch (error) {
       if (!(error instanceof ValidationError)) throw error;
       if (error.status === 429) res.set('Retry-After', '60');
