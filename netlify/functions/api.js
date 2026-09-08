@@ -57,9 +57,10 @@ export const handler = async (event, context) => {
     });
   }
 
+  const supabaseSecret = value('SUPABASE_SECRET_KEY');
   Object.assign(process.env, {
-    SUPABASE_SECRET_KEY: value('SUPABASE_SECRET_KEY'),
-    DATA_BACKEND: value('DATA_BACKEND'),
+    SUPABASE_SECRET_KEY: supabaseSecret,
+    DATA_BACKEND: value('DATA_BACKEND') || (supabaseSecret ? 'supabase' : undefined),
   });
 
   if (!handlerPromise) {
