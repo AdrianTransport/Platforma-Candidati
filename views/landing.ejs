@@ -3,18 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Știri locale, campanii și publicațiile candidaților găzduite prin VoceaCandidatului.">
-  <title><%= platform.name %> — știri și campanii locale</title>
+  <meta name="description" content="Vocea Locală Lenauheim — știri, inițiative și publicațiile candidaților din Bulgăruș, Lenauheim și Grabaț.">
+  <title>Vocea Locală Lenauheim — știri și inițiative din comună</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="public-body portal-public-body">
   <header class="portal-news-header">
-    <a class="platform-brand" href="/"><span>Vocea</span>Candidatului</a>
+    <a class="platform-brand local-brand" href="/"><span>Vocea Locală</span><strong>Lenauheim</strong></a>
     <nav><a href="#stiri">Știri</a><a href="#campanii">Campanii</a><a href="#candidati">Candidați</a><a href="#despre">Despre platformă</a><a class="btn secondary" href="/login">Autentificare</a></nav>
   </header>
 
   <main>
-    <div class="portal-edition-bar"><span>PUBLICAȚIE DIGITALĂ LOCALĂ</span><time><%= new Intl.DateTimeFormat('ro-RO', { dateStyle: 'full', timeZone: 'Europe/Bucharest' }).format(new Date()) %></time><span>ȘTIRI · CAMPANII · CANDIDAȚI</span></div>
+    <div class="portal-edition-bar"><span>PUBLICAȚIE DIGITALĂ LOCALĂ</span><time><%= new Intl.DateTimeFormat('ro-RO', { dateStyle: 'full', timeZone: 'Europe/Bucharest' }).format(new Date()) %></time><span>BULGĂRUȘ · LENAUHEIM · GRABAȚ</span></div>
+
+    <section class="local-identity-banner" aria-labelledby="local-identity-title">
+      <div class="local-identity-copy"><span class="eyebrow">Vocea comunității</span><h1 id="local-identity-title">Bulgăruș · Lenauheim · Grabaț</h1><p>Știri, proiecte și inițiative din toate cele trei localități ale comunei, într-un singur loc.</p></div>
+      <div class="local-map"><iframe title="Harta localităților Bulgăruș, Lenauheim și Grabaț" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=20.72%2C45.83%2C20.90%2C45.96&amp;layer=mapnik&amp;marker=45.8904%2C20.799" referrerpolicy="no-referrer-when-downgrade"></iframe><a href="https://www.openstreetmap.org/?mlat=45.8904&amp;mlon=20.799#map=12/45.8904/20.799" target="_blank" rel="noopener">Deschide harta mărită ↗</a></div>
+    </section>
 
     <% if (principal) { %>
       <section class="portal-lead">
@@ -46,6 +51,6 @@
     <section class="marketing-section" id="despre"><div class="section-heading"><span class="eyebrow">Platformă completă</span><h2>Comunicare electorală organizată, simplă și transparentă.</h2></div><div class="feature-grid"><article><span>01</span><h3>Portal administrat</h3><p>Super Adminul publică știri, campanii și articolul principal.</p></article><article><span>02</span><h3>Site tip ziar</h3><p>Fiecare candidat are propriul site cu program, proiecte și articole.</p></article><article><span>03</span><h3>Text și imagini</h3><p>Editor manual și instrumente OpenAI disponibile după activarea administratorului.</p></article><article><span>04</span><h3>Statistici clare</h3><p>Citiri și surse generale de trafic, fără profilarea politică a alegătorilor.</p></article></div></section>
   </main>
 
-  <footer class="marketing-footer"><strong><%= platform.name %></strong><span>Platformă tehnică operată de <%= platform.operatorName %>. Materialele candidaților sunt marcate separat și păstrează datele de transparență.</span><nav class="legal-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav></footer>
+  <footer class="marketing-footer"><strong>Vocea Locală Lenauheim</strong><span>Platformă tehnică operată de <%= platform.operatorName %>. Materialele candidaților sunt marcate separat și păstrează datele de transparență.</span><nav class="legal-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav></footer>
 </body>
 </html>

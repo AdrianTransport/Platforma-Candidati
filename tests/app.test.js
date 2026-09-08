@@ -229,6 +229,8 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   });
   await t.test('Etichetele electorale, transparența și paginile juridice sunt publice', async () => {
     const listing = await guest('/site/ana');
+    assert.match(listing.html, /Vocea[\s\S]*Candidatului/);
+    assert.ok(!listing.html.includes('<strong>JURNAL</strong>'));
     assert.match(listing.html, /Material electoral · publicitate politică/);
     assert.match(listing.html, /Finanțat de ana/);
     assert.match(listing.html, /Vezi transparența completă/);
@@ -392,6 +394,9 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal((await guest(imageUrl)).status, 200);
 
     const home = await guest('/');
+    assert.match(home.html, /Vocea Locală/);
+    assert.match(home.html, /Bulgăruș · Lenauheim · Grabaț/);
+    assert.match(home.html, /openstreetmap\.org\/export\/embed/);
     assert.match(home.html, /Campanie pentru cartiere curate/);
     assert.match(home.html, /Campanie candidat/);
     const detail = await guest(`/actualitate/${post.slug}`);

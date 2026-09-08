@@ -1,1 +1,28 @@
-<!DOCTYPE html><html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Candidați — VoceaCandidatului</title><link rel="stylesheet" href="/style.css"></head><body class="public-body"><header class="portal-news-header"><a class="platform-brand" href="/"><span>Vocea</span>Candidatului</a><nav><a href="/">Pagina principală</a><a class="btn secondary" href="/login">Autentificare</a></nav></header><main class="published-section candidate-directory"><div class="portal-section-head"><div><span class="eyebrow">Vitrina publică</span><h1>Toți candidații activi</h1></div><p><%= total %> candidați găsiți</p></div><form method="GET" class="directory-filters"><label>Caută<input type="search" name="cauta" value="<%= cauta %>" placeholder="Nume, localitate sau partid"></label><label>Județ<select name="judet"><option value="">Toate județele</option><% judete.forEach(value => { %><option <%= value === judet ? 'selected' : '' %>><%= value %></option><% }) %></select></label><label>Funcție<input name="functie" value="<%= functie %>" placeholder="Primar, consilier..."></label><button type="submit">Filtrează</button><a href="/candidati">Resetează</a></form><% if (!candidati.length) { %><div class="empty-public">Nu există candidați pentru filtrele selectate.</div><% } else { %><div class="candidate-showcase"><% candidati.forEach(c => { %><a href="/site/<%= c.subdomeniu %>"><span><%= c.functie_candidatura || 'Candidat' %></span><strong><%= c.nume_candidat %></strong><small><%= [c.partid, c.zona, c.judet].filter(Boolean).join(' · ') %></small><em>Deschide publicația →</em></a><% }) %></div><% } %><nav class="pagination"><% for (let i=1;i<=pages;i++) { %><a class="<%= i===page ? 'active' : '' %>" href="?cauta=<%= encodeURIComponent(cauta) %>&judet=<%= encodeURIComponent(judet) %>&functie=<%= encodeURIComponent(functie) %>&pagina=<%= i %>"><%= i %></a><% } %></nav></main></body></html>
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Candidați — Vocea Locală Lenauheim</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="public-body">
+  <header class="portal-news-header">
+    <a class="platform-brand local-brand" href="/"><span>Vocea Locală</span><strong>Lenauheim</strong></a>
+    <nav><a href="/">Pagina principală</a><a class="btn secondary" href="/login">Autentificare</a></nav>
+  </header>
+  <main class="published-section candidate-directory">
+    <div class="portal-section-head"><div><span class="eyebrow">Vitrina publică</span><h1>Toți candidații activi</h1></div><p><%= total %> candidați găsiți</p></div>
+    <form method="GET" class="directory-filters">
+      <label>Caută<input type="search" name="cauta" value="<%= cauta %>" placeholder="Nume, localitate sau partid"></label>
+      <label>Județ<select name="judet"><option value="">Toate județele</option><% judete.forEach(value => { %><option <%= value === judet ? 'selected' : '' %>><%= value %></option><% }) %></select></label>
+      <label>Funcție<input name="functie" value="<%= functie %>" placeholder="Primar, consilier..."></label>
+      <button type="submit">Filtrează</button><a href="/candidati">Resetează</a>
+    </form>
+    <% if (!candidati.length) { %><div class="empty-public">Nu există candidați pentru filtrele selectate.</div><% } else { %>
+      <div class="candidate-showcase"><% candidati.forEach(c => { %><a href="/site/<%= c.subdomeniu %>"><span><%= c.functie_candidatura || 'Candidat' %></span><strong><%= c.nume_candidat %></strong><small><%= [c.partid, c.zona, c.judet].filter(Boolean).join(' · ') %></small><em>Deschide publicația →</em></a><% }) %></div>
+    <% } %>
+    <nav class="pagination"><% for (let i=1;i<=pages;i++) { %><a class="<%= i===page ? 'active' : '' %>" href="?cauta=<%= encodeURIComponent(cauta) %>&judet=<%= encodeURIComponent(judet) %>&functie=<%= encodeURIComponent(functie) %>&pagina=<%= i %>"><%= i %></a><% } %></nav>
+  </main>
+</body>
+</html>
