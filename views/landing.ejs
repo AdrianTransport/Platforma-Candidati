@@ -10,7 +10,7 @@
 <body class="public-body portal-public-body">
   <header class="portal-news-header">
     <a class="platform-brand local-brand" href="/"><span>Vocea Locală</span><strong>Lenauheim</strong></a>
-    <nav><a href="#stiri">Știri</a><a href="#campanii">Campanii</a><a href="#candidati">Candidați</a><a href="#despre">Despre platformă</a><a class="btn secondary" href="/login">Autentificare</a></nav>
+    <nav><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/sectiune/evenimente">Evenimente</a><a href="/candidati">Candidați</a><a class="btn secondary" href="/login">Autentificare</a></nav>
   </header>
 
   <main>
@@ -55,5 +55,6 @@
   </main>
 
   <footer class="marketing-footer"><strong>Vocea Locală Lenauheim</strong><span>Platformă tehnică operată de <%= platform.operatorName %>. Materialele candidaților sunt marcate separat și păstrează datele de transparență.</span><nav class="legal-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav></footer>
+<script>document.querySelectorAll('.portal-news-card,.portal-campaign-grid article').forEach(card=>{const link=card.querySelector('a[href]');if(!link)return;card.tabIndex=0;card.setAttribute('role','link');card.addEventListener('click',event=>{if(!event.target.closest('a,button'))location.href=link.href;});card.addEventListener('keydown',event=>{if(event.key==='Enter')location.href=link.href;});});</script>
 </body>
 </html>

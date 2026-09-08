@@ -9,8 +9,8 @@
 </head>
 <body class="public-body portal-public-body">
   <header class="portal-news-header">
-    <a class="platform-brand" href="/"><span>Vocea</span>Candidatului</a>
-    <nav><a href="/#stiri">Știri</a><a href="/#campanii">Campanii</a><a href="/#candidati">Candidați</a><a class="btn secondary" href="/login">Autentificare</a></nav>
+    <a class="platform-brand local-brand" href="/"><span>Vocea Locală</span><strong>Lenauheim</strong></a>
+    <nav><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/sectiune/evenimente">Evenimente</a><a href="/candidati">Candidați</a><a class="btn secondary" href="/login">Autentificare</a></nav>
   </header>
   <main class="portal-article-shell">
     <a class="back-home" href="/">← Înapoi la prima pagină</a>
@@ -34,6 +34,7 @@
           <p class="portal-read-count"><%= post.vizualizari || 0 %> citiri</p>
         </aside>
       </div>
+      <div class="portal-engagement-wrap"><%- include('partials/engagement', { item: post, publicUrl: postUrl, reactionAction: `/actualitate/${post.slug}/reactie` }) %></div>
       <% if (post.generat_de_ai) { %><p class="ai-disclosure">Text redactat cu ajutorul OpenAI și verificat de editor înainte de publicare.</p><% } %>
     </article>
   </main>

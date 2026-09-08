@@ -22,6 +22,11 @@
       <span><%= electoralMode ? `Finanțat de ${transparentaPublicatie.finantat_de} · ` : '' %>publicat și asumat de <%= transparentaPublicatie.responsabil_editorial %></span>
       <a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența completă</a>
     </section>
+    <section class="civic-candidate-hero" <% if (user.fotografie_coperta_url) { %>style="background-image:linear-gradient(90deg,rgba(8,32,44,.94),rgba(8,32,44,.58)),url('<%= user.fotografie_coperta_url %>')"<% } %>>
+      <div class="civic-hero-copy"><span>Pentru o comunitate unită</span><h1><%= user.nume_candidat %></h1><p class="civic-role"><%= [user.functie_candidatura, user.zona].filter(Boolean).join(' · ') %></p><p><%= user.slogan || user.mesaj_scurt || 'Oameni. Fapte. Un viitor mai bun pentru comunitate.' %></p><div><a class="civic-primary-action" href="/site/<%= user.subdomeniu %>/proiecte">Vezi proiectele →</a><a class="civic-secondary-action" href="/site/<%= user.subdomeniu %>/contact">Contact</a></div></div>
+      <div class="civic-portrait"><% if (user.fotografie_profil_url) { %><img src="<%= user.fotografie_profil_url %>" alt="<%= user.nume_candidat %>"><% } else { %><span><%= user.nume_candidat.split(' ').map(part => part[0]).slice(0,2).join('') %></span><small>Adaugă fotografia din profil</small><% } %></div>
+    </section>
+    <nav class="civic-feature-grid" aria-label="Explorează publicația"><a href="/site/<%= user.subdomeniu %>/program"><span>◎</span><strong>Priorități</strong><small>Program și obiective pentru comunitate</small><em>Află mai multe →</em></a><a href="/site/<%= user.subdomeniu %>/proiecte"><span>⚙</span><strong>Proiecte</strong><small>Idei concrete și stadiul lor</small><em>Vezi proiectele →</em></a><a href="/site/<%= user.subdomeniu %>/actualitate"><span>▤</span><strong>Actualitate</strong><small>Noutăți și poziții publice</small><em>Citește noutățile →</em></a><a href="/site/<%= user.subdomeniu %>/evenimente"><span>□</span><strong>Evenimente</strong><small>Întâlniri și acțiuni locale</small><em>Vezi evenimentele →</em></a></nav>
     <form method="GET" action="/site/<%= user.subdomeniu %>" class="newspaper-search" role="search">
       <label>Caută în articole<input type="search" name="cauta" maxlength="120" value="<%= cautaText %>" placeholder="Titlu sau conținut"></label>
       <label>Categorie<select name="categorie"><option value="">Toate categoriile</option>
@@ -88,5 +93,6 @@
 
     <footer class="newspaper-footer"><div><strong><%= user.nume_candidat %></strong><span><%= user.slogan || 'Pentru comunitate.' %></span></div><p><%= electoralMode ? `Material electoral finanțat de ${transparentaPublicatie.finantat_de} și ` : 'Publicație civică ' %>asumată de <%= transparentaPublicatie.responsabil_editorial %>. Statisticile numără afișări, fără profiluri politice ale cititorilor. Comentariile sunt moderate înainte de afișare.</p><nav class="footer-links" aria-label="Informații legale"><a href="/site/<%= user.subdomeniu %>/transparenta">Transparență</a><a href="/legal/termeni">Termeni</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a><a href="/">Parte din Vocea Locală Lenauheim</a></nav></footer>
   </div>
+<script>document.querySelectorAll('.photo-card,.front-sidebar article').forEach(card=>{const link=card.querySelector('a[href]');if(!link)return;card.tabIndex=0;card.setAttribute('role','link');card.addEventListener('click',event=>{if(!event.target.closest('a,button'))location.href=link.href;});card.addEventListener('keydown',event=>{if(event.key==='Enter')location.href=link.href;});});</script>
 </body>
 </html>

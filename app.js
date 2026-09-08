@@ -57,6 +57,14 @@ const SECTIUNI_EDITORIALE = Object.freeze([
   { slug: 'proiecte', categorie: 'Proiecte', titlu: 'Proiecte', descriere: 'Proiecte concrete pentru comunitate, fiecare cu pagina sa.' },
   { slug: 'evenimente', categorie: 'Evenimente', titlu: 'Evenimente', descriere: 'Întâlniri publice, dezbateri și acțiuni de campanie.' },
 ]);
+const PORTAL_SECTIONS = Object.freeze({
+  stiri: { titlu: 'Știri locale', descriere: 'Noutăți verificate din Bulgăruș, Lenauheim și Grabaț.', categorii: [] },
+  administratie: { titlu: 'Administrație', descriere: 'Decizii publice, proiecte și informații despre administrația locală.', categorii: ['Administrație', 'Primărie'] },
+  comunitate: { titlu: 'Comunitate', descriere: 'Oameni, inițiative și subiecte importante pentru comună.', categorii: ['Comunitate'] },
+  educatie: { titlu: 'Educație', descriere: 'Școli, copii și oportunități educaționale locale.', categorii: ['Educație'] },
+  economie: { titlu: 'Economie', descriere: 'Afaceri locale, locuri de muncă și dezvoltare.', categorii: ['Economie'] },
+  evenimente: { titlu: 'Evenimente', descriere: 'Calendarul activităților și întâlnirilor din comunitate.', categorii: ['Evenimente'] },
+});
 const ACCEPTANCE_FIELDS = [
   'functie_candidatura', 'zona', 'judet', 'partid', 'tip_candidat', 'entitate_responsabila',
   'finantator_materiale', 'scrutin', 'cod_mandatar_financiar', 'tip_contract', 'numar_contract',
@@ -106,6 +114,23 @@ function pollInput(body) {
   if (options.length < 2 || options.length > 6) throw new ValidationError('Adaugă între 2 și 6 opțiuni, fiecare pe un rând.');
   if (new Set(options.map(value => value.toLowerCase())).size !== options.length) throw new ValidationError('Opțiunile sondajului trebuie să fie diferite.');
   return { question, options: options.map((text, index) => ({ id: index + 1, text, votes: 0 })) };
+}
+
+function reactionFingerprint(req, type, id) {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) throw new ValidationError('Reacțiile necesită configurarea securizată a sesiunii.', 503);
+  return createHmac('sha256', secret).update(`reaction:${type}:${id}:${req.session.csrfToken}`).digest('hex');
+}
+
+function applyReaction(item, fingerprint, choice) {
+  if (!['like', 'dislike'].includes(choice)) throw new ValidationError('Reacția selectată nu este validă.');
+  item.reactii ||= { like: 0, dislike: 0, voters: {} };
+  item.reactii.voters ||= {};
+  const previous = item.reactii.voters[fingerprint];
+  if (previous === choice) return;
+  if (previous) item.reactii[previous] = Math.max(0, Number(item.reactii[previous] || 0) - 1);
+  item.reactii[choice] = Number(item.reactii[choice] || 0) + 1;
+  item.reactii.voters[fingerprint] = choice;
 }
 
 function productionAuth() {
@@ -277,6 +302,15 @@ export async function createApp({
       judete: [...new Set(all.map(candidate => candidate.judet).filter(Boolean))].sort() });
   });
 
+  app.get('/sectiune/:slug', (req, res) => {
+    const section = PORTAL_SECTIONS[req.params.slug];
+    if (!section) return res.status(404).send('Secțiunea nu există.');
+    const posts = db.data.portal_posts.filter(post => portalPostIsPublic(post)
+      && (req.params.slug === 'stiri' ? post.tip === 'stire' : section.categorii.includes(post.categorie)))
+      .sort((a, b) => new Date(portalPublicationDate(b)) - new Date(portalPublicationDate(a)));
+    res.render('portal-section-public', { section, posts });
+  });
+
   app.post('/sondaje/:id/vot', requireCsrf, safely(async (req, res) => {
     const poll = db.data.polls.find(item => item.id === Number(req.params.id) && item.active);
     if (!poll) throw new ValidationError('Sondajul nu mai este activ.', 404);
@@ -301,7 +335,15 @@ export async function createApp({
     if (!post) return res.status(404).send('Materialul nu există.');
     post.vizualizari = (post.vizualizari || 0) + 1;
     await db.write();
-    res.render('portal-post', { post, candidat: portalCandidate(post) });
+    res.render('portal-post', { post, candidat: portalCandidate(post), postUrl: `${publicBaseUrl(req)}/actualitate/${encodeURIComponent(post.slug)}` });
+  }));
+
+  app.post('/actualitate/:slug/reactie', requireCsrf, safely(async (req, res) => {
+    const post = db.data.portal_posts.find(item => item.slug === req.params.slug && portalPostIsPublic(item));
+    if (!post) throw new ValidationError('Materialul nu există.', 404);
+    applyReaction(post, reactionFingerprint(req, 'portal', post.id), String(req.body.reactie || ''));
+    await db.write();
+    res.redirect(303, `/actualitate/${post.slug}#reactii`);
   }));
 
   app.get('/login', (req, res) => {
@@ -1234,6 +1276,8 @@ export async function createApp({
       user.tiktok_url = urlSigur(req.body.tiktok_url);
       user.youtube_url = urlSigur(req.body.youtube_url);
     }
+    user.fotografie_profil_url = urlSigur(req.body.fotografie_profil_url);
+    user.fotografie_coperta_url = urlSigur(req.body.fotografie_coperta_url);
     await db.write();
     await compliance.audit({ actorId: user.id, actorRole: 'candidate', action: 'candidate_profile_changed',
       targetType: 'candidate', targetId: user.id, details: { acceptance_invalidated: requiresNewAcceptance } });
@@ -1470,6 +1514,16 @@ export async function createApp({
 
   app.get('/site/:subdomeniu/articol/:id', safely((req, res) => renderPublicArticle(req, res, { count: true })));
   app.get('/site/:subdomeniu/proiect/:id', safely((req, res) => renderPublicArticle(req, res, { count: true, expectedCategory: 'Proiecte' })));
+
+  app.post('/site/:subdomeniu/articol/:id/reactie', requireCsrf, safely(async (req, res) => {
+    const user = db.data.users.find(item => item.subdomeniu === req.params.subdomeniu && poatePublicaSite(item));
+    const articol = user && db.data.articole.find(item => item.id === Number(req.params.id)
+      && item.user_id === user.id && isPublished(item, now()) && item.moderation_status !== 'suspendat');
+    if (!articol) throw new ValidationError('Articolul nu există.', 404);
+    applyReaction(articol, reactionFingerprint(req, 'candidate', articol.id), String(req.body.reactie || ''));
+    await db.write();
+    res.redirect(303, `/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}#reactii`);
+  }));
 
   app.post('/site/:subdomeniu/articol/:id/comentarii', requireCsrf, safely(async (req, res) => {
     const { user, articol } = publicArticle(req);

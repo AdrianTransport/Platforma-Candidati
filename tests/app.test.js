@@ -306,6 +306,13 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     const page = await guest('/site/ana/articol/1');
     guestToken = csrf(page.html);
     assert.ok(guestToken);
+    assert.match(page.html, /Părerea comunității/);
+    assert.match(page.html, /WhatsApp/);
+    assert.equal((await guest('/site/ana/articol/1/reactie', { csrf_token: guestToken, reactie: 'like' })).status, 303);
+    assert.equal(db.data.articole.find(item => item.id === 1).reactii.like, 1);
+    assert.equal((await guest('/site/ana/articol/1/reactie', { csrf_token: guestToken, reactie: 'dislike' })).status, 303);
+    assert.equal(db.data.articole.find(item => item.id === 1).reactii.like, 0);
+    assert.equal(db.data.articole.find(item => item.id === 1).reactii.dislike, 1);
     const body = { nume: '<script>autor</script>', text: '<script>alert("test")</script>', acord_publicare: 'on', csrf_token: guestToken };
     const url = '/site/ana/articol/1/comentarii';
     assert.equal((await guest(url, { ...body, csrf_token: 'wrong' })).status, 403);
@@ -412,6 +419,7 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match(home.html, /openstreetmap\.org\/export\/embed/);
     assert.match(home.html, /Campanie pentru cartiere curate/);
     assert.match(home.html, /Campanie candidat/);
+    assert.match(home.html, /href="\/sectiune\/administratie"/);
     const detail = await guest(`/actualitate/${post.slug}`);
     assert.equal(detail.status, 200);
     assert.match(detail.html, /Ana — campanie electorală/);
@@ -433,6 +441,14 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal(news.status, 302);
     const newsPost = db.data.portal_posts.find(item => item.tip === 'stire');
     assert.equal(newsPost.transparenta.responsabil_editorial, 'Operator Test SRL');
+    const newsSection = await guest('/sectiune/stiri');
+    assert.equal(newsSection.status, 200);
+    assert.match(newsSection.html, /Noutăți din platformă/);
+    assert.equal((await guest('/sectiune/necunoscuta')).status, 404);
+    const newsDetail = await guest(`/actualitate/${newsPost.slug}`);
+    const reactionToken = csrf(newsDetail.html);
+    assert.equal((await guest(`/actualitate/${newsPost.slug}/reactie`, { csrf_token: reactionToken, reactie: 'like' })).status, 303);
+    assert.equal(newsPost.reactii.like, 1);
     assert.match((await guest(`/actualitate/${newsPost.slug}`)).html, /Știre publicată și asumată editorial de/);
     const invalidImage = await admin(`/admin/portal/${newsPost.id}`, {
       csrf_token: adminToken, ...newsPost, imagine_url: 'javascript:alert(1)', status: 'publicat', confirmare_responsabilitate: 'on',

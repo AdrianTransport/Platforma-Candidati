@@ -64,6 +64,8 @@ export async function initDB() {
     user.instagram_url ||= '';
     user.tiktok_url ||= '';
     user.youtube_url ||= '';
+    user.fotografie_profil_url ||= '';
+    user.fotografie_coperta_url ||= '';
     user.tip_candidat ||= '';
     user.entitate_responsabila ||= '';
     user.finantator_materiale ||= '';
@@ -112,6 +114,8 @@ export async function initDB() {
     articol.distribuiri_sociale ||= [];
     articol.moderation_status ||= 'normal';
     articol.transparenta ||= null;
+    articol.reactii ||= { like: 0, dislike: 0, voters: {} };
+    articol.reactii.voters ||= {};
   }
 
   for (const post of db.data.portal_posts) {
@@ -123,6 +127,8 @@ export async function initDB() {
     post.imagine_generata_ai ||= false;
     post.generat_de_ai ||= false;
     post.principal ||= false;
+    post.reactii ||= { like: 0, dislike: 0, voters: {} };
+    post.reactii.voters ||= {};
     post.status ||= 'ciorna';
     post.tip ||= 'stire';
   }

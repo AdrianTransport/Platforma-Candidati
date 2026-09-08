@@ -25,7 +25,7 @@
           <% if (articol.imagine_legenda || articol.imagine_credit || articol.imagine_generata_ai) { %><figcaption><%= articol.imagine_legenda || '' %><% if (articol.imagine_credit) { %> · <%= articol.imagine_credit %><% } %><% if (articol.imagine_generata_ai) { %><span class="image-origin">Ilustrație generată cu AI; nu este o fotografie documentară.</span><% } %></figcaption><% } %>
         </figure><% } %>
         <div class="article-text"><% articol.continut.split('\n').filter(p => p.trim()).forEach(paragraf => { %><% if (paragraf.startsWith('## ')) { %><h2><%= paragraf.slice(3) %></h2><% } else { %><p><%= paragraf %></p><% } %><% }) %></div>
-        <% if (!preview) { %><div class="share-box"><strong>Distribuie articolul</strong><div><a target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(articolUrl) %>">Facebook</a><button type="button" class="secondary" onclick="navigator.clipboard.writeText(location.href).then(() => this.textContent='Link copiat')">Copiază linkul</button></div></div>
+        <% if (!preview) { %><%- include('partials/engagement', { item: articol, publicUrl: articolUrl, reactionAction: `/site/${user.subdomeniu}/articol/${articol.id}/reactie` }) %>
         <section class="comments-section" id="comentarii">
           <h2>Comentarii<% if (commentsAvailable) { %> (<%= comentarii.length %>)<% } %></h2>
           <p class="note">Comentariile apar numai după aprobarea Super Adminului. Aprobarea nu confirmă afirmațiile autorului. Nu trimite date personale ale altor persoane.</p>
