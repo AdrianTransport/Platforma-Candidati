@@ -34,6 +34,18 @@ export function createAuthUser(user, key) {
   });
 }
 
+export function createAuthUserWithPassword(user, password, key) {
+  return authRequest('admin/users', {
+    method: 'POST', key,
+    body: {
+      email: user.email,
+      password,
+      email_confirm: true,
+      app_metadata: { role: user.role, legacy_id: user.id },
+    },
+  });
+}
+
 export function signInWithPassword(email, password) {
   return authRequest('token?grant_type=password', { method: 'POST', body: { email, password } });
 }
@@ -42,3 +54,6 @@ export function updateAuthPassword(userId, password) {
   return authRequest(`admin/users/${encodeURIComponent(userId)}`, { method: 'PUT', body: { password } });
 }
 
+export function deleteAuthUser(userId) {
+  return authRequest(`admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
+}

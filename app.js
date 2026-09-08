@@ -9,6 +9,7 @@ import { articleInput, profileInput, filterArticles, isPublished, publicationDat
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
 import { attachEditorialRoutes } from './editorial-routes.js';
+import { createAuthUserWithPassword, deleteAuthUser, signInWithPassword, updateAuthPassword } from './supabase-auth.js';
 import { LEGAL_PAGES } from './legal-pages.js';
 import { isPortalPublished, portalPostInput, portalPublicationDate } from './portal.js';
 import {
@@ -96,11 +97,22 @@ function poatePublicaSite(user) {
   return user?.role === 'candidate' && user.activ && user.status_cont === 'activ' && user.module?.site;
 }
 
+function productionAuth() {
+  if (!process.env.SUPABASE_SECRET_KEY) return null;
+  return {
+    signIn: signInWithPassword,
+    createUser: createAuthUserWithPassword,
+    deleteUser: deleteAuthUser,
+    updatePassword: updateAuthPassword,
+  };
+}
+
 export async function createApp({
   comments = createComments(),
   now = () => Date.now(),
   editorial = createEditorial({ now }),
   compliance = createCompliance({ now }),
+  auth = productionAuth(),
 } = {}) {
   await initDB();
   const platform = platformInfo();
@@ -258,7 +270,20 @@ export async function createApp({
     const contPermis = user?.role === 'admin'
       ? user.activ
       : user?.role === 'candidate' && ['in_asteptare', 'activ'].includes(user.status_cont);
-    if (!user || !contPermis || !bcrypt.compareSync(parola, user.password_hash)) {
+    let parolaValida = false;
+    if (user && contPermis) {
+      if (auth && user.auth_user_id) {
+        try {
+          const result = await auth.signIn(email, parola);
+          parolaValida = result?.user?.id === user.auth_user_id;
+        } catch {
+          parolaValida = false;
+        }
+      } else if (!auth) {
+        parolaValida = bcrypt.compareSync(parola, user.password_hash);
+      }
+    }
+    if (!user || !contPermis || !parolaValida) {
       if (user) {
         user.login_attempts = (user.login_attempts || 0) + 1;
         if (user.login_attempts >= 5) {
@@ -544,8 +569,19 @@ export async function createApp({
       last_login_at: null,
       created_at: new Date().toISOString(),
     };
+    let authUser;
+    if (auth) {
+      authUser = await auth.createUser(candidate, parola);
+      candidate.auth_user_id = authUser.id;
+    }
     db.data.users.push(candidate);
-    await db.write();
+    try {
+      await db.write();
+    } catch (error) {
+      db.data.users = db.data.users.filter(user => user.id !== candidate.id);
+      if (authUser) await auth.deleteUser(authUser.id).catch(() => {});
+      throw error;
+    }
     await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_created',
       targetType: 'candidate', targetId: candidate.id, details: { contract_type: legal.tip_contract, contract_number: legal.numar_contract } });
     res.status(201).render('candidate-created', { candidate, parola });
@@ -555,12 +591,26 @@ export async function createApp({
     const admin = db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin');
     const parolaActuala = String(req.body.parola_actuala || '');
     const parolaNoua = String(req.body.parola_noua || '');
-    if (!admin || !bcrypt.compareSync(parolaActuala, admin.password_hash)) {
+    let parolaActualaValida = false;
+    if (admin) {
+      if (auth && admin.auth_user_id) {
+        try {
+          const result = await auth.signIn(admin.email, parolaActuala);
+          parolaActualaValida = result?.user?.id === admin.auth_user_id;
+        } catch {
+          parolaActualaValida = false;
+        }
+      } else if (!auth) {
+        parolaActualaValida = bcrypt.compareSync(parolaActuala, admin.password_hash);
+      }
+    }
+    if (!admin || !parolaActualaValida) {
       return res.redirect('/admin?eroare=Parola%20actuala%20nu%20este%20corecta.');
     }
     if (parolaNoua.length < 12 || parolaNoua !== String(req.body.confirma_parola || '')) {
       return res.redirect('/admin?eroare=Parola%20noua%20trebuie%20sa%20aiba%20minimum%2012%20caractere%20si%20sa%20fie%20confirmata.');
     }
+    if (auth) await auth.updatePassword(admin.auth_user_id, parolaNoua);
     admin.password_hash = bcrypt.hashSync(parolaNoua, 12);
     admin.password_changed_at = new Date().toISOString();
     await db.write();
@@ -848,343 +898,3 @@ export async function createApp({
         // Stergerea conexiunii locale ramane prioritara chiar daca furnizorul nu raspunde.
       }
     }
-    if (user?.social_connections) user.social_connections.tiktok = null;
-    await db.write();
-    res.redirect('/dashboard/social?mesaj=TikTok%20a%20fost%20deconectat%20din%20platforma.');
-  });
-
-  app.post('/dashboard/social/publica/:id', requireRole('candidate'), requireCsrf, async (req, res) => {
-    const user = db.data.users.find((u) => u.id === req.session.userId);
-    const articol = db.data.articole.find(
-      (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId && isPublished(a, now())
-    );
-    const platforma = String(req.body.platforma || '').toLowerCase();
-    if (!user?.module?.social || !articol || !['facebook', 'instagram', 'tiktok'].includes(platforma)) {
-      return res.redirect('/dashboard/social?eroare=Articolul%20sau%20reteaua%20selectata%20nu%20este%20valida.');
-    }
-    const articolUrl = `${publicBaseUrl(req)}/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}?utm_source=${platforma}`;
-    const textScurt = String(articol.continut || '').replace(/\s+/g, ' ').trim().slice(0, 450);
-    try {
-      const imaginePublica = internalImageId(articol.imagine_url)
-        ? new URL(articol.imagine_url, publicBaseUrl(req)).toString() : articol.imagine_url;
-      let rezultat;
-      if (platforma === 'facebook' || platforma === 'instagram') {
-        const meta = user.social_connections?.meta;
-        const page = meta?.pages?.find((item) => item.id === meta.selected_page_id);
-        if (!page) throw new Error('Conecteaza Meta si selecteaza o Pagina inainte de publicare.');
-        rezultat = platforma === 'facebook'
-          ? await publishFacebook(page, `${articol.titlu}\n\n${textScurt}`, articolUrl)
-          : await publishInstagram(page, `${articol.titlu}\n\n${textScurt}\n\n${articolUrl}`, imaginePublica);
-      } else {
-        const connection = user.social_connections?.tiktok;
-        if (!connection) throw new Error('Conecteaza contul TikTok inainte de publicare.');
-        rezultat = await publishTikTokPhoto(connection, articol.titlu, `${textScurt}\n\n${articolUrl}`, imaginePublica);
-      }
-      articol.distribuiri_sociale ||= [];
-      articol.distribuiri_sociale.push({
-        platforma,
-        data: new Date().toISOString(),
-        id_extern: rezultat.id || rezultat.data?.publish_id || '',
-        status: 'trimis',
-      });
-      await db.write();
-      res.redirect(`/dashboard/social?mesaj=${encodeURIComponent(`Articolul a fost trimis cu succes catre ${platforma}.`)}`);
-    } catch (error) {
-      res.redirect(`/dashboard/social?eroare=${encodeURIComponent(`${platforma}: ${error.message || 'publicarea a esuat.'}`)}`);
-    }
-  });
-
-  app.post('/dashboard/profil', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
-    const user = db.data.users.find((u) => u.id === req.session.userId);
-    if (!user) return res.redirect('/login');
-    const before = Object.fromEntries(ACCEPTANCE_FIELDS.map(field => [field, user[field]]));
-    Object.assign(user, profileInput(req.body));
-    const requiresNewAcceptance = acceptanceChanged(before, user);
-    if (requiresNewAcceptance) invalidateAcceptance(user);
-    if (user.module?.social) {
-      user.facebook_url = urlSigur(req.body.facebook_url);
-      user.instagram_url = urlSigur(req.body.instagram_url);
-      user.tiktok_url = urlSigur(req.body.tiktok_url);
-      user.youtube_url = urlSigur(req.body.youtube_url);
-    }
-    await db.write();
-    await compliance.audit({ actorId: user.id, actorRole: 'candidate', action: 'candidate_profile_changed',
-      targetType: 'candidate', targetId: user.id, details: { acceptance_invalidated: requiresNewAcceptance } });
-    res.redirect(requiresNewAcceptance ? '/activare?mesaj=Datele%20publice%20s-au%20schimbat.%20Confirm%C4%83%20din%20nou%20termenii.' : '/dashboard?profil=salvat');
-  }));
-
-  app.get('/dashboard/articol/nou', requireRole('candidate'), (req, res) => {
-    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
-    const section = SECTIUNI_EDITORIALE.find(item => item.categorie === req.query.categorie);
-    const categorie = section?.categorie || 'Actualitate';
-    const tip = categorie === 'Program' ? 'candidatura' : (categorie === 'Evenimente' ? 'anunt' : 'idee');
-    res.render('articol-form', { user, legalReady: candidateComplianceMissing(user, platform).length === 0, articol: { titlu: '', continut: '', categorie, tip }, eroare: '', dataProgramata: '', confirmareResponsabilitate: false });
-  });
-
-  app.get('/dashboard/articol/:id/edit', requireRole('candidate'), (req, res) => {
-    const articol = db.data.articole.find(
-      (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId
-    );
-    if (!articol) return res.redirect('/dashboard');
-    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
-    res.render('articol-form', { user, legalReady: candidateComplianceMissing(user, platform).length === 0, articol, eroare: '', dataProgramata: localDateTime(articol.data_programata), confirmareResponsabilitate: false });
-  });
-
-  app.get('/dashboard/articol/:id/preview', requireRole('candidate'), requireActiveAccount, (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
-    const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
-    const articol = db.data.articole.find(item => item.id === Number(req.params.id) && item.user_id === user?.id);
-    if (!user?.module?.site || !articol) return res.status(404).send('Materialul nu există.');
-    const articolUrl = `${req.protocol}://${req.get('host')}/dashboard/articol/${articol.id}/preview`;
-    res.render('site-articol', {
-      user, articol, articolUrl, transparenta: publicTransparency(user, articol), activeSection: sectionSlugForCategory(articol.categorie),
-      comentarii: [], commentsAvailable: true, commentError: '', commentValues: {}, commentSent: false, preview: true,
-    });
-  });
-
-  async function validateArticle(req, res, previous) {
-    try {
-      const fields = articleInput(req.body, previous, now());
-      const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
-      if (previous?.moderation_status === 'suspendat' && ['publicat', 'programat'].includes(fields.status)) {
-        throw new ValidationError('Articolul este suspendat de Super Admin și nu poate fi republicat până la soluționarea sesizării.');
-      }
-      if (['publicat', 'programat'].includes(fields.status)) {
-        const missing = candidateComplianceMissing(user, platform);
-        if (missing.length) throw new ValidationError(`Publicarea este blocată. Lipsesc: ${missing.join(', ')}.`);
-        if (req.body.confirmare_responsabilitate !== 'on') {
-          throw new ValidationError('Confirmă responsabilitatea editorială și exactitatea datelor de transparență.');
-        }
-        fields.transparenta = transparencySnapshot(user, new Date(now()).toISOString());
-      }
-      fields.imagine_url = editorialImageUrl(req.body.imagine_url);
-      const imageId = internalImageId(fields.imagine_url);
-      if (imageId) {
-        const image = await editorial.media(imageId);
-        if (!image || image.userId !== req.session.userId) throw new ValidationError('Imaginea nu aparține contului tău sau nu mai este disponibilă.');
-        fields.imagine_generata_ai = image.generated || fields.imagine_generata_ai;
-      }
-      return fields;
-    }
-    catch (error) {
-      if (!(error instanceof ValidationError)) throw error;
-      const form = Object.fromEntries(['titlu', 'continut', 'tip', 'categorie', 'imagine_url', 'rezumat', 'imagine_alt', 'imagine_legenda', 'imagine_credit'].map(key =>
-        [key, typeof req.body[key] === 'string' ? req.body[key] : '']));
-      const user = db.data.users.find(candidate => candidate.id === req.session.userId && candidate.role === 'candidate');
-      res.status(400).render('articol-form', { user, legalReady: candidateComplianceMissing(user, platform).length === 0, articol: { ...form, id: previous?.id, generat_de_ai: req.body.generat_de_ai === 'true', imagine_generata_ai: req.body.imagine_generata_ai === 'true' },
-        eroare: error.message, dataProgramata: typeof req.body.data_programata === 'string' ? req.body.data_programata : '',
-        confirmareResponsabilitate: req.body.confirmare_responsabilitate === 'on' });
-      return null;
-    }
-  }
-
-  app.post('/dashboard/articol', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
-    const fields = await validateArticle(req, res, null);
-    if (!fields) return;
-    const article = {
-      id: nextArticolId(),
-      user_id: req.session.userId,
-      ...fields,
-      vizualizari: 0,
-      distribuiri_sociale: [],
-      moderation_status: 'normal',
-    };
-    db.data.articole.push(article);
-    await db.write();
-    await compliance.audit({ actorId: req.session.userId, actorRole: 'candidate', action: 'article_created',
-      targetType: 'article', targetId: article.id, details: { status: article.status, title: article.titlu.slice(0, 200) } });
-    res.redirect('/dashboard');
-  }));
-
-  app.post('/dashboard/articol/:id', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
-    const articol = db.data.articole.find(
-      (a) => a.id === Number(req.params.id) && a.user_id === req.session.userId
-    );
-    if (!articol) return res.redirect('/dashboard');
-    const fields = await validateArticle(req, res, articol);
-    if (!fields) return;
-    Object.assign(articol, fields);
-    await db.write();
-    await compliance.audit({ actorId: req.session.userId, actorRole: 'candidate', action: 'article_updated',
-      targetType: 'article', targetId: articol.id, details: { status: articol.status, title: articol.titlu.slice(0, 200) } });
-    res.redirect('/dashboard');
-  }));
-
-  app.post('/dashboard/articol/:id/sterge', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
-    const articol = db.data.articole.find(a => a.id === Number(req.params.id) && a.user_id === req.session.userId);
-    if (articol?.moderation_status === 'suspendat') {
-      throw new ValidationError('Un articol suspendat nu poate fi șters până la soluționarea sesizării.', 409);
-    }
-    db.data.articole = db.data.articole.filter(
-      (a) => !(a.id === Number(req.params.id) && a.user_id === req.session.userId)
-    );
-    await db.write();
-    if (articol) await compliance.audit({ actorId: req.session.userId, actorRole: 'candidate', action: 'article_deleted',
-      targetType: 'article', targetId: articol.id, details: { status: articol.status, title: articol.titlu.slice(0, 200) } });
-    res.redirect('/dashboard');
-  }));
-
-  attachEditorialRoutes(app, {
-    db, editorial, requireRole, requireActiveAccount, requireCsrf, now,
-    isPortalPostPublished: portalPostIsPublic,
-  });
-
-  /* --------------------------- SITE PUBLIC (ziar) -------------------------- */
-
-  app.get('/site/:subdomeniu', safely(async (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
-    const user = db.data.users.find(
-      (u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u)
-    );
-    if (!user) return res.status(404).send('Pagina nu exista.');
-    const toate = publicCandidateArticles(user);
-    const { cautaText, categorieSelectata, filtrate } = filterArticles(toate, req.query);
-    const candidatura = filtrate.find((a) => a.tip === 'candidatura');
-    const fluxIdei = filtrate.filter((a) => a.id !== candidatura?.id);
-    const categorii = filtrate.reduce((grupuri, articol) => {
-      const categorie = articol.categorie || 'Actualitate';
-      grupuri[categorie] ||= [];
-      grupuri[categorie].push(articol);
-      return grupuri;
-    }, Object.create(null));
-    if (user.module?.statistici) {
-      user.statistici.vizite_site += 1;
-      const sursa = sursaVizitei(req);
-      user.statistici.surse[sursa] = (user.statistici.surse[sursa] || 0) + 1;
-      await db.write();
-    }
-    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata, activeSection: 'acasa',
-      categoriiToate: [...new Set(toate.map(a => a.categorie || 'Actualitate'))].sort(),
-      rezultatTotal: filtrate.length });
-  }));
-
-  for (const section of SECTIUNI_EDITORIALE) {
-    app.get(`/site/:subdomeniu/${section.slug}`, (req, res) => {
-      res.set('Cache-Control', 'private, no-store');
-      const user = publicCandidate(req.params.subdomeniu);
-      if (!user) return res.status(404).send('Pagina nu există.');
-      const articole = publicCandidateArticles(user)
-        .filter(article => article.categorie === section.categorie);
-      res.render('site-section', { user, section, articole, activeSection: section.slug });
-    });
-  }
-
-  app.get('/site/:subdomeniu/despre', (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
-    const user = publicCandidate(req.params.subdomeniu);
-    if (!user) return res.status(404).send('Pagina nu există.');
-    res.render('site-about', { user, activeSection: 'despre' });
-  });
-
-  app.get('/site/:subdomeniu/contact', (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
-    const user = publicCandidate(req.params.subdomeniu);
-    if (!user) return res.status(404).send('Pagina nu există.');
-    res.render('site-contact', { user, activeSection: 'contact' });
-  });
-
-  app.get('/site/:subdomeniu/transparenta', (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
-    const user = publicCandidate(req.params.subdomeniu);
-    if (!user) return res.status(404).send('Pagina nu există.');
-    const articleId = Number(req.query.articol);
-    const articol = Number.isSafeInteger(articleId) && articleId > 0
-      ? db.data.articole.find(item => item.id === articleId && item.user_id === user.id && isPublished(item, now()))
-      : null;
-    res.render('site-transparency', { user, articol, transparenta: publicTransparency(user, articol), activeSection: 'transparenta' });
-  });
-
-  app.get('/site/:subdomeniu/articol/:id/raporteaza', (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
-    const { user, articol } = publicArticle(req);
-    if (!articol) return res.status(404).send('Articolul nu există sau nu este publicat.');
-    const reportId = /^[a-f0-9-]{36}$/.test(String(req.query.sesizare || '')) ? String(req.query.sesizare) : '';
-    res.render('report-form', { user, articol, eroare: '', values: {}, trimis: req.query.trimis === 'da', reportId });
-  });
-
-  app.post('/site/:subdomeniu/articol/:id/raporteaza', requireCsrf, safely(async (req, res) => {
-    const { user, articol } = publicArticle(req);
-    if (!articol) return res.status(404).send('Articolul nu există sau nu este publicat.');
-    try {
-      const report = await compliance.submitReport({ candidate: user, article: articol, body: req.body, ip: requestIp(req) });
-      return res.redirect(303, `/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}/raporteaza?trimis=da&sesizare=${encodeURIComponent(report.id)}`);
-    } catch (error) {
-      if (!(error instanceof ValidationError)) throw error;
-      if (error.status === 429) res.set('Retry-After', '60');
-      return res.status(error.status).render('report-form', { user, articol, eroare: error.message,
-        values: Object.fromEntries(['motiv', 'descriere', 'nume', 'email'].map(key =>
-          [key, typeof req.body[key] === 'string' ? req.body[key] : ''])), trimis: false, reportId: '' });
-    }
-  }));
-
-  async function renderPublicArticle(req, res, { error = '', values = {}, status = 200, count = false, expectedCategory = '' } = {}) {
-    res.set('Cache-Control', 'private, no-store');
-    const { user, articol } = publicArticle(req);
-    if (!articol || (expectedCategory && articol.categorie !== expectedCategory)) {
-      return res.status(404).send('Articolul nu exista sau nu e publicat.');
-    }
-    let comentarii = [];
-    let commentsAvailable = true;
-    try { comentarii = (await comments.list(user.id, articol.id)).filter(c => c.status === 'aprobat'); }
-    catch (commentError) {
-      commentsAvailable = false;
-      console.error('Citirea comentariilor a eșuat:', commentError.name);
-    }
-    if (count && user.module?.statistici) {
-      articol.vizualizari = (articol.vizualizari || 0) + 1;
-      await db.write();
-    }
-    const bazaPublica = process.env.URL || `${req.protocol}://${req.get('host')}`;
-    const articolUrl = new URL(`/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}`, bazaPublica).toString();
-    res.status(status).render('site-articol', { user, articol, articolUrl, transparenta: publicTransparency(user, articol), comentarii, commentsAvailable, commentError: error,
-      activeSection: sectionSlugForCategory(articol.categorie),
-      commentValues: values, commentSent: req.query.comentariu === 'trimis', preview: false });
-  }
-
-  app.get('/site/:subdomeniu/articol/:id', safely((req, res) => renderPublicArticle(req, res, { count: true })));
-  app.get('/site/:subdomeniu/proiect/:id', safely((req, res) => renderPublicArticle(req, res, { count: true, expectedCategory: 'Proiecte' })));
-
-  app.post('/site/:subdomeniu/articol/:id/comentarii', requireCsrf, safely(async (req, res) => {
-    const { user, articol } = publicArticle(req);
-    if (!articol) return res.status(404).send('Articolul nu există sau nu e publicat.');
-    try {
-      await comments.submit({ candidateId: user.id, articleId: articol.id, body: req.body,
-        // Nu avem încredere în X-Forwarded-For trimis direct de client.
-        ip: requestIp(req) });
-    } catch (error) {
-      if (!(error instanceof ValidationError)) throw error;
-      if (error.status === 429) res.set('Retry-After', '60');
-      return renderPublicArticle(req, res, { error: error.message, status: error.status,
-        values: { nume: typeof req.body.nume === 'string' ? req.body.nume : '', text: typeof req.body.text === 'string' ? req.body.text : '' } });
-    }
-    res.redirect(303, `/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}?comentariu=trimis#comentarii`);
-  }));
-
-  app.get('/site/:subdomeniu/social/:platforma', async (req, res) => {
-    const user = db.data.users.find((u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
-    const platforma = String(req.params.platforma || '').toLowerCase();
-    if (!user || !user.module?.social || !RETELE_SOCIALE.has(platforma)) {
-      return res.redirect(`/site/${encodeURIComponent(req.params.subdomeniu)}`);
-    }
-    const destinatie = urlSigur(user[`${platforma}_url`]);
-    if (!destinatie) return res.redirect(`/site/${encodeURIComponent(user.subdomeniu)}`);
-    if (user.module?.statistici) {
-      user.statistici.clickuri_sociale[platforma] =
-        (user.statistici.clickuri_sociale[platforma] || 0) + 1;
-      await db.write();
-    }
-    res.redirect(destinatie);
-  });
-
-  app.use((error, req, res, next) => {
-    if (res.headersSent) return next(error);
-    if (['/dashboard/media', '/admin/portal/media'].includes(req.path) && error.type === 'entity.too.large') {
-      return res.status(413).json({ eroare: 'Imagine prea mare. Încarcă un fișier de maximum 3 MB după redimensionare.' });
-    }
-    if (error instanceof ValidationError) return res.status(error.status).send(error.message);
-    // Nu expunem stack-uri, secrete sau datele trimise de vizitatori.
-    console.error('Cerere nereușită:', error.name);
-    res.status(503).send('Datele nu pot fi accesate momentan. Reîncarcă pagina și încearcă din nou.');
-  });
-  return app;
-}
