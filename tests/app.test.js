@@ -336,6 +336,28 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal((await admin(url, { csrf_token: adminToken, status: 'sters', version: current.version })).status, 303);
     assert.match((await admin('/admin/comentarii?status=sters')).html, /Istoric moderare \(3\)/);
   });
+  await t.test('Sondaje separate pentru portal și candidat, vot unic și vitrină filtrabilă', async () => {
+    const portalPoll = await admin('/admin/sondaje', { csrf_token: adminToken,
+      intrebare: 'Care este prioritatea comunității?', optiuni: 'Drumuri\nȘcoli\nCurățenie', rezultate_publice: 'on' });
+    assert.equal(portalPoll.status, 302);
+    const home = await guest('/');
+    assert.match(home.html, /Care este prioritatea comunității/);
+    const homeToken = csrf(home.html);
+    const portalPollId = db.data.polls.find(poll => poll.owner_role === 'admin').id;
+    assert.equal((await guest(`/sondaje/${portalPollId}/vot`, { csrf_token: homeToken, optiune: '1' })).status, 303);
+    assert.equal((await guest(`/sondaje/${portalPollId}/vot`, { csrf_token: homeToken, optiune: '2' })).status, 409);
+
+    const candidatePoll = await cand('/dashboard/sondaje', { csrf_token: candidateToken,
+      intrebare: 'Ce proiect este prioritar în cartier?', optiuni: 'Parc\nIluminat', rezultate_publice: 'on' });
+    assert.equal(candidatePoll.status, 302);
+    const candidateSite = await guest('/site/ana');
+    assert.match(candidateSite.html, /Ce proiect este prioritar în cartier/);
+    const directory = await guest('/candidati?judet=Timiș&functie=Consilier');
+    assert.equal(directory.status, 200);
+    assert.match(directory.html, /Toți candidații activi/);
+    assert.match(directory.html, /ana/);
+    assert.ok(!(await guest('/candidati?judet=Cluj')).html.includes('Deschide publicația →'));
+  });
   await t.test('Site principal: numai Super Admin publică știri și campanii cu imagini și citiri', async () => {
     assert.equal((await cand('/admin/portal')).status, 403);
     const center = await admin('/admin/portal');

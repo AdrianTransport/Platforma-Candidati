@@ -38,9 +38,11 @@ export async function initDB() {
   db.data.users ||= [];
   db.data.articole ||= [];
   db.data.portal_posts ||= [];
+  db.data.polls ||= [];
   db.data.nextUserId ||= 1;
   db.data.nextArticolId ||= 1;
   db.data.nextPortalPostId ||= 1;
+  db.data.nextPollId ||= 1;
 
   for (const user of db.data.users) {
     user.login_attempts ||= 0;

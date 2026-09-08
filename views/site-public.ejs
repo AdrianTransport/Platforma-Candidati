@@ -80,6 +80,7 @@
       <aside class="edition-aside"><h2>Cele mai accesate</h2><ol class="most-read"><% populare.forEach(a => { %><li><a href="/site/<%= user.subdomeniu %>/articol/<%= a.id %>"><%= a.titlu %><small><%= a.vizualizari || 0 %> afișări</small></a></li><% }) %></ol><p>Contorul măsoară afișările paginii, nu cititori unici sau lectura integrală.</p></aside>
     <% } %></div>
     </main>
+    <% if (sondaj) { %><section class="candidate-profile candidate-poll-section" id="sondaj"><%- include('partials/poll', { poll: sondaj }) %></section><% } %>
 
     <section class="candidate-profile" id="despre"><div class="candidate-monogram"><%= user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('') %></div><div><span class="article-label">Despre candidat</span><h2><%= user.nume_candidat %></h2><p><%= user.descriere || user.mesaj_scurt || 'Prezentarea candidatului va fi publicată aici.' %></p><strong><%= [user.functie_candidatura, user.partid, user.zona].filter(Boolean).join(' · ') %></strong><p><a class="read-more" href="/site/<%= user.subdomeniu %>/despre">Citește prezentarea completă</a></p></div></section>
 

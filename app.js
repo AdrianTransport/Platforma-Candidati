@@ -2,10 +2,11 @@ import express from 'express';
 import ejs from 'ejs';
 import cookieSession from 'cookie-session';
 import bcrypt from 'bcryptjs';
+import { createHmac } from 'node:crypto';
 import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { requireRole } from './middleware/auth.js';
-import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, ValidationError } from './publication.js';
+import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, textField, ValidationError } from './publication.js';
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
 import { attachEditorialRoutes } from './editorial-routes.js';
@@ -97,6 +98,14 @@ function poatePublicaSite(user) {
   return user?.role === 'candidate' && user.activ && user.status_cont === 'activ' && user.module?.site;
 }
 
+function pollInput(body) {
+  const question = textField(body.intrebare, 'Întrebarea sondajului', 180, true);
+  const options = String(body.optiuni || '').split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+  if (options.length < 2 || options.length > 6) throw new ValidationError('Adaugă între 2 și 6 opțiuni, fiecare pe un rând.');
+  if (new Set(options.map(value => value.toLowerCase())).size !== options.length) throw new ValidationError('Opțiunile sondajului trebuie să fie diferite.');
+  return { question, options: options.map((text, index) => ({ id: index + 1, text, votes: 0 })) };
+}
+
 function productionAuth() {
   if (!process.env.SUPABASE_SECRET_KEY) return null;
   return {
@@ -116,6 +125,10 @@ export async function createApp({
 } = {}) {
   await initDB();
   const platform = platformInfo();
+  const ownerPolls = (role, ownerId = null) => db.data.polls
+    .filter(poll => poll.owner_role === role && poll.owner_id === ownerId)
+    .sort((a, b) => b.id - a.id);
+  const activePoll = (role, ownerId = null) => ownerPolls(role, ownerId).find(poll => poll.active) || null;
 
   const app = express();
   // Inregistram motorul explicit (in loc sa lasam Express sa faca un require
@@ -238,8 +251,43 @@ export async function createApp({
       principal: mainPost ? withCandidate(mainPost) : null,
       stiri: portalPosts.filter(post => post.tip === 'stire' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
       campanii: portalPosts.filter(post => post.tip === 'campanie' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
+      sondaj: activePoll('admin'),
     });
   });
+
+  app.get('/candidati', (req, res) => {
+    const all = db.data.users.filter(poatePublicaSite).sort((a, b) => String(a.nume_candidat).localeCompare(String(b.nume_candidat), 'ro'));
+    const judet = textField(req.query.judet, 'Județ', 100).toLowerCase();
+    const functie = textField(req.query.functie, 'Funcție', 100).toLowerCase();
+    const cauta = textField(req.query.cauta, 'Căutare', 120).toLowerCase();
+    const filtered = all.filter(candidate => (!judet || String(candidate.judet).toLowerCase() === judet)
+      && (!functie || String(candidate.functie_candidatura).toLowerCase().includes(functie))
+      && (!cauta || `${candidate.nume_candidat} ${candidate.zona} ${candidate.partid}`.toLowerCase().includes(cauta)));
+    const pages = Math.max(1, Math.ceil(filtered.length / 12));
+    const page = Math.min(pages, Math.max(1, Number.parseInt(req.query.pagina, 10) || 1));
+    res.set('Cache-Control', 'private, no-store');
+    res.render('candidate-showcase', { candidati: filtered.slice((page - 1) * 12, page * 12), total: filtered.length, page, pages,
+      judet: req.query.judet || '', functie: req.query.functie || '', cauta: req.query.cauta || '',
+      judete: [...new Set(all.map(candidate => candidate.judet).filter(Boolean))].sort() });
+  });
+
+  app.post('/sondaje/:id/vot', requireCsrf, safely(async (req, res) => {
+    const poll = db.data.polls.find(item => item.id === Number(req.params.id) && item.active);
+    if (!poll) throw new ValidationError('Sondajul nu mai este activ.', 404);
+    const option = poll.options.find(item => item.id === Number(req.body.optiune));
+    if (!option) throw new ValidationError('Alege una dintre opțiunile sondajului.');
+    const pollSecret = process.env.SESSION_SECRET;
+    if (!pollSecret || pollSecret.length < 32) throw new ValidationError('Sondajele necesită SESSION_SECRET configurat securizat.', 503);
+    const fingerprint = createHmac('sha256', pollSecret)
+      .update(`poll:${poll.id}:${req.session.csrfToken}`).digest('hex');
+    poll.voters ||= [];
+    if (poll.voters.includes(fingerprint)) throw new ValidationError('Ai votat deja în acest sondaj.', 409);
+    poll.voters.push(fingerprint);
+    option.votes += 1;
+    await db.write();
+    const candidate = poll.owner_role === 'candidate' && db.data.users.find(user => user.id === poll.owner_id);
+    res.redirect(303, candidate ? `/site/${candidate.subdomeniu}?sondaj=votat#sondaj` : '/?sondaj=votat#sondaj');
+  }));
 
   app.get('/actualitate/:slug', safely(async (req, res) => {
     res.set('Cache-Control', 'private, no-store');
@@ -371,8 +419,18 @@ export async function createApp({
       platform,
       complianceMissing: Object.fromEntries(candidati.map(candidate =>
         [candidate.id, candidateComplianceMissing(candidate, platform)])),
+      sondaje: ownerPolls('admin'),
     });
   });
+
+  app.post('/admin/sondaje', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const fields = pollInput(req.body);
+    db.data.polls.forEach(poll => { if (poll.owner_role === 'admin') poll.active = false; });
+    db.data.polls.push({ id: db.data.nextPollId++, owner_role: 'admin', owner_id: null, ...fields,
+      active: true, show_results: req.body.rezultate_publice === 'on', voters: [], created_at: new Date().toISOString() });
+    await db.write();
+    res.redirect('/admin?mesaj=Sondajul%20paginii%20principale%20a%20fost%20publicat.');
+  }));
 
   const portalCandidates = () => db.data.users
     .filter(user => user.role === 'candidate')
@@ -681,6 +739,7 @@ export async function createApp({
     db.data.users = db.data.users.filter(user => user.id !== candidate.id);
     db.data.articole = db.data.articole.filter(article => article.user_id !== candidate.id);
     db.data.portal_posts = db.data.portal_posts.filter(post => post.candidate_id !== candidate.id);
+    db.data.polls = db.data.polls.filter(poll => poll.owner_role !== 'candidate' || poll.owner_id !== candidate.id);
     await db.write();
     try {
       if (auth && candidate.auth_user_id) await auth.deleteUser(candidate.auth_user_id);
@@ -824,8 +883,30 @@ export async function createApp({
     res.render('candidate-dashboard', { articole, user, totalCitiri, topArticole, sectiuniEditoriale,
       categoriiDashboard, categorieFiltru, statusFiltru, rezultatTotal: articole.length,
       totalArticole: toateArticolele.length,
-      lipsuriJuridice: candidateComplianceMissing(user, platform) });
+      lipsuriJuridice: candidateComplianceMissing(user, platform), sondaje: ownerPolls('candidate', user.id),
+      mesaj: req.query.mesaj || '', eroare: req.query.eroare || '' });
   });
+
+  app.post('/dashboard/sondaje', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const fields = pollInput(req.body);
+    db.data.polls.forEach(poll => { if (poll.owner_role === 'candidate' && poll.owner_id === req.session.userId) poll.active = false; });
+    db.data.polls.push({ id: db.data.nextPollId++, owner_role: 'candidate', owner_id: req.session.userId, ...fields,
+      active: true, show_results: req.body.rezultate_publice === 'on', voters: [], created_at: new Date().toISOString() });
+    await db.write();
+    res.redirect('/dashboard?mesaj=Sondajul%20a%20fost%20publicat.');
+  }));
+
+  app.post('/sondaje/:id/stare', requireCsrf, safely(async (req, res) => {
+    const poll = db.data.polls.find(item => item.id === Number(req.params.id));
+    const sessionCandidate = db.data.users.find(user => user.id === req.session.userId && poatePublicaSite(user));
+    const owns = req.session.rol === 'admin' ? poll?.owner_role === 'admin'
+      : req.session.rol === 'candidate' && sessionCandidate && poll?.owner_role === 'candidate' && poll.owner_id === req.session.userId;
+    if (!owns) return res.status(403).send('Acces interzis.');
+    poll.active = req.body.active === 'true';
+    if (poll.active) db.data.polls.forEach(item => { if (item.id !== poll.id && item.owner_role === poll.owner_role && item.owner_id === poll.owner_id) item.active = false; });
+    await db.write();
+    res.redirect(req.session.rol === 'admin' ? '/admin' : '/dashboard');
+  }));
 
   app.get('/dashboard/social', requireRole('candidate'), (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
@@ -1164,7 +1245,7 @@ export async function createApp({
       user.statistici.surse[sursa] = (user.statistici.surse[sursa] || 0) + 1;
       await db.write();
     }
-    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata, activeSection: 'acasa',
+    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata, activeSection: 'acasa', sondaj: activePoll('candidate', user.id),
       categoriiToate: [...new Set(toate.map(a => a.categorie || 'Actualitate'))].sort(),
       rezultatTotal: filtrate.length });
   }));
