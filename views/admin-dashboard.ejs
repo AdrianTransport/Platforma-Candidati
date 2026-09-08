@@ -117,6 +117,30 @@
               <p class="note"><%= c.status_cont === 'activ' ? 'Candidatul se poate autentifica și publica.' : 'Autentificarea candidatului este blocată.' %></p>
               <% if (complianceMissing[c.id].length) { %><div class="legal-warning"><strong>Activarea este blocată:</strong><ul><% complianceMissing[c.id].forEach(item => { %><li><%= item %></li><% }) %></ul></div><% } %>
             </form>
+            <div class="candidate-security-actions">
+              <details>
+                <summary>Parolă și recuperare</summary>
+                <form method="POST" action="/admin/candidati/<%= c.id %>/parola" class="form-grid compact-form">
+                  <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+                  <label>Parolă nouă<input type="password" name="parola_noua" minlength="12" required autocomplete="new-password"></label>
+                  <label>Confirmă parola<input type="password" name="confirma_parola" minlength="12" required autocomplete="new-password"></label>
+                  <button class="secondary" type="submit">Schimbă parola</button>
+                </form>
+                <form method="POST" action="/admin/candidati/<%= c.id %>/recuperare-parola" onsubmit="return confirm('Generezi o parolă temporară nouă? Parola actuală nu va mai funcționa.')">
+                  <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+                  <button class="secondary" type="submit">Generează parolă de recuperare</button>
+                </form>
+              </details>
+              <details class="danger-zone">
+                <summary>Ștergere definitivă</summary>
+                <p class="note">Șterge contul Supabase, profilul, materialele și datele operaționale. Acțiunea nu poate fi anulată.</p>
+                <form method="POST" action="/admin/candidati/<%= c.id %>/sterge" onsubmit="return confirm('Ștergi definitiv acest candidat și toate materialele sale?')">
+                  <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+                  <label>Scrie emailul pentru confirmare<input type="email" name="confirma_email" required placeholder="<%= c.email %>" autocomplete="off"></label>
+                  <button class="danger" type="submit">Șterge definitiv candidatul</button>
+                </form>
+              </details>
+            </div>
           </div>
         </article>
       <% }) %>

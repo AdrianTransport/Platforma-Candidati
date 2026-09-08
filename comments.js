@@ -17,6 +17,10 @@ export function createComments({ store = createCommentStore(), now = () => Date.
     return values;
   }
 
+  async function deletePrefix(prefix) {
+    for (const key of await store.keys(prefix)) await store.delete(key);
+  }
+
   function applyEvents(comment, events) {
     const history = events.filter(e => e.comment_id === comment.id)
       .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
@@ -53,6 +57,10 @@ export function createComments({ store = createCommentStore(), now = () => Date.
 
   return {
     list,
+    async purgeCandidate(candidateId) {
+      await deletePrefix(`comments/${candidateId}/`);
+      await deletePrefix(`moderation/${candidateId}/`);
+    },
     async submit({ candidateId, articleId, body, ip }) {
       if (body.website) throw new ValidationError('Trimitere invalidă.');
       const nume = textField(body.nume, 'Nume sau pseudonim', 80, true);

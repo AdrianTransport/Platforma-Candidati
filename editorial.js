@@ -85,6 +85,17 @@ export function createEditorial({ store = createEditorialStore(), env = process.
     try { await store.set(key, data); }
     catch (error) { if (error.code !== 'EEXIST') throw error; }
   }
+  async function deletePrefix(prefix) {
+    for (const key of await store.keys(prefix)) await store.delete(key);
+  }
+  async function purgeUser(userId) {
+    await deletePrefix(`jobs/${userId}/`);
+    await deletePrefix(`usage/${userId}/`);
+    for (const key of await store.keys('media/')) {
+      const media = await store.get(key);
+      if (media?.userId === userId) await store.delete(key);
+    }
+  }
   const day = () => new Date(now()).toISOString().slice(0, 10);
   async function reserve(userId, kind, requestId, maximum) {
     const prefix = `usage/${userId}/${day()}/${kind}/`;
@@ -222,5 +233,5 @@ export function createEditorial({ store = createEditorialStore(), env = process.
     await setOnce(`${key}/result`, completed);
     return completed;
   }
-  return { config, upload, media, start, status };
+  return { config, upload, media, start, status, purgeUser };
 }

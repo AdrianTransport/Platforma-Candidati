@@ -35,7 +35,8 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     confirmare_mandatar: true, terms_version: TERMS_VERSION, terms_accepted_at: '2026-01-01T00:00:00Z',
     editorial_responsibility_accepted_at: '2026-01-01T00:00:00Z', created_at: '2026-01-01T00:00:00Z' });
   await fs.writeFile(path.join(dir, 'data', 'db.json'), JSON.stringify({
-    users: [{ id: 1, role: 'admin', activ: true, email: 'admin@example.test', password_hash: hash }, candidate(2, 'ana'), candidate(3, 'bogdan')],
+    users: [{ id: 1, role: 'admin', activ: true, email: 'admin@example.test', password_hash: hash, auth_user_id: 'auth-1' },
+      { ...candidate(2, 'ana'), auth_user_id: 'auth-2' }, { ...candidate(3, 'bogdan'), auth_user_id: 'auth-3' }],
     articole: [{ id: 1, user_id: 2, titlu: 'Școala publică', continut: 'Informații pentru Timișoara', tip: 'idee', categorie: 'Proiecte', status: 'publicat', data_publicare: '2026-01-01T12:00:00Z' },
       { id: 2, user_id: 3, titlu: 'Alt candidat', continut: 'Text privat candidat B', tip: 'idee', categorie: 'Program', status: 'publicat', data_publicare: '2026-01-01T12:00:00Z' },
       { id: 3, user_id: 2, titlu: 'Ciorna secretă', continut: 'Niciodată public înainte de aprobare', tip: 'idee', categorie: 'Secrete', status: 'ciorna' }],
@@ -47,9 +48,35 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     fetcher: async () => { throw new Error('AI network must not be called'); }, now: () => clock });
   const compliance = createCompliance({ store: createLocalCommentStore(path.join(dir, 'compliance')),
     now: () => clock, secret: process.env.SESSION_SECRET });
+  const authAccounts = new Map([
+    ['admin@example.test', { id: 'auth-1', password }],
+    ['ana@example.test', { id: 'auth-2', password }],
+    ['bogdan@example.test', { id: 'auth-3', password }],
+  ]);
+  const auth = {
+    async signIn(email, supplied) {
+      const account = authAccounts.get(email);
+      if (!account || account.password !== supplied) throw new Error('Invalid credentials');
+      return { user: { id: account.id } };
+    },
+    async createUser(user, supplied) {
+      const account = { id: `auth-${user.id}`, password: supplied };
+      authAccounts.set(user.email, account);
+      return account;
+    },
+    async updatePassword(id, supplied) {
+      const entry = [...authAccounts.entries()].find(([, account]) => account.id === id);
+      if (!entry) throw new Error('User not found');
+      entry[1].password = supplied;
+    },
+    async deleteUser(id) {
+      const entry = [...authAccounts.entries()].find(([, account]) => account.id === id);
+      if (entry) authAccounts.delete(entry[0]);
+    },
+  };
   const { createApp } = await import('../app.js');
   const { db } = await import('../db.js');
-  const app = await createApp({ comments, editorial, compliance, now: () => clock });
+  const app = await createApp({ comments, editorial, compliance, auth, now: () => clock });
   app.set('views', path.join(root, 'views'));
   const server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
@@ -425,6 +452,36 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     const repeated = await pending('/activare', { csrf_token: repeatToken, accepta_termeni: 'on', accepta_responsabilitate: 'on' });
     assert.equal(repeated.headers.get('location'), '/dashboard?activare=confirmata');
     assert.equal(newCandidate.terms_version, TERMS_VERSION);
+  });
+  await t.test('Super Admin schimbă, recuperează și șterge sincronizat contul candidatului', async () => {
+    const candidate = db.data.users.find(user => user.email === 'nou@example.test');
+    const changedPassword = 'Parola-Noua-Sigura-2026!';
+    const invalid = await admin(`/admin/candidati/${candidate.id}/parola`, {
+      csrf_token: adminToken, parola_noua: changedPassword, confirma_parola: 'alta-parola',
+    });
+    assert.match(invalid.headers.get('location'), /eroare=/);
+    const changed = await admin(`/admin/candidati/${candidate.id}/parola`, {
+      csrf_token: adminToken, parola_noua: changedPassword, confirma_parola: changedPassword,
+    });
+    assert.match(changed.headers.get('location'), /mesaj=/);
+    assert.equal((await browser()('/login', { email: candidate.email, parola: changedPassword })).status, 302);
+
+    const recovered = await admin(`/admin/candidati/${candidate.id}/recuperare-parola`, { csrf_token: adminToken });
+    assert.equal(recovered.status, 200);
+    const temporaryPassword = recovered.html.match(/class="credential-value">([^<]+)</)?.[1];
+    assert.equal(temporaryPassword?.length, 16);
+    assert.equal((await browser()('/login', { email: candidate.email, parola: temporaryPassword })).status, 302);
+
+    db.data.articole.push({ id: 999, user_id: candidate.id, titlu: 'Material de șters', continut: 'Test', status: 'ciorna' });
+    await db.write();
+    const rejected = await admin(`/admin/candidati/${candidate.id}/sterge`, { csrf_token: adminToken, confirma_email: 'gresit@example.test' });
+    assert.match(rejected.headers.get('location'), /eroare=/);
+    assert.ok(db.data.users.some(user => user.id === candidate.id));
+    const deleted = await admin(`/admin/candidati/${candidate.id}/sterge`, { csrf_token: adminToken, confirma_email: candidate.email });
+    assert.match(deleted.headers.get('location'), /mesaj=/);
+    assert.ok(!db.data.users.some(user => user.id === candidate.id));
+    assert.ok(!db.data.articole.some(article => article.user_id === candidate.id));
+    assert.ok(!authAccounts.has(candidate.email));
   });
   await t.test('Sesizare: dovadă, suspendare, protecție la concurență, restabilire și jurnal', async () => {
     const reportUrl = '/site/ana/articol/1/raporteaza';

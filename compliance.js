@@ -120,6 +120,10 @@ export function createCompliance({ store = createComplianceStore(), now = () => 
     return values;
   }
 
+  async function deletePrefix(prefix) {
+    for (const key of await store.keys(prefix)) await store.delete(key);
+  }
+
   async function rateLimit(ip) {
     if (!secret || secret.length < 32) throw new ValidationError('Raportarea necesită SESSION_SECRET configurat cu minimum 32 de caractere.', 503);
     const timestamp = now();
@@ -154,6 +158,11 @@ export function createCompliance({ store = createComplianceStore(), now = () => 
 
   return {
     audit,
+    async purgeCandidate(candidateId) {
+      await deletePrefix(`acceptance/${candidateId}/`);
+      await deletePrefix(`reports/${candidateId}/`);
+      await deletePrefix(`report-events/${candidateId}/`);
+    },
     async acceptTerms({ candidateId, ip = 'unknown' }) {
       const created_at = new Date(now()).toISOString();
       const event = { id: randomUUID(), candidate_id: candidateId, terms_version: TERMS_VERSION,

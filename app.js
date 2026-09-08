@@ -638,6 +638,67 @@ export async function createApp({
     res.redirect('/admin');
   }));
 
+  app.post('/admin/candidati/:id/parola', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const candidate = db.data.users.find(user => user.id === Number(req.params.id) && user.role === 'candidate');
+    if (!candidate) return res.redirect('/admin?eroare=Contul%20candidatului%20nu%20exista.');
+    const password = String(req.body.parola_noua || '');
+    if (password.length < 12 || password !== String(req.body.confirma_parola || '')) {
+      return res.redirect('/admin?eroare=Parola%20noua%20trebuie%20sa%20aiba%20minimum%2012%20caractere%20si%20sa%20fie%20confirmata.');
+    }
+    if (auth) await auth.updatePassword(candidate.auth_user_id, password);
+    candidate.password_hash = bcrypt.hashSync(password, 12);
+    candidate.password_changed_at = new Date().toISOString();
+    candidate.login_attempts = 0;
+    candidate.locked_until = null;
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_password_changed',
+      targetType: 'candidate', targetId: candidate.id });
+    res.redirect('/admin?mesaj=Parola%20candidatului%20a%20fost%20schimbata.');
+  }));
+
+  app.post('/admin/candidati/:id/recuperare-parola', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const candidate = db.data.users.find(user => user.id === Number(req.params.id) && user.role === 'candidate');
+    if (!candidate) return res.redirect('/admin?eroare=Contul%20candidatului%20nu%20exista.');
+    const password = generateazaParola();
+    if (auth) await auth.updatePassword(candidate.auth_user_id, password);
+    candidate.password_hash = bcrypt.hashSync(password, 12);
+    candidate.password_changed_at = new Date().toISOString();
+    candidate.login_attempts = 0;
+    candidate.locked_until = null;
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_password_recovered',
+      targetType: 'candidate', targetId: candidate.id });
+    res.status(200).render('candidate-password-reset', { candidate, parola: password });
+  }));
+
+  app.post('/admin/candidati/:id/sterge', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const candidate = db.data.users.find(user => user.id === Number(req.params.id) && user.role === 'candidate');
+    if (!candidate) return res.redirect('/admin?eroare=Contul%20candidatului%20nu%20exista.');
+    if (String(req.body.confirma_email || '').trim().toLowerCase() !== candidate.email.toLowerCase()) {
+      return res.redirect('/admin?eroare=Pentru%20stergere%20scrie%20exact%20emailul%20candidatului.');
+    }
+    const previous = structuredClone(db.data);
+    db.data.users = db.data.users.filter(user => user.id !== candidate.id);
+    db.data.articole = db.data.articole.filter(article => article.user_id !== candidate.id);
+    db.data.portal_posts = db.data.portal_posts.filter(post => post.candidate_id !== candidate.id);
+    await db.write();
+    try {
+      if (auth && candidate.auth_user_id) await auth.deleteUser(candidate.auth_user_id);
+    } catch (error) {
+      db.data = previous;
+      await db.write();
+      throw error;
+    }
+    await Promise.allSettled([
+      comments.purgeCandidate?.(candidate.id),
+      compliance.purgeCandidate?.(candidate.id),
+      editorial.purgeUser?.(candidate.id),
+    ]);
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_deleted',
+      targetType: 'candidate', targetId: candidate.id, details: { auth_deleted: Boolean(candidate.auth_user_id) } });
+    res.redirect('/admin?mesaj=Contul%20candidatului%20si%20materialele%20sale%20au%20fost%20sterse.');
+  }));
+
   app.post('/admin/candidati/:id/configurare', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === Number(req.params.id));
     if (user?.role === 'candidate') {
