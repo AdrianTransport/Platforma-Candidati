@@ -2,7 +2,7 @@ import { createHmac, randomUUID } from 'node:crypto';
 import { createComplianceStore } from './compliance-store.js';
 import { textField, ValidationError } from './publication.js';
 
-export const TERMS_VERSION = '2026-09-07';
+export const TERMS_VERSION = '2026-09-08';
 export const REPORT_STATUS = new Set(['noua', 'in_analiza', 'continut_suspendat', 'respinsa', 'inchisa']);
 export const REPORT_REASONS = new Set(['defaimare', 'amenintare', 'discriminare', 'date_personale', 'drepturi_autor', 'informatii_false', 'electoral', 'altul']);
 const CONTRACT_TYPES = new Set(['platit', 'gratuit']);

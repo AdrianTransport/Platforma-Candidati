@@ -1,13 +1,26 @@
 export const LEGAL_PAGES = {
+  statut: {
+    title: 'Statut editorial și independență',
+    intro: 'Cine administrează publicația, cine asigură tehnologia și care sunt regulile editoriale ale proiectului.',
+    sections: [
+      ['Inițiativă civică personală', '„Vocea Locală Lenauheim” este o inițiativă civică și editorială independentă a persoanei fizice Droc Cristian Dan. Publicația nu este organ oficial al Primăriei Comunei Lenauheim, al Consiliului Local, al unui partid politic sau al altei autorități și nu este afiliată acestora. Denumirile instituțiilor publice sunt folosite exclusiv pentru identificare și informare.'],
+      ['Responsabilitate editorială', 'Droc Cristian Dan stabilește și își asumă conținutul publicat pe site-ul principal. Opiniile sunt marcate și separate de afirmațiile factuale. Pentru informațiile de interes public sunt urmărite verificarea documentelor, indicarea surselor, actualizarea erorilor și prezentarea punctelor de vedere relevante.'],
+      ['Furnizare tehnică gratuită', 'Site-ul a fost proiectat și livrat gratuit persoanei fizice Droc Cristian Dan de CristianWeb, serviciu tehnic furnizat prin EvaMaria Shop S.R.L., CUI 44420154. CristianWeb asigură dezvoltarea, găzduirea și mentenanța tehnică; această contribuție nu transferă societății controlul editorial și nu transformă societatea în autorul materialelor publicate.'],
+      ['Fără finanțare publică', 'Site-ul principal nu este finanțat, comandat sau administrat de Primăria Comunei Lenauheim ori de Consiliul Local Lenauheim. Orice material electoral sau publicitate politică, dacă va exista, va fi separat și marcat potrivit legii, cu indicarea beneficiarului și a finanțării.'],
+      ['Drept la replică și corectare', 'Persoanele vizate pot solicita gratuit publicarea unui punct de vedere, corectarea unei erori factuale ori eliminarea unor date publicate nelegal, folosind datele de contact afișate. Solicitarea va fi analizată într-un termen rezonabil, fără ca această procedură să limiteze dreptul de a sesiza autoritățile sau instanțele competente.'],
+      ['Cadru juridic', 'Activitatea editorială se întemeiază pe libertatea de exprimare și dreptul la informație prevăzute de art. 30 și 31 din Constituția României și de art. 10 din Convenția europeană a drepturilor omului, precum și pe accesul la informații de interes public reglementat de Legea nr. 544/2001. Aceste drepturi se exercită cu respectarea demnității, reputației, vieții private, imaginii, protecției datelor, drepturilor de autor și prezumției de nevinovăție.'],
+    ],
+  },
   termeni: {
     title: 'Termeni de utilizare',
     intro: 'Regulile serviciului tehnic prin care candidații își administrează propriile publicații.',
     sections: [
-      ['Rolurile părților', 'Operatorul platformei furnizează accesul tehnic, găzduirea și instrumentele de administrare. Candidatul sau entitatea indicată în contract decide conținutul, îl publică și poartă responsabilitatea editorială pentru acesta.'],
+      ['Rolurile părților', 'Pentru site-ul principal, inițiatorul și responsabilul editorial este persoana fizică Droc Cristian Dan. CristianWeb, serviciu tehnic furnizat prin EvaMaria Shop S.R.L., CUI 44420154, asigură infrastructura și mentenanța. Pentru publicațiile candidaților, candidatul sau entitatea indicată în contract decide conținutul, îl publică și poartă responsabilitatea editorială pentru acesta.'],
       ['Conținutul candidatului', 'Candidatul garantează că informațiile, imaginile, mărcile și celelalte materiale pot fi folosite legal și respectă legislația electorală, drepturile persoanelor, drepturile de autor și protecția datelor.'],
       ['Transparență', 'Finanțatorul real, responsabilul editorial, scrutinul, codul mandatarului financiar și informațiile contractuale trebuie menținute corecte. Platforma poate bloca publicarea când datele obligatorii lipsesc.'],
       ['Intervenția platformei', 'Conținutul aparent ilegal, reclamat sau vizat de o solicitare a autorităților poate fi suspendat ori eliminat. Contractul nu limitează obligațiile legale proprii ale operatorului platformei.'],
       ['Serviciu plătit sau gratuit', 'Forma comercială este consemnată în contract. Un serviciu oferit gratuit nu poate fi prezentat ca fiind finanțat de candidat și trebuie validat de candidat sau mandatar din perspectiva regulilor de finanțare electorală.'],
+      ['Independență instituțională', 'Publicația nu este site oficial și nu este afiliată Primăriei Comunei Lenauheim, Consiliului Local Lenauheim ori unui partid politic. Nicio autoritate menționată în materiale nu răspunde pentru administrarea sau conținutul acestei publicații independente.'],
     ],
   },
   continut: {
@@ -16,6 +29,7 @@ export const LEGAL_PAGES = {
     sections: [
       ['Conținut interzis', 'Nu sunt permise amenințările, hărțuirea, discriminarea, defăimarea, identitatea falsă, publicarea nelegală de date personale, încălcarea drepturilor de autor sau instrucțiunile pentru activități ilegale.'],
       ['Dovezi și surse', 'Autorul trebuie să poată susține afirmațiile factuale și să indice sursa imaginilor. Opiniile trebuie prezentate ca opinii, nu ca fapte demonstrate.'],
+      ['Interes public și echilibru', 'Critica instituțiilor și a persoanelor care exercită funcții publice trebuie să privească subiecte de interes public și să se bazeze pe o documentare rezonabilă. Acuzațiile nedovedite nu vor fi prezentate drept fapte certe, iar persoanei vizate i se va oferi posibilitatea unui punct de vedere sau a dreptului la replică.'],
       ['Moderare', 'Platforma nu aprobă în prealabil fiecare afirmație, dar poate suspenda conținutul după o sesizare, când există indicii de nelegalitate ori când regulile contractuale sunt încălcate.'],
       ['Fără susținere politică', 'Furnizarea tehnologiei nu reprezintă susținerea candidatului și nu transformă operatorul platformei în autorul mesajului.'],
     ],
