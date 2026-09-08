@@ -51,6 +51,21 @@ test('Profil juridic strict, operator complet și instantaneu de transparență'
   assert.equal(publicTransparency(candidate, { transparenta: snapshot }).finantat_de, 'Ana Test');
 });
 
+test('Profilul civic nu cere date electorale înainte de 2028, dar modul electoral le cere', () => {
+  const civic = {
+    functie_candidatura: 'Primar', zona: 'Lenauheim', tip_candidat: 'independent',
+    entitate_responsabila: 'Ana Test', terms_version: TERMS_VERSION,
+    terms_accepted_at: '2026-09-08T00:00:00Z', editorial_responsibility_accepted_at: '2026-09-08T00:00:00Z',
+  };
+  assert.deepEqual(candidateComplianceMissing(civic, platform, false), []);
+  const electoralMissing = candidateComplianceMissing(civic, platform, true);
+  assert.ok(electoralMissing.includes('codul mandatarului financiar'));
+  assert.ok(electoralMissing.includes('numărul contractului'));
+  const input = legalProfileInput({ tip_candidat: 'independent', entitate_responsabila: 'Ana Test' }, false);
+  assert.equal(input.cod_mandatar_financiar, '');
+  assert.equal(input.tip_contract, 'gratuit');
+});
+
 test('Acceptări, sesizări, dovezi, ratelimit, versiuni și audit append-only', async t => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'platform-compliance-test-'));
   t.after(() => fs.rm(directory, { recursive: true, force: true }));

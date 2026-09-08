@@ -10,14 +10,14 @@
 </head>
 <body class="newspaper-body">
   <div class="newspaper-shell">
-    <div class="newspaper-kicker"><span>VOCEA CANDIDATULUI · PUBLICAȚIE ELECTORALĂ</span><span><%= new Date().toLocaleDateString('ro-RO') %></span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
+    <div class="newspaper-kicker"><span>VOCEA CANDIDATULUI · <%= electoralMode ? 'PUBLICAȚIE ELECTORALĂ' : 'PUBLICAȚIE CIVICĂ' %></span><span><%= new Date().toLocaleDateString('ro-RO') %></span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
     <header class="newspaper-header">
       <a href="/site/<%= user.subdomeniu %>" class="newspaper-logo voice-logo" aria-label="Vocea Candidatului — pagina principală"><span>Vocea</span><strong>Candidatului</strong></a>
       <div class="candidate-identity"><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura, user.partid].filter(Boolean).join(' · ') %></span></div>
     </header>
     <%- include('partials/candidate-nav', { user, activeSection }) %>
     <% const transparenta = publicTransparency(user, null); %>
-    <section class="political-ad-banner" aria-label="Informații despre publicitatea politică"><strong>Material electoral · publicitate politică</strong><span>Finanțat de <%= transparenta.finantat_de %> · publicat și asumat de <%= transparenta.responsabil_editorial %></span><a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența completă</a></section>
+    <section class="political-ad-banner <%= electoralMode ? '' : 'civic-disclosure' %>" aria-label="Informații despre responsabilitatea editorială"><strong><%= electoralMode ? 'Material electoral · publicitate politică' : 'Publicație civică independentă' %></strong><span><%= electoralMode ? `Finanțat de ${transparenta.finantat_de} · ` : '' %>publicat și asumat de <%= transparenta.responsabil_editorial %></span><a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența completă</a></section>
 
     <main class="section-page">
       <header class="section-page-header"><span class="article-label">Rubrică</span><h1><%= section.titlu %></h1><p><%= section.descriere %></p><strong><%= articole.length %> <%= articole.length === 1 ? 'material publicat' : 'materiale publicate' %></strong></header>
@@ -36,7 +36,7 @@
     </main>
 
     <% if (user.module?.social && [user.facebook_url, user.instagram_url, user.tiktok_url, user.youtube_url].some(Boolean)) { %><section class="social-strip"><span>Urmărește campania</span><div><% ['facebook','instagram','tiktok','youtube'].forEach(platforma => { if (user[`${platforma}_url`]) { %><a href="/site/<%= user.subdomeniu %>/social/<%= platforma %>" target="_blank" rel="noopener"><%= platforma %></a><% } }) %></div></section><% } %>
-    <footer class="newspaper-footer"><div><strong><%= user.nume_candidat %></strong><span><%= user.slogan || 'Pentru comunitate.' %></span></div><p>Material electoral finanțat de <%= transparenta.finantat_de %> și asumat de <%= transparenta.responsabil_editorial %>. Fiecare material are o pagină proprie și contor de afișări.</p><nav class="footer-links" aria-label="Informații legale"><a href="/site/<%= user.subdomeniu %>/transparenta">Transparență</a><a href="/legal/termeni">Termeni</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a><a href="/">Parte din Vocea Locală Lenauheim</a></nav></footer>
+    <footer class="newspaper-footer"><div><strong><%= user.nume_candidat %></strong><span><%= user.slogan || 'Pentru comunitate.' %></span></div><p><%= electoralMode ? `Material electoral finanțat de ${transparenta.finantat_de} și ` : 'Publicație civică ' %>asumată de <%= transparenta.responsabil_editorial %>. Fiecare material are o pagină proprie și contor de afișări.</p><nav class="footer-links" aria-label="Informații legale"><a href="/site/<%= user.subdomeniu %>/transparenta">Transparență</a><a href="/legal/termeni">Termeni</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a><a href="/">Parte din Vocea Locală Lenauheim</a></nav></footer>
   </div>
 </body>
 </html>

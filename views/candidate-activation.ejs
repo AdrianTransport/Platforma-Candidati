@@ -9,7 +9,7 @@
 <body>
   <main class="app-shell">
     <div class="topbar">
-      <div><span class="eyebrow">Verificare contractuală</span><h1>Activarea contului</h1></div>
+      <div><span class="eyebrow"><%= electoralMode ? 'Verificare electorală și contractuală' : 'Activare profil civic' %></span><h1>Activarea contului</h1></div>
       <form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Ieșire</button></form>
     </div>
     <% if (mesaj) { %><p class="mesaj-succes" role="status"><%= mesaj %></p><% } %>
@@ -23,23 +23,25 @@
         <div><dt>Tip</dt><dd><%= user.tip_candidat || '—' %></dd></div>
         <div><dt>Funcție</dt><dd><%= user.functie_candidatura || '—' %></dd></div>
         <div><dt>Zonă</dt><dd><%= [user.zona, user.judet].filter(Boolean).join(', ') || '—' %></dd></div>
-        <div><dt>Scrutin</dt><dd><%= user.scrutin || '—' %></dd></div>
         <div><dt>Responsabil editorial</dt><dd><%= user.entitate_responsabila || '—' %></dd></div>
-        <div><dt>Finanțator</dt><dd><%= user.finantator_materiale || '—' %></dd></div>
-        <div><dt>Cod mandatar financiar</dt><dd><%= user.cod_mandatar_financiar || '—' %></dd></div>
-        <div><dt>Contract</dt><dd><%= user.numar_contract || '—' %> · <%= user.tip_contract === 'gratuit' ? 'serviciu oferit gratuit' : 'serviciu plătit' %></dd></div>
-        <div><dt>Valoare</dt><dd><%= user.tip_contract === 'gratuit' ? '0' : (user.valoare_contract || '—') %> <%= user.moneda_contract || 'RON' %></dd></div>
+        <% if (electoralMode) { %>
+          <div><dt>Scrutin</dt><dd><%= user.scrutin || '—' %></dd></div>
+          <div><dt>Finanțator</dt><dd><%= user.finantator_materiale || '—' %></dd></div>
+          <div><dt>Cod mandatar financiar</dt><dd><%= user.cod_mandatar_financiar || '—' %></dd></div>
+          <div><dt>Referință contractuală</dt><dd><%= user.numar_contract || '—' %> · <%= user.tip_contract === 'gratuit' ? 'serviciu oferit gratuit' : 'serviciu plătit' %></dd></div>
+          <div><dt>Valoare</dt><dd><%= user.tip_contract === 'gratuit' ? '0' : (user.valoare_contract || '—') %> <%= user.moneda_contract || 'RON' %></dd></div>
+        <% } %>
       </dl>
       <% if (lipsuri.length) { %><div class="legal-warning"><strong>Contul nu este încă pregătit:</strong><ul><% lipsuri.forEach(item => { %><li><%= item %></li><% }) %></ul></div><% } %>
     </section>
 
     <section class="card">
       <h2>Confirmare obligatorie</h2>
-      <p class="note">Versiunea termenilor: <%= termsVersion %>. Dacă datele de mai sus nu sunt corecte, nu confirma și contactează Super Adminul.</p>
+      <p class="note">Versiunea termenilor: <%= termsVersion %>. <%= electoralMode ? 'Verifică inclusiv datele electorale și contractuale.' : 'Până în 2028 confirmi numai profilul civic și responsabilitatea pentru conținut.' %></p>
       <form method="POST" action="/activare">
         <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
         <label class="consent-label"><input type="checkbox" name="accepta_termeni" required> Am citit și accept <a href="/legal/termeni" target="_blank">Termenii de utilizare</a> și <a href="/legal/continut" target="_blank">Politica de conținut</a>.</label>
-        <label class="consent-label"><input type="checkbox" name="accepta_responsabilitate" required> Confirm că eu sau entitatea indicată în contract decidem ce se publică și ne asumăm responsabilitatea editorială, legalitatea materialelor și corectitudinea finanțatorului declarat.</label>
+        <label class="consent-label"><input type="checkbox" name="accepta_responsabilitate" required> Confirm că decid ce se publică și îmi asum responsabilitatea editorială, legalitatea informațiilor și dreptul de folosire a textelor și imaginilor.</label>
         <button type="submit" <%= lipsuri.filter(item => item !== 'acceptarea termenilor și a responsabilității editoriale').length ? 'disabled' : '' %>>Confirmă datele și responsabilitatea</button>
       </form>
       <% if (user.status_cont === 'activ') { %><p><a class="btn secondary" href="/dashboard">Continuă la dashboard</a></p><% } %>

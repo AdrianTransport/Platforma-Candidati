@@ -86,8 +86,8 @@
               <label class="editor-consent"><input type="checkbox" name="generat_de_ai" id="generat_de_ai" value="true" <%= articol && articol.generat_de_ai ? 'checked' : '' %>> Text creat cu ajutorul AI (se afișează o etichetă pe site). Verific faptele și îmi asum conținutul înainte de publicare.</label>
               <div class="editor-compliance">
                 <strong>Responsabilitate și transparență</strong>
-                <p class="editor-help">La publicare sau programare se salvează o copie a finanțatorului, responsabilului editorial, scrutinului, codului mandatarului și datelor contractuale. Ciornele pot fi salvate fără această confirmare.</p>
-                <label class="editor-consent"><input type="checkbox" name="confirmare_responsabilitate" <%= confirmareResponsabilitate ? 'checked' : '' %>> Confirm că materialul respectă legea și contractul, că am dreptul să folosesc textele și imaginile și că datele de transparență ale contului sunt corecte.</label>
+                <p class="editor-help"><%= electoralMode ? 'La publicare se arhivează datele electorale și contractuale ale contului.' : 'Publicația funcționează în regim civic până în 2028. Se arhivează autorul și responsabilul editorial, fără cod de mandatar sau referință contractuală.' %></p>
+                <label class="editor-consent"><input type="checkbox" name="confirmare_responsabilitate" <%= confirmareResponsabilitate ? 'checked' : '' %>> Confirm că am verificat informațiile, că am dreptul să folosesc textele și imaginile și că îmi asum conținutul publicat.</label>
                 <% if (articol?.moderation_status === 'suspendat') { %><p class="eroare">Material suspendat de Super Admin: <%= articol.moderation_reason || 'sesizare în analiză' %>. Îl poți salva doar ca ciornă până la restabilire.</p><% } %>
               </div>
             </section>

@@ -19,6 +19,7 @@ import {
   candidateComplianceMissing,
   createCompliance,
   legalProfileInput,
+  isElectoralMode,
   platformInfo,
   publicTransparency,
   transparencySnapshot,
@@ -29,6 +30,7 @@ import {
   exchangeMetaCode,
   exchangeTikTokCode,
   fetchMetaPages,
+  fetchTikTokProfile,
   metaAuthorizeUrl,
   metaConfigured,
   publicBaseUrl,
@@ -125,6 +127,7 @@ export async function createApp({
 } = {}) {
   await initDB();
   const platform = platformInfo();
+  const electoralMode = isElectoralMode(now());
   const ownerPolls = (role, ownerId = null) => db.data.polls
     .filter(poll => poll.owner_role === role && poll.owner_id === ownerId)
     .sort((a, b) => b.id - a.id);
@@ -144,6 +147,7 @@ export async function createApp({
   app.locals.publicTransparency = publicTransparency;
   app.locals.platform = platform;
   app.locals.termsVersion = TERMS_VERSION;
+  app.locals.electoralMode = electoralMode;
   app.use(express.static(path.join(baseDir, 'public')));
   app.use(express.urlencoded({ extended: true }));
   app.use('/dashboard/media', express.json({ limit: '4300kb' }));
@@ -245,6 +249,7 @@ export async function createApp({
         || new Date(portalPublicationDate(b)) - new Date(portalPublicationDate(a)));
     const withCandidate = post => ({ ...post, candidat: portalCandidate(post) });
     const mainPost = portalPosts[0] || null;
+    const portalOwner = db.data.users.find(user => user.role === 'admin');
     res.set('Cache-Control', 'private, no-store');
     res.render('landing', {
       candidatiPublici,
@@ -252,6 +257,7 @@ export async function createApp({
       stiri: portalPosts.filter(post => post.tip === 'stire' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
       campanii: portalPosts.filter(post => post.tip === 'campanie' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
       sondaj: activePoll('admin'),
+      portalOwner,
     });
   });
 
@@ -589,7 +595,7 @@ export async function createApp({
       subdomeniu = `${slugify(nume_candidat)}-${contor++}`;
     }
     const parola = generateazaParola();
-    const legal = legalProfileInput(req.body);
+    const legal = legalProfileInput(req.body, electoralMode);
     const candidate = {
       id: nextUserId(),
       email: emailNormalizat,
@@ -766,7 +772,7 @@ export async function createApp({
       user.zona = String(req.body.zona || '').trim();
       user.judet = String(req.body.judet || '').trim();
       user.partid = String(req.body.partid || '').trim();
-      Object.assign(user, legalProfileInput(req.body));
+      Object.assign(user, legalProfileInput({ ...user, ...req.body }, electoralMode));
       const requiresNewAcceptance = acceptanceChanged(before, user);
       if (requiresNewAcceptance) invalidateAcceptance(user);
       user.module = {
@@ -908,6 +914,126 @@ export async function createApp({
     res.redirect(req.session.rol === 'admin' ? '/admin' : '/dashboard');
   }));
 
+  app.get('/admin/social', requireRole('admin'), requireActiveAccount, (req, res) => {
+    const user = db.data.users.find((item) => item.id === req.session.userId);
+    const posts = db.data.portal_posts.filter(portalPostIsPublic)
+      .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+    res.render('admin-social-center', { user, posts, metaEsteConfigurat: metaConfigured(),
+      tiktokEsteConfigurat: tiktokConfigured(), mesaj: req.query.mesaj || '', eroare: req.query.eroare || '' });
+  });
+
+  app.get('/admin/social/meta/conecteaza', requireRole('admin'), requireActiveAccount, (req, res) => {
+    if (!metaConfigured()) return res.redirect('/admin/social?eroare=Integrarea%20Meta%20nu%20este%20inca%20configurata.');
+    const state = randomState();
+    req.session.oauth = { provider: 'meta-admin', state, expires: Date.now() + 10 * 60 * 1000 };
+    const redirectUri = `${publicBaseUrl(req)}/oauth/meta/admin/callback`;
+    res.redirect(metaAuthorizeUrl(redirectUri, state));
+  });
+
+  app.get('/oauth/meta/admin/callback', requireRole('admin'), requireActiveAccount, async (req, res) => {
+    const oauth = req.session.oauth;
+    req.session.oauth = null;
+    if (!oauth || oauth.provider !== 'meta-admin' || oauth.state !== req.query.state || oauth.expires < Date.now()) return res.redirect('/admin/social?eroare=Sesiunea%20Meta%20a%20expirat.');
+    if (req.query.error || !req.query.code) return res.redirect(`/admin/social?eroare=${encodeURIComponent(req.query.error_description || 'Conectarea Meta a fost anulata.')}`);
+    try {
+      const redirectUri = `${publicBaseUrl(req)}/oauth/meta/admin/callback`;
+      const token = await exchangeMetaCode(String(req.query.code), redirectUri);
+      const pages = await fetchMetaPages(token.access_token);
+      if (!pages.length) throw new Error('Nu am gasit nicio Pagina Facebook administrata de acest cont.');
+      const user = db.data.users.find((item) => item.id === req.session.userId);
+      user.social_connections ||= { meta: null, tiktok: null };
+      user.social_connections.meta = { connected_at: new Date().toISOString(), selected_page_id: pages[0].id, pages };
+      user.facebook_url = pages[0].facebook_url;
+      user.instagram_url = pages[0].instagram_username ? `https://www.instagram.com/${pages[0].instagram_username}/` : user.instagram_url;
+      await db.write();
+      res.redirect('/admin/social?mesaj=Pagina%20Meta%20a%20fost%20conectata.');
+    } catch (error) { res.redirect(`/admin/social?eroare=${encodeURIComponent(error.message || 'Conectarea Meta a esuat.')}`); }
+  });
+
+  app.post('/admin/social/meta/pagina', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const user = db.data.users.find((item) => item.id === req.session.userId);
+    const meta = user?.social_connections?.meta;
+    const page = meta?.pages?.find((item) => item.id === String(req.body.page_id || ''));
+    if (!page) return res.redirect('/admin/social?eroare=Pagina%20Meta%20selectata%20nu%20este%20valida.');
+    meta.selected_page_id = page.id;
+    user.facebook_url = page.facebook_url;
+    if (page.instagram_username) user.instagram_url = `https://www.instagram.com/${page.instagram_username}/`;
+    await db.write();
+    res.redirect('/admin/social?mesaj=Pagina%20principala%20a%20fost%20salvata.');
+  }));
+
+  app.post('/admin/social/meta/deconecteaza', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const user = db.data.users.find((item) => item.id === req.session.userId);
+    if (user?.social_connections) user.social_connections.meta = null;
+    await db.write();
+    res.redirect('/admin/social?mesaj=Meta%20a%20fost%20deconectat.');
+  }));
+
+  app.get('/admin/social/tiktok/conecteaza', requireRole('admin'), requireActiveAccount, (req, res) => {
+    if (!tiktokConfigured()) return res.redirect('/admin/social?eroare=Integrarea%20TikTok%20nu%20este%20inca%20configurata.');
+    const state = randomState();
+    req.session.oauth = { provider: 'tiktok-admin', state, expires: Date.now() + 10 * 60 * 1000 };
+    const redirectUri = `${publicBaseUrl(req)}/oauth/tiktok/admin/callback`;
+    res.redirect(tiktokAuthorizeUrl(redirectUri, state));
+  });
+
+  app.get('/oauth/tiktok/admin/callback', requireRole('admin'), requireActiveAccount, async (req, res) => {
+    const oauth = req.session.oauth;
+    req.session.oauth = null;
+    if (!oauth || oauth.provider !== 'tiktok-admin' || oauth.state !== req.query.state || oauth.expires < Date.now()) return res.redirect('/admin/social?eroare=Sesiunea%20TikTok%20a%20expirat.');
+    if (req.query.error || !req.query.code) return res.redirect(`/admin/social?eroare=${encodeURIComponent(req.query.error_description || 'Conectarea TikTok a fost anulata.')}`);
+    try {
+      const redirectUri = `${publicBaseUrl(req)}/oauth/tiktok/admin/callback`;
+      const token = await exchangeTikTokCode(String(req.query.code), redirectUri);
+      const profile = await fetchTikTokProfile(token.access_token);
+      const user = db.data.users.find((item) => item.id === req.session.userId);
+      user.social_connections ||= { meta: null, tiktok: null };
+      user.social_connections.tiktok = { open_id: token.open_id, display_name: profile.display_name || '',
+        profile_url: profile.profile_deep_link || '', scope: token.scope,
+        access_token_enc: encryptSecret(token.access_token), refresh_token_enc: encryptSecret(token.refresh_token),
+        expires_at: new Date(Date.now() + Number(token.expires_in || 86400) * 1000).toISOString(),
+        refresh_expires_at: new Date(Date.now() + Number(token.refresh_expires_in || 31536000) * 1000).toISOString(), connected_at: new Date().toISOString() };
+      if (profile.profile_deep_link) user.tiktok_url = profile.profile_deep_link;
+      await db.write();
+      res.redirect('/admin/social?mesaj=TikTok%20a%20fost%20conectat.');
+    } catch (error) { res.redirect(`/admin/social?eroare=${encodeURIComponent(error.message || 'Conectarea TikTok a esuat.')}`); }
+  });
+
+  app.post('/admin/social/tiktok/deconecteaza', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const user = db.data.users.find((item) => item.id === req.session.userId);
+    if (user?.social_connections) user.social_connections.tiktok = null;
+    await db.write();
+    res.redirect('/admin/social?mesaj=TikTok%20a%20fost%20deconectat.');
+  }));
+
+  app.post('/admin/social/publica/:id', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const user = db.data.users.find((item) => item.id === req.session.userId);
+    const post = db.data.portal_posts.find((item) => item.id === Number(req.params.id) && portalPostIsPublic(item));
+    const platforma = String(req.body.platforma || '').toLowerCase();
+    if (!post || !['facebook', 'instagram', 'tiktok'].includes(platforma)) return res.redirect('/admin/social?eroare=Materialul%20sau%20reteaua%20nu%20este%20valida.');
+    const postUrl = `${publicBaseUrl(req)}/actualitate/${encodeURIComponent(post.slug)}?utm_source=${platforma}`;
+    const textScurt = String(post.rezumat || post.continut || '').replace(/\s+/g, ' ').trim().slice(0, 450);
+    try {
+      const imaginePublica = internalImageId(post.imagine_url) ? new URL(post.imagine_url, publicBaseUrl(req)).toString() : post.imagine_url;
+      let rezultat;
+      if (platforma === 'facebook' || platforma === 'instagram') {
+        const meta = user.social_connections?.meta;
+        const page = meta?.pages?.find((item) => item.id === meta.selected_page_id);
+        if (!page) throw new Error('Conecteaza Meta si selecteaza o Pagina.');
+        rezultat = platforma === 'facebook' ? await publishFacebook(page, `${post.titlu}\n\n${textScurt}`, postUrl)
+          : await publishInstagram(page, `${post.titlu}\n\n${textScurt}\n\n${postUrl}`, imaginePublica);
+      } else {
+        const connection = user.social_connections?.tiktok;
+        if (!connection) throw new Error('Conecteaza contul TikTok.');
+        rezultat = await publishTikTokPhoto(connection, post.titlu, `${textScurt}\n\n${postUrl}`, imaginePublica);
+      }
+      post.distribuiri_sociale ||= [];
+      post.distribuiri_sociale.push({ platforma, data: new Date().toISOString(), id_extern: rezultat.id || rezultat.data?.publish_id || '', status: 'trimis' });
+      await db.write();
+      res.redirect(`/admin/social?mesaj=${encodeURIComponent(`Materialul a fost trimis catre ${platforma}.`)}`);
+    } catch (error) { res.redirect(`/admin/social?eroare=${encodeURIComponent(`${platforma}: ${error.message || 'publicarea a esuat.'}`)}`); }
+  }));
+
   app.get('/dashboard/social', requireRole('candidate'), (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (!user?.module?.social) return res.redirect('/dashboard');
@@ -955,6 +1081,8 @@ export async function createApp({
         selected_page_id: pages[0].id,
         pages,
       };
+      user.facebook_url = pages[0].facebook_url;
+      user.instagram_url = pages[0].instagram_username ? `https://www.instagram.com/${pages[0].instagram_username}/` : user.instagram_url;
       await db.write();
       res.redirect('/dashboard/social?mesaj=Meta%20a%20fost%20conectat.%20Alege%20Pagina%20pe%20care%20vrei%20sa%20publici.');
     } catch (error) {
@@ -968,6 +1096,9 @@ export async function createApp({
     const pageId = String(req.body.page_id || '');
     if (meta?.pages?.some((page) => page.id === pageId)) {
       meta.selected_page_id = pageId;
+      const page = meta.pages.find((item) => item.id === pageId);
+      user.facebook_url = page.facebook_url;
+      if (page.instagram_username) user.instagram_url = `https://www.instagram.com/${page.instagram_username}/`;
       await db.write();
       return res.redirect('/dashboard/social?mesaj=Pagina%20Meta%20a%20fost%20selectata.');
     }
@@ -1003,10 +1134,13 @@ export async function createApp({
     try {
       const redirectUri = `${publicBaseUrl(req)}/oauth/tiktok/callback`;
       const token = await exchangeTikTokCode(String(req.query.code), redirectUri);
+      const profile = await fetchTikTokProfile(token.access_token);
       const user = db.data.users.find((u) => u.id === req.session.userId);
       user.social_connections ||= { meta: null, tiktok: null };
       user.social_connections.tiktok = {
         open_id: token.open_id,
+        display_name: profile.display_name || '',
+        profile_url: profile.profile_deep_link || '',
         scope: token.scope,
         access_token_enc: encryptSecret(token.access_token),
         refresh_token_enc: encryptSecret(token.refresh_token),
@@ -1014,6 +1148,7 @@ export async function createApp({
         refresh_expires_at: new Date(Date.now() + Number(token.refresh_expires_in || 31536000) * 1000).toISOString(),
         connected_at: new Date().toISOString(),
       };
+      if (profile.profile_deep_link) user.tiktok_url = profile.profile_deep_link;
       await db.write();
       res.redirect('/dashboard/social?mesaj=Contul%20TikTok%20a%20fost%20conectat.');
     } catch (error) {

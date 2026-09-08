@@ -11,6 +11,7 @@
 .newspaper-nav{border-top:1px solid #17202a;border-bottom:3px solid #17202a;gap:26px;padding:16px 28px}
 .newspaper-nav a{font-size:14px}.newspaper-nav a:hover,.newspaper-nav a.active{color:#0e6264;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:5px}
 .political-ad-banner{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:14px 28px;background:#eaf4f4;border-bottom:1px solid #bed5d6;font-size:13px;line-height:1.5}.political-ad-banner strong{color:#0b5557;text-transform:uppercase;letter-spacing:.05em}.political-ad-banner a{font-weight:800;color:#0b5557}
+.civic-disclosure{background:#f3f7f5;border-color:#d3dfd8}.civic-disclosure strong,.civic-disclosure a{color:#315c49}
 .newspaper-search{background:#fff;padding:18px 28px;gap:14px}.newspaper-search label{font-size:14px}.newspaper-search a{font-size:14px}
 .edition-main{padding:28px}.edition-label,.section-heading{display:flex;justify-content:space-between;align-items:baseline;gap:16px;border-bottom:2px solid #17202a;padding-bottom:10px;margin:0 0 22px}
 .edition-label strong{font-size:14px;text-transform:uppercase;letter-spacing:.1em}.edition-label span{font-size:13px;color:#5d6870}

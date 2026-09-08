@@ -128,6 +128,10 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match(dashboard.html, /Administrează fiecare pagină din meniu/);
     assert.match(dashboard.html, /href="\/candidate-ui\.css"/);
     assert.match(dashboard.html, /class="candidate-sidebar"/);
+    assert.match(dashboard.html, /class="candidate-profile-editor candidate-panel"/);
+    assert.match(dashboard.html, /Identitate publică/);
+    assert.match(dashboard.html, /Candidatură și zonă/);
+    assert.match(dashboard.html, /Gestionează conexiunile API/);
     assert.match(dashboard.html, /data-label="Acțiuni"/);
     for (const section of ['actualitate', 'program', 'proiecte', 'evenimente']) {
       assert.ok(dashboard.html.includes(`/dashboard/articol/nou?categorie=${section[0].toUpperCase()}${section.slice(1)}`));
@@ -227,20 +231,23 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match(invalid.html, /Ciorna secretă/);
     assert.ok(!invalid.html.includes('&lt;script&gt;'));
   });
-  await t.test('Etichetele electorale, transparența și paginile juridice sunt publice', async () => {
+  await t.test('Modul civic, transparența și paginile juridice sunt publice', async () => {
     const listing = await guest('/site/ana');
     assert.match(listing.html, /Vocea[\s\S]*Candidatului/);
     assert.ok(!listing.html.includes('<strong>JURNAL</strong>'));
-    assert.match(listing.html, /Material electoral · publicitate politică/);
-    assert.match(listing.html, /Finanțat de ana/);
+    assert.match(listing.html, /PUBLICAȚIE CIVICĂ/);
+    assert.match(listing.html, /Publicație civică independentă/);
+    assert.ok(!listing.html.includes('Cod mandatar financiar'));
     assert.match(listing.html, /Vezi transparența completă/);
     const article = await guest('/site/ana/articol/1');
     assert.match(article.html, /responsabil editorial/);
     assert.match(article.html, /Raportează materialul/);
     const transparency = await guest('/site/ana/transparenta?articol=1');
     assert.equal(transparency.status, 200);
+    assert.match(transparency.html, /Material civic \/ informare publică/);
+    assert.ok(!transparency.html.includes('Referință contractuală'));
     assert.match(transparency.html, /Operator Test SRL/);
-    assert.match(transparency.html, /TEST-2/);
+    assert.match(transparency.html, /RO12345678/);
     assert.match((await guest('/legal/termeni')).html, /Operator Test SRL/);
     assert.equal((await guest('/legal/inexistent')).status, 404);
   });
@@ -315,12 +322,18 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   });
   await t.test('Super Admin: aprobare, XSS escapate, audit, respingere și ștergere', async () => {
     assert.equal((await admin('/login', { email: 'admin@example.test', parola: password })).status, 302);
-    assert.match((await admin('/admin')).html, /Cele mai citite articole/);
+    const adminDashboard = await admin('/admin');
+    assert.match(adminDashboard.html, /Cele mai citite articole/);
+    assert.match(adminDashboard.html, /href="\/admin\/social"/);
     const page = await admin('/admin/comentarii');
     assert.equal(page.status, 200);
     assert.ok(!page.html.includes('<script>autor'));
     assert.match(page.html, /&lt;script&gt;autor/);
     adminToken = csrf(page.html);
+    const adminSocial = await admin('/admin/social');
+    assert.equal(adminSocial.status, 200);
+    assert.match(adminSocial.html, /Conectează paginile oficiale/);
+    assert.equal((await cand('/admin/social')).status, 403);
     const url = `/admin/comentarii/2/1/${comment.id}`;
     assert.equal((await cand(url, { csrf_token: candidateToken, status: 'aprobat', version: 'initial' })).status, 403);
     assert.equal((await admin(url, { status: 'aprobat', version: 'initial' })).status, 403);
@@ -428,14 +441,12 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match(invalidImage.html, /Adresa imaginii trebuie să fie HTTP\/HTTPS/);
     assert.deepEqual(JSON.parse((await admin('/admin/portal/ai/config')).html), { text: false, image: false });
   });
-  await t.test('Activare contractuală: cont în așteptare, acceptare și activare de Super Admin', async () => {
+  await t.test('Activare civică fără date electorale, apoi actualizare și reacceptare', async () => {
     const created = await admin('/admin/candidati', {
       csrf_token: adminToken, nume_candidat: 'Candidat Nou', email: 'nou@example.test',
       functie_candidatura: 'Primar', zona: 'Lugoj', judet: 'Timiș', partid: 'Independent',
-      tip_candidat: 'independent', scrutin: 'Alegeri locale de test', entitate_responsabila: 'Candidat Nou',
-      finantator_materiale: 'Candidat Nou', cod_mandatar_financiar: 'MANDAT-NOU', tip_contract: 'platit',
-      numar_contract: 'CONTRACT-NOU', data_contract: '2026-07-01', valoare_contract: '2500', moneda_contract: 'RON',
-      confirmare_mandatar: 'on', modul_site: 'on', modul_statistici: 'on', modul_social: 'on',
+      tip_candidat: 'independent', entitate_responsabila: 'Candidat Nou',
+      modul_site: 'on', modul_statistici: 'on', modul_social: 'on',
     });
     assert.equal(created.status, 201);
     assert.equal(created.headers.get('location'), null);
@@ -446,6 +457,8 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     const login = await pending('/login', { email: 'nou@example.test', parola: temporaryPassword });
     assert.equal(login.headers.get('location'), '/activare');
     const activation = await pending('/activare');
+    assert.match(activation.html, /Activare profil civic/);
+    assert.ok(!activation.html.includes('Cod mandatar financiar'));
     const activationToken = csrf(activation.html);
     assert.ok(activationToken);
     assert.equal((await pending('/dashboard')).status, 403);

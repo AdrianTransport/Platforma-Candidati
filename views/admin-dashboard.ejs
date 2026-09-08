@@ -24,7 +24,7 @@
     <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
     <% if (!platform.complete) { %><div class="eroare"><strong>Activarea juridică este blocată.</strong> Configurează în Netlify: PLATFORM_OPERATOR_NAME, PLATFORM_OPERATOR_ID, PLATFORM_LEGAL_EMAIL și PLATFORM_LEGAL_ADDRESS.</div><% } %>
 
-    <section class="admin-tools-grid"><div class="card portal-tool-card"><h2>Site-ul principal</h2><p>Publică știrile platformei, campanii pentru candidați și alege articolul principal.</p><a class="btn" href="/admin/portal">Administrează site-ul</a></div><div class="card"><h2>Moderarea comentariilor</h2><p>Numai comentariile aprobate devin publice. Poți verifica istoricul fiecărei decizii.</p><a class="btn" href="/admin/comentarii">Deschide moderarea</a></div><div class="card compliance-card"><h2>Sesizări juridice</h2><p>Analizează materialele raportate, păstrează motivarea și suspendă conținutul când este necesar.</p><a class="btn" href="/admin/sesizari">Deschide sesizările</a></div><div class="card audit-card"><h2>Jurnal de conformitate</h2><p>Vezi activările, configurările, publicările și deciziile administrative în ordine cronologică.</p><a class="btn secondary" href="/admin/jurnal">Deschide jurnalul</a></div></section>
+    <section class="admin-tools-grid"><div class="card portal-tool-card"><h2>Site-ul principal</h2><p>Publică știrile platformei, campanii pentru candidați și alege articolul principal.</p><a class="btn" href="/admin/portal">Administrează site-ul</a></div><div class="card"><h2>Facebook, Instagram și TikTok</h2><p>Conectează paginile oficiale ale site-ului principal și distribuie materialele publicate.</p><a class="btn" href="/admin/social">Gestionează rețelele</a></div><div class="card"><h2>Moderarea comentariilor</h2><p>Numai comentariile aprobate devin publice. Poți verifica istoricul fiecărei decizii.</p><a class="btn" href="/admin/comentarii">Deschide moderarea</a></div><div class="card compliance-card"><h2>Sesizări juridice</h2><p>Analizează materialele raportate, păstrează motivarea și suspendă conținutul când este necesar.</p><a class="btn" href="/admin/sesizari">Deschide sesizările</a></div><div class="card audit-card"><h2>Jurnal de conformitate</h2><p>Vezi activările, configurările, publicările și deciziile administrative în ordine cronologică.</p><a class="btn secondary" href="/admin/jurnal">Deschide jurnalul</a></div></section>
     <section class="card poll-manager"><span class="eyebrow">Engagement pe pagina principală</span><h2>Sondaj rapid</h2><form method="POST" action="/admin/sondaje" class="form-grid form-grid-2"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><label>Întrebare<input name="intrebare" maxlength="180" required placeholder="Care este prioritatea comunității?"></label><label>Opțiuni, una pe fiecare rând<textarea name="optiuni" rows="4" required placeholder="Drumuri și trotuare&#10;Școli și grădinițe&#10;Curățenie"></textarea></label><label class="consent-label full-field"><input type="checkbox" name="rezultate_publice" checked> Afișează rezultatele și publicului</label><div class="form-actions"><button type="submit">Publică sondajul</button></div></form><div class="poll-admin-list"><% sondaje.forEach(poll => { const total = poll.options.reduce((sum, option) => sum + option.votes, 0); %><article><div><strong><%= poll.question %></strong><small><%= total %> voturi · <%= poll.active ? 'activ' : 'închis' %></small><ul class="poll-owner-results"><% poll.options.forEach(option => { %><li><span><%= option.text %></span><strong><%= option.votes %> · <%= total ? Math.round(option.votes * 100 / total) : 0 %>%</strong></li><% }) %></ul></div><form method="POST" action="/sondaje/<%= poll.id %>/stare"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><input type="hidden" name="active" value="<%= poll.active ? 'false' : 'true' %>"><button class="secondary" type="submit"><%= poll.active ? 'Închide' : 'Reactivează' %></button></form></article><% }) %></div></section>
     <section class="card"><h2>Cele mai citite articole</h2><p class="note">Top 10 după afișările înregistrate, nu cititori unici și nu indexare Google.</p>
       <% if (!topArticole.length) { %><p>Nu există articole publice.</p><% } %>
@@ -54,18 +54,22 @@
         <label>Județ<input type="text" name="judet" placeholder="Timiș"></label>
         <label>Partid sau independent<input type="text" name="partid" placeholder="Independent"></label>
         <label>Tip candidat<select name="tip_candidat" required><option value="independent">Independent</option><option value="partid">Candidat susținut de partid</option></select></label>
-        <label>Scrutin<input type="text" name="scrutin" maxlength="200" required placeholder="Alegeri locale 2028"></label>
         <label>Responsabil editorial<input type="text" name="entitate_responsabila" maxlength="200" required placeholder="Numele candidatului sau entitatea contractuală"></label>
-        <label>Finanțatorul real<input type="text" name="finantator_materiale" maxlength="200" required placeholder="Candidat, partid sau alt sponsor legal"></label>
-        <label>Cod mandatar financiar<input type="text" name="cod_mandatar_financiar" maxlength="100" required></label>
-        <label>Tip contract<select name="tip_contract" required><option value="platit">Serviciu plătit</option><option value="gratuit">Serviciu oferit gratuit</option></select></label>
-        <label>Număr contract<input type="text" name="numar_contract" maxlength="100" required></label>
-        <label>Data contractului<input type="date" name="data_contract" required></label>
-        <label>Valoare contract<input type="number" name="valoare_contract" min="0" max="100000000" step="0.01" placeholder="0 pentru gratuit; valoare pozitivă pentru plătit"></label>
-        <label>Monedă<select name="moneda_contract"><option value="RON">RON</option><option value="EUR">EUR</option></select></label>
-        <label>Început campanie (opțional)<input type="date" name="campanie_start"></label>
-        <label>Sfârșit campanie (opțional)<input type="date" name="campanie_end"></label>
-        <label class="consent-label full-field"><input type="checkbox" name="confirmare_mandatar" required> Candidatul sau mandatarul financiar a confirmat datele de finanțare și folosirea serviciului plătit/gratuit.</label>
+        <% if (electoralMode) { %>
+          <label>Scrutin<input type="text" name="scrutin" maxlength="200" required placeholder="Alegeri locale 2028"></label>
+          <label>Finanțatorul real<input type="text" name="finantator_materiale" maxlength="200" required placeholder="Candidat, partid sau alt sponsor legal"></label>
+          <label>Cod mandatar financiar<input type="text" name="cod_mandatar_financiar" maxlength="100" required></label>
+          <label>Tip contract<select name="tip_contract" required><option value="platit">Serviciu plătit</option><option value="gratuit">Serviciu oferit gratuit</option></select></label>
+          <label>Referință contractuală<input type="text" name="numar_contract" maxlength="100" required></label>
+          <label>Data contractului<input type="date" name="data_contract" required></label>
+          <label>Valoare contract<input type="number" name="valoare_contract" min="0" max="100000000" step="0.01"></label>
+          <label>Monedă<select name="moneda_contract"><option value="RON">RON</option><option value="EUR">EUR</option></select></label>
+          <label>Început campanie (opțional)<input type="date" name="campanie_start"></label>
+          <label>Sfârșit campanie (opțional)<input type="date" name="campanie_end"></label>
+          <label class="consent-label full-field"><input type="checkbox" name="confirmare_mandatar" required> Candidatul sau mandatarul financiar confirmă datele electorale și contractuale.</label>
+        <% } else { %>
+          <p class="note full-field"><strong>Mod civic activ.</strong> Codul mandatarului financiar și referința contractuală vor fi solicitate începând din 2028 și nu blochează acum contul.</p>
+        <% } %>
         <div class="form-actions"><button type="submit">Creează cont în așteptare</button></div>
       </form>
     </details>
@@ -76,7 +80,7 @@
       <% candidati.forEach(c => { %>
         <article class="card candidate-admin-card">
           <div class="candidate-admin-head">
-            <div><span class="status-dot status-<%= c.status_cont %>"></span><strong><%= c.nume_candidat %></strong><span class="pill <%= c.status_cont === 'activ' ? 'publicat' : 'ciorna' %>"><%= c.status_cont.replace('_', ' ') %></span><% if (!complianceMissing[c.id].length) { %><span class="pill publicat">juridic complet</span><% } %><p><%= c.email %> · /site/<%= c.subdomeniu %><% if (c.last_login_at) { %> · ultima autentificare <%= new Date(c.last_login_at).toLocaleDateString('ro-RO') %><% } %></p></div>
+            <div><span class="status-dot status-<%= c.status_cont %>"></span><strong><%= c.nume_candidat %></strong><span class="pill <%= c.status_cont === 'activ' ? 'publicat' : 'ciorna' %>"><%= c.status_cont.replace('_', ' ') %></span><% if (!complianceMissing[c.id].length) { %><span class="pill publicat"><%= electoralMode ? 'juridic complet' : 'profil civic complet' %></span><% } %><p><%= c.email %> · /site/<%= c.subdomeniu %><% if (c.last_login_at) { %> · ultima autentificare <%= new Date(c.last_login_at).toLocaleDateString('ro-RO') %><% } %></p></div>
             <% if (c.module?.site && c.status_cont === 'activ') { %><a class="btn secondary" href="/site/<%= c.subdomeniu %>" target="_blank">Deschide site-ul</a><% } %>
           </div>
           <div class="admin-card-columns">
@@ -87,18 +91,20 @@
               <label>Localitate / zonă<input name="zona" value="<%= c.zona || '' %>"></label>
               <label>Județ<input name="judet" value="<%= c.judet || '' %>"></label>
               <label>Tip candidat<select name="tip_candidat"><option value="independent" <%= c.tip_candidat === 'independent' ? 'selected' : '' %>>Independent</option><option value="partid" <%= c.tip_candidat === 'partid' ? 'selected' : '' %>>Susținut de partid</option></select></label>
-              <label>Scrutin<input name="scrutin" maxlength="200" required value="<%= c.scrutin || '' %>"></label>
               <label>Responsabil editorial<input name="entitate_responsabila" maxlength="200" required value="<%= c.entitate_responsabila || '' %>"></label>
-              <label>Finanțator real<input name="finantator_materiale" maxlength="200" required value="<%= c.finantator_materiale || '' %>"></label>
-              <label>Cod mandatar financiar<input name="cod_mandatar_financiar" maxlength="100" required value="<%= c.cod_mandatar_financiar || '' %>"></label>
-              <label>Tip contract<select name="tip_contract"><option value="platit" <%= c.tip_contract === 'platit' ? 'selected' : '' %>>Serviciu plătit</option><option value="gratuit" <%= c.tip_contract === 'gratuit' ? 'selected' : '' %>>Serviciu gratuit</option></select></label>
-              <label>Număr contract<input name="numar_contract" maxlength="100" required value="<%= c.numar_contract || '' %>"></label>
-              <label>Data contractului<input type="date" name="data_contract" required value="<%= c.data_contract || '' %>"></label>
-              <label>Valoare<input type="number" name="valoare_contract" min="0" max="100000000" step="0.01" required value="<%= c.valoare_contract || 0 %>"></label>
-              <label>Monedă<select name="moneda_contract"><option value="RON" <%= c.moneda_contract !== 'EUR' ? 'selected' : '' %>>RON</option><option value="EUR" <%= c.moneda_contract === 'EUR' ? 'selected' : '' %>>EUR</option></select></label>
-              <label>Început campanie<input type="date" name="campanie_start" value="<%= c.campanie_start || '' %>"></label>
-              <label>Sfârșit campanie<input type="date" name="campanie_end" value="<%= c.campanie_end || '' %>"></label>
-              <label class="consent-label full-field"><input type="checkbox" name="confirmare_mandatar" <%= c.confirmare_mandatar ? 'checked' : '' %>> Datele au fost confirmate de candidat/mandatar.</label>
+              <% if (electoralMode) { %>
+                <label>Scrutin<input name="scrutin" maxlength="200" required value="<%= c.scrutin || '' %>"></label>
+                <label>Finanțator real<input name="finantator_materiale" maxlength="200" required value="<%= c.finantator_materiale || '' %>"></label>
+                <label>Cod mandatar financiar<input name="cod_mandatar_financiar" maxlength="100" required value="<%= c.cod_mandatar_financiar || '' %>"></label>
+                <label>Tip contract<select name="tip_contract"><option value="platit" <%= c.tip_contract === 'platit' ? 'selected' : '' %>>Serviciu plătit</option><option value="gratuit" <%= c.tip_contract === 'gratuit' ? 'selected' : '' %>>Serviciu gratuit</option></select></label>
+                <label>Referință contractuală<input name="numar_contract" maxlength="100" required value="<%= c.numar_contract || '' %>"></label>
+                <label>Data contractului<input type="date" name="data_contract" required value="<%= c.data_contract || '' %>"></label>
+                <label>Valoare<input type="number" name="valoare_contract" min="0" max="100000000" step="0.01" required value="<%= c.valoare_contract || 0 %>"></label>
+                <label>Monedă<select name="moneda_contract"><option value="RON" <%= c.moneda_contract !== 'EUR' ? 'selected' : '' %>>RON</option><option value="EUR" <%= c.moneda_contract === 'EUR' ? 'selected' : '' %>>EUR</option></select></label>
+                <label>Început campanie<input type="date" name="campanie_start" value="<%= c.campanie_start || '' %>"></label>
+                <label>Sfârșit campanie<input type="date" name="campanie_end" value="<%= c.campanie_end || '' %>"></label>
+                <label class="consent-label full-field"><input type="checkbox" name="confirmare_mandatar" <%= c.confirmare_mandatar ? 'checked' : '' %>> Datele au fost confirmate de candidat/mandatar.</label>
+              <% } else { %><p class="note full-field">Mod civic: datele electorale și contractuale sunt păstrate, dar nu sunt cerute până în 2028.</p><% } %>
               <div class="module-checks">
                 <label><input type="checkbox" name="modul_site" <%= c.module?.site ? 'checked' : '' %>> Site public</label>
                 <label><input type="checkbox" name="modul_statistici" <%= c.module?.statistici ? 'checked' : '' %>> Statistici</label>

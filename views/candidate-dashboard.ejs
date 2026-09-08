@@ -101,25 +101,16 @@
         </div>
       </section>
 
-      <section class="candidate-profile candidate-panel" id="profil-public">
+      <section class="candidate-profile-editor candidate-panel" id="profil-public">
         <details>
           <summary><span><span class="candidate-kicker">Date publice</span><strong>Profilul public și rețelele sociale</strong></span><span class="candidate-summary-action">Editează profilul</span></summary>
           <form method="POST" action="/dashboard/profil" class="candidate-form-grid">
             <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
-            <label>Slogan<input name="slogan" maxlength="140" value="<%= user.slogan || '' %>" placeholder="Împreună pentru comunitatea noastră"></label>
-            <label>Mesaj scurt<input name="mesaj_scurt" maxlength="240" value="<%= user.mesaj_scurt || '' %>" placeholder="Mesajul afișat în antetul publicației"></label>
-            <label class="full-field">Prezentare<textarea name="descriere" rows="5" maxlength="2000" placeholder="Cine ești și de ce candidezi"><%= user.descriere || '' %></textarea></label>
-            <label>Funcția pentru care candidezi<input name="functie_candidatura" maxlength="120" value="<%= user.functie_candidatura || '' %>"></label>
-            <label>Localitate / zonă<input name="zona" maxlength="120" value="<%= user.zona || '' %>"></label>
-            <label>Județ<input name="judet" maxlength="80" value="<%= user.judet || '' %>"></label>
-            <label>Email de contact public (opțional)<input type="email" name="email_contact" maxlength="254" value="<%= user.email_contact || '' %>"></label>
-            <label>Telefon de contact public (opțional)<input type="tel" name="telefon_contact" maxlength="30" value="<%= user.telefon_contact || '' %>"></label>
-            <p class="candidate-form-note full-field">Datele de contact devin publice. Adresa folosită pentru autentificare nu este afișată automat.</p>
+            <fieldset class="candidate-form-section full-field"><legend>Identitate publică</legend><p>Informațiile principale afișate în publicația ta.</p><div class="candidate-fields-grid"><label>Slogan<input name="slogan" maxlength="140" value="<%= user.slogan || '' %>" placeholder="Împreună pentru comunitatea noastră"></label><label>Mesaj scurt<input name="mesaj_scurt" maxlength="240" value="<%= user.mesaj_scurt || '' %>" placeholder="Mesajul afișat în antetul publicației"></label><label class="full-field">Prezentare<textarea name="descriere" rows="5" maxlength="2000" placeholder="Cine ești și de ce candidezi"><%= user.descriere || '' %></textarea></label></div></fieldset>
+            <fieldset class="candidate-form-section full-field"><legend>Candidatură și zonă</legend><p>Ajută cititorii să identifice clar comunitatea reprezentată.</p><div class="candidate-fields-grid candidate-fields-grid-three"><label>Funcția pentru care candidezi<input name="functie_candidatura" maxlength="120" value="<%= user.functie_candidatura || '' %>"></label><label>Localitate / zonă<input name="zona" maxlength="120" value="<%= user.zona || '' %>"></label><label>Județ<input name="judet" maxlength="80" value="<%= user.judet || '' %>"></label></div></fieldset>
+            <fieldset class="candidate-form-section full-field"><legend>Contact public</legend><p>Aceste date devin publice. Adresa folosită pentru autentificare nu este afișată automat.</p><div class="candidate-fields-grid"><label>Email de contact (opțional)<input type="email" name="email_contact" maxlength="254" value="<%= user.email_contact || '' %>"></label><label>Telefon de contact (opțional)<input type="tel" name="telefon_contact" maxlength="30" value="<%= user.telefon_contact || '' %>"></label></div></fieldset>
             <% if (user.module?.social) { %>
-              <label>Facebook<input type="url" name="facebook_url" value="<%= user.facebook_url || '' %>" placeholder="https://facebook.com/..."></label>
-              <label>Instagram<input type="url" name="instagram_url" value="<%= user.instagram_url || '' %>" placeholder="https://instagram.com/..."></label>
-              <label>TikTok<input type="url" name="tiktok_url" value="<%= user.tiktok_url || '' %>" placeholder="https://tiktok.com/@..."></label>
-              <label>YouTube<input type="url" name="youtube_url" value="<%= user.youtube_url || '' %>" placeholder="https://youtube.com/@..."></label>
+              <fieldset class="candidate-form-section candidate-social-settings full-field"><legend>Rețele sociale</legend><p>Conectează conturile prin API pentru publicare. Linkurile de mai jos rămân o soluție de rezervă pentru profilul public.</p><div class="candidate-connection-summary"><span class="candidate-connection-pill <%= user.social_connections?.meta ? 'connected' : '' %>">Facebook & Instagram · <%= user.social_connections?.meta ? 'conectate' : 'neconectate' %></span><span class="candidate-connection-pill <%= user.social_connections?.tiktok ? 'connected' : '' %>">TikTok · <%= user.social_connections?.tiktok ? 'conectat' : 'neconectat' %></span><a class="candidate-btn secondary small" href="/dashboard/social">Gestionează conexiunile API</a></div><div class="candidate-fields-grid candidate-fields-grid-two"><label>Link Facebook<input type="url" name="facebook_url" value="<%= user.facebook_url || '' %>" placeholder="https://facebook.com/..."></label><label>Link Instagram<input type="url" name="instagram_url" value="<%= user.instagram_url || '' %>" placeholder="https://instagram.com/..."></label><label>Link TikTok<input type="url" name="tiktok_url" value="<%= user.tiktok_url || '' %>" placeholder="https://tiktok.com/@..."></label><label>Link YouTube<input type="url" name="youtube_url" value="<%= user.youtube_url || '' %>" placeholder="https://youtube.com/@..."></label></div></fieldset>
             <% } %>
             <div class="candidate-form-actions"><button class="candidate-btn primary" type="submit">Salvează profilul</button></div>
           </form>

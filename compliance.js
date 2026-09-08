@@ -10,6 +10,12 @@ const CANDIDATE_TYPES = new Set(['independent', 'partid']);
 const CURRENCIES = new Set(['RON', 'EUR']);
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 const DAY = 86400000;
+export const ELECTORAL_MODE_START = Date.UTC(2028, 0, 1);
+
+export function isElectoralMode(at = Date.now()) {
+  const timestamp = at instanceof Date ? at.getTime() : Number(at);
+  return Number.isFinite(timestamp) && timestamp >= ELECTORAL_MODE_START;
+}
 
 function envText(value, max = 300) {
   return String(value || '').trim().slice(0, max);
@@ -48,22 +54,22 @@ function moneyField(value, contractType) {
   return number;
 }
 
-export function legalProfileInput(body) {
-  const tip_contract = enumField(body.tip_contract, CONTRACT_TYPES, 'Tip contract');
+export function legalProfileInput(body, electoralMode = isElectoralMode()) {
+  const tip_contract = enumField(body.tip_contract || (electoralMode ? '' : 'gratuit'), CONTRACT_TYPES, 'Tip contract');
   const campanie_start = dateField(body.campanie_start, 'Început campanie');
   const campanie_end = dateField(body.campanie_end, 'Sfârșit campanie');
   if (campanie_start && campanie_end && campanie_end < campanie_start) {
     throw new ValidationError('Sfârșitul campaniei nu poate fi înaintea începutului.');
   }
   return {
-    tip_candidat: enumField(body.tip_candidat, CANDIDATE_TYPES, 'Tip candidat'),
+    tip_candidat: enumField(body.tip_candidat || 'independent', CANDIDATE_TYPES, 'Tip candidat'),
     entitate_responsabila: textField(body.entitate_responsabila, 'Responsabil editorial', 200, true),
-    finantator_materiale: textField(body.finantator_materiale, 'Finanțator', 200, true),
-    scrutin: textField(body.scrutin, 'Scrutin', 200, true),
-    cod_mandatar_financiar: textField(body.cod_mandatar_financiar, 'Cod mandatar financiar', 100, true),
+    finantator_materiale: textField(body.finantator_materiale, 'Finanțator', 200, electoralMode),
+    scrutin: textField(body.scrutin, 'Scrutin', 200, electoralMode),
+    cod_mandatar_financiar: textField(body.cod_mandatar_financiar, 'Cod mandatar financiar', 100, electoralMode),
     tip_contract,
-    numar_contract: textField(body.numar_contract, 'Număr contract', 100, true),
-    data_contract: dateField(body.data_contract, 'Data contractului', true),
+    numar_contract: textField(body.numar_contract, 'Număr contract', 100, electoralMode),
+    data_contract: dateField(body.data_contract, 'Data contractului', electoralMode),
     valoare_contract: moneyField(body.valoare_contract, tip_contract),
     moneda_contract: enumField(body.moneda_contract || 'RON', CURRENCIES, 'Monedă'),
     campanie_start,
@@ -72,18 +78,22 @@ export function legalProfileInput(body) {
   };
 }
 
-export function candidateComplianceMissing(user, platform = { complete: true }) {
+export function candidateComplianceMissing(user, platform = { complete: true }, electoralMode = isElectoralMode()) {
   const missing = [];
   if (!platform.complete) missing.push('datele juridice ale operatorului platformei');
   for (const [key, label] of [
     ['functie_candidatura', 'funcția candidaturii'], ['zona', 'zona candidaturii'],
     ['tip_candidat', 'tipul candidatului'], ['entitate_responsabila', 'responsabilul editorial'],
-    ['finantator_materiale', 'finanțatorul real'], ['scrutin', 'scrutinul'],
-    ['cod_mandatar_financiar', 'codul mandatarului financiar'], ['tip_contract', 'tipul contractului'],
-    ['numar_contract', 'numărul contractului'], ['data_contract', 'data contractului'],
   ]) if (!String(user?.[key] ?? '').trim()) missing.push(label);
-  if (user?.tip_contract === 'platit' && !(Number(user.valoare_contract) > 0)) missing.push('valoarea contractului');
-  if (!user?.confirmare_mandatar) missing.push('confirmarea datelor de către candidat/mandatar');
+  if (electoralMode) {
+    for (const [key, label] of [
+      ['finantator_materiale', 'finanțatorul real'], ['scrutin', 'scrutinul'],
+      ['cod_mandatar_financiar', 'codul mandatarului financiar'], ['tip_contract', 'tipul contractului'],
+      ['numar_contract', 'numărul contractului'], ['data_contract', 'data contractului'],
+    ]) if (!String(user?.[key] ?? '').trim()) missing.push(label);
+    if (user?.tip_contract === 'platit' && !(Number(user.valoare_contract) > 0)) missing.push('valoarea contractului');
+    if (!user?.confirmare_mandatar) missing.push('confirmarea datelor de către candidat/mandatar');
+  }
   if (user?.terms_version !== TERMS_VERSION || !user?.terms_accepted_at || !user?.editorial_responsibility_accepted_at) {
     missing.push('acceptarea termenilor și a responsabilității editoriale');
   }

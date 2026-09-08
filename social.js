@@ -88,17 +88,25 @@ export async function exchangeMetaCode(code, redirectUri) {
 
 export async function fetchMetaPages(userAccessToken) {
   const params = new URLSearchParams({
-    fields: 'id,name,access_token,instagram_business_account{id,username}',
+    fields: 'id,name,link,access_token,instagram_business_account{id,username}',
     access_token: userAccessToken,
   });
   const result = await responseJson(await fetch(`${META_GRAPH}/me/accounts?${params}`), 'Meta Pages');
   return (result.data || []).map((page) => ({
     id: page.id,
     name: page.name,
+    facebook_url: page.link || `https://www.facebook.com/${page.id}`,
     access_token_enc: encryptSecret(page.access_token),
     instagram_id: page.instagram_business_account?.id || '',
     instagram_username: page.instagram_business_account?.username || '',
   }));
+}
+
+export async function fetchTikTokProfile(accessToken) {
+  const result = await responseJson(await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,profile_deep_link', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  }), 'TikTok profil');
+  return result.data?.user || {};
 }
 
 export async function publishFacebook(page, message, link) {
@@ -136,7 +144,7 @@ export function tiktokAuthorizeUrl(redirectUri, state) {
   const params = new URLSearchParams({
     client_key: process.env.TIKTOK_CLIENT_KEY,
     response_type: 'code',
-    scope: 'user.info.basic,video.publish',
+    scope: 'user.info.basic,user.info.profile,video.publish',
     redirect_uri: redirectUri,
     state,
   });
