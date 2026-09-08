@@ -6,6 +6,7 @@ const NAMESPACES = [
   ['compliance', 'campanie-compliance'],
   ['editorial', 'campanie-editorial'],
 ];
+const PROJECT_URL = 'https://sfxdxatfcllwkihxqhra.supabase.co';
 
 function sameSecret(actual, expected) {
   const a = Buffer.from(String(actual || ''));
@@ -44,11 +45,11 @@ async function allBlobKeys(store) {
 export async function migrateBlobsToSupabase({ authorization, env }) {
   const token = String(authorization || '').replace(/^Bearer\s+/i, '');
   if (!sameSecret(token, env.MIGRATION_TOKEN)) return { statusCode: 404, body: 'Not found' };
-  if (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY) {
-    const missing = [!env.SUPABASE_URL && 'SUPABASE_URL', !env.SUPABASE_SECRET_KEY && 'SUPABASE_SECRET_KEY'].filter(Boolean);
+  if (!env.SUPABASE_SECRET_KEY) {
+    const missing = ['SUPABASE_SECRET_KEY'];
     return { statusCode: 503, body: `Missing environment variables: ${missing.join(', ')}` };
   }
-  const client = { url: env.SUPABASE_URL.replace(/\/$/, ''), key: env.SUPABASE_SECRET_KEY };
+  const client = { url: PROJECT_URL, key: env.SUPABASE_SECRET_KEY };
   const database = await getStore('campanie-db').get('db', { type: 'json' });
   if (!database) throw new Error('Source database is empty');
   await supabaseRequest(client, 'platform_state?on_conflict=id', {
