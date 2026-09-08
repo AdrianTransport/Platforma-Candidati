@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { createSupabaseKeyStore, useSupabase } from './supabase-store.js';
 
 // Fiecare comentariu/eveniment are o cheie proprie. Nu rescriem db.json.
 export function createLocalCommentStore(directory = path.join(process.cwd(), 'data', 'comments')) {
@@ -56,6 +57,7 @@ export function createBlobCommentStore(store) {
 export function createCommentStore() {
   const serverless = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME;
   if (!serverless) return createLocalCommentStore();
+  if (useSupabase()) return createSupabaseKeyStore('comments');
   let adapter;
   async function ready() {
     if (!adapter) {

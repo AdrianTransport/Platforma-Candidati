@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { createLocalCommentStore, createBlobCommentStore } from './comment-store.js';
+import { createSupabaseKeyStore, useSupabase } from './supabase-store.js';
 import { textField, ValidationError } from './publication.js';
 
 export const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
@@ -17,6 +18,7 @@ export function createEditorialStore({
   loadBlobs = () => import('@netlify/blobs'),
 } = {}) {
   if (!serverless) return createLocalCommentStore(path.join(process.cwd(), 'data', 'editorial'));
+  if (useSupabase()) return createSupabaseKeyStore('editorial');
   let adapter;
   async function ready() {
     if (!adapter) {

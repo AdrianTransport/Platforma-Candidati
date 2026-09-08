@@ -43,9 +43,10 @@ export const handler = async (event, context) => {
   // explicit, la FIECARE invocare, inainte de orice citire/scriere in Blobs.
   connectLambda(event);
 
+  const value = key => typeof Netlify === 'undefined' ? process.env[key] : Netlify.env.get(key);
+
   if (event.path === '/internal/migrate-supabase') {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
-    const value = key => typeof Netlify === 'undefined' ? process.env[key] : Netlify.env.get(key);
     return migrateBlobsToSupabase({
       authorization: event.headers?.authorization,
       env: {
@@ -55,6 +56,11 @@ export const handler = async (event, context) => {
       },
     });
   }
+
+  Object.assign(process.env, {
+    SUPABASE_SECRET_KEY: value('SUPABASE_SECRET_KEY'),
+    DATA_BACKEND: value('DATA_BACKEND'),
+  });
 
   if (!handlerPromise) {
     // Păstrăm adaptorul existent; imaginile trebuie codate binar, nu ca text UTF-8.

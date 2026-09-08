@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
+import { readSupabaseState, useSupabase, writeSupabaseState } from './supabase-store.js';
 
 const LOCAL_FILE = path.join(process.cwd(), 'data', 'db.json');
 const DEFAULT_DATA = {
@@ -28,6 +29,7 @@ function getBlobsStore() {
 }
 
 export async function readData() {
+  if (ESTE_SERVERLESS && useSupabase()) return (await readSupabaseState()) || structuredClone(DEFAULT_DATA);
   if (ESTE_SERVERLESS) {
     const store = await getBlobsStore();
     if (store) {
@@ -44,6 +46,7 @@ export async function readData() {
 }
 
 export async function writeData(data) {
+  if (ESTE_SERVERLESS && useSupabase()) return writeSupabaseState(data);
   if (ESTE_SERVERLESS) {
     const store = await getBlobsStore();
     if (store) {

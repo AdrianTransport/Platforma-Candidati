@@ -1,11 +1,13 @@
 import path from 'node:path';
 import { createBlobCommentStore, createLocalCommentStore } from './comment-store.js';
+import { createSupabaseKeyStore, useSupabase } from './supabase-store.js';
 
 // Sesizările, acceptările și evenimentele de audit au fiecare o cheie unică.
 // Astfel, două cereri simultane nu rescriu același document din Netlify Blobs.
 export function createComplianceStore() {
   const serverless = process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME;
   if (!serverless) return createLocalCommentStore(path.join(process.cwd(), 'data', 'compliance'));
+  if (useSupabase()) return createSupabaseKeyStore('compliance');
 
   let adapter;
   async function ready() {
