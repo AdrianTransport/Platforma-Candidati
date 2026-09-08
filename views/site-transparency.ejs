@@ -27,7 +27,7 @@
           <div><dt>Referință contractuală</dt><dd><%= transparenta.numar_contract || 'Nespecificată' %></dd></div>
           <div><dt>Valoarea serviciului</dt><dd><%= transparenta.tip_contract === 'gratuit' ? '0' : transparenta.valoare_contract %> <%= transparenta.moneda_contract %></dd></div>
         <% } else { %><div><dt>Regim curent</dt><dd>Publicație civică. Datele electorale și contractuale devin active începând din 2028.</dd></div><% } %>
-        <div><dt>Furnizor tehnic</dt><dd><%= platform.operatorName || platform.name %><%= platform.operatorId ? ` · ${platform.operatorId}` : '' %> — găzduire și instrumente tehnice, fără asumarea mesajului candidatului</dd></div>
+        <div><dt>Furnizor tehnic</dt><dd>CristianWeb — găzduire și instrumente tehnice, fără asumarea mesajului candidatului</dd></div>
       </dl>
       <p class="legal-warning">Furnizorul tehnic nu redactează și nu aprobă mesajul. Această delimitare nu împiedică platforma să suspende un material reclamat sau aparent ilegal.</p>
       <% if (articol) { %><p><a class="btn secondary" href="/site/<%= user.subdomeniu %>/articol/<%= articol.id %>/raporteaza">Raportează acest material</a></p><% } %>

@@ -246,9 +246,12 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal(transparency.status, 200);
     assert.match(transparency.html, /Material civic \/ informare publică/);
     assert.ok(!transparency.html.includes('Referință contractuală'));
-    assert.match(transparency.html, /Operator Test SRL/);
-    assert.match(transparency.html, /RO12345678/);
-    assert.match((await guest('/legal/termeni')).html, /Operator Test SRL/);
+    assert.match(transparency.html, /CristianWeb/);
+    assert.doesNotMatch(transparency.html, /Operator Test SRL/);
+    assert.doesNotMatch(transparency.html, /RO12345678/);
+    const legalTerms = await guest('/legal/termeni');
+    assert.match(legalTerms.html, /Droc Cristian Dan/);
+    assert.doesNotMatch(legalTerms.html, /Operator Test SRL|RO12345678/);
     assert.equal((await guest('/legal/inexistent')).status, 404);
   });
   await t.test('Profil și contact opțional, fără expunerea adresei de login', async () => {
