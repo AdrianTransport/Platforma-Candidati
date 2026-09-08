@@ -2,7 +2,6 @@ import { connectLambda } from '@netlify/blobs';
 import serverless from 'serverless-http';
 import { createApp } from '../../app.js';
 import { createEditorial, createEditorialStore } from '../../editorial.js';
-import { migrateAuth } from '../../migrate-auth.js';
 
 let handlerPromise;
 
@@ -50,15 +49,6 @@ export const handler = async (event, context) => {
     SUPABASE_SECRET_KEY: supabaseSecret,
     DATA_BACKEND: value('DATA_BACKEND') || (supabaseSecret ? 'supabase' : undefined),
   });
-
-  if (event.path?.includes('migrate-supabase-auth')) {
-    if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
-    const authorization = event.headers?.authorization || event.headers?.Authorization;
-    return migrateAuth({
-      authorization,
-      key: supabaseSecret,
-    });
-  }
 
   if (!handlerPromise) {
     // Păstrăm adaptorul existent; imaginile trebuie codate binar, nu ca text UTF-8.
