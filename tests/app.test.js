@@ -288,7 +288,8 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.ok(!listing.html.includes('Articol programat'));
     assert.ok(!listing.html.includes('Secrete'));
     assert.ok(!listing.html.includes('Ciorna secretă'));
-    assert.match(listing.headers.get('cache-control'), /no-store/);
+    assert.equal(listing.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
+    assert.match(listing.headers.get('netlify-cdn-cache-control'), /durable, max-age=60/);
     assert.match((await guest('/site/ana?cauta=programat')).html, /Niciun articol găsit/);
     assert.match((await cand('/dashboard/articol/4/edit')).html, /value="2026-07-10T12:30"/);
   });

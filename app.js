@@ -199,11 +199,28 @@ export async function createApp({
   );
 
   app.use((req, res, next) => {
-    req.session.csrfToken ||= randomState();
     res.locals.userId = req.session.userId || null;
     res.locals.rol = req.session.rol || null;
     res.locals.numeCandidat = req.session.numeCandidat || null;
+    res.locals.csrfToken = req.session.csrfToken || '';
+    next();
+  });
+
+  function ensureCsrfToken(req, res) {
+    req.session.csrfToken ||= randomState();
     res.locals.csrfToken = req.session.csrfToken;
+    return req.session.csrfToken;
+  }
+
+  function setPublicCdnCache(res, { maxAge = 60, stale = 300 } = {}) {
+    res.set('Cache-Control', 'public, max-age=0, must-revalidate');
+    res.set('Netlify-CDN-Cache-Control', `public, durable, max-age=${maxAge}, stale-while-revalidate=${stale}`);
+  }
+
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && /^(\/admin|\/dashboard|\/activare)(\/|$)/.test(req.path)) {
+      ensureCsrfToken(req, res);
+    }
     next();
   });
 
@@ -222,6 +239,7 @@ export async function createApp({
     }
     next();
   }
+
   function requestIp(req) {
     return (process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME)
       ? req.get('x-nf-client-connection-ip') || req.socket.remoteAddress || 'unknown'
@@ -281,13 +299,19 @@ export async function createApp({
     const withCandidate = post => ({ ...post, candidat: portalCandidate(post) });
     const mainPost = portalPosts[0] || null;
     const portalOwner = db.data.users.find(user => user.role === 'admin');
-    res.set('Cache-Control', 'private, no-store');
+    const sondaj = activePoll('admin');
+    if (sondaj) {
+      ensureCsrfToken(req, res);
+      res.set('Cache-Control', 'private, no-store');
+    } else {
+      setPublicCdnCache(res);
+    }
     res.render('landing', {
       candidatiPublici,
       principal: mainPost ? withCandidate(mainPost) : null,
       stiri: portalPosts.filter(post => post.tip === 'stire' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
       campanii: portalPosts.filter(post => post.tip === 'campanie' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
-      sondaj: activePoll('admin'),
+      sondaj,
       portalOwner,
     });
   });
@@ -302,7 +326,7 @@ export async function createApp({
       && (!cauta || `${candidate.nume_candidat} ${candidate.zona} ${candidate.partid}`.toLowerCase().includes(cauta)));
     const pages = Math.max(1, Math.ceil(filtered.length / 12));
     const page = Math.min(pages, Math.max(1, Number.parseInt(req.query.pagina, 10) || 1));
-    res.set('Cache-Control', 'private, no-store');
+    setPublicCdnCache(res);
     res.render('candidate-showcase', { candidati: filtered.slice((page - 1) * 12, page * 12), total: filtered.length, page, pages,
       judet: req.query.judet || '', functie: req.query.functie || '', cauta: req.query.cauta || '',
       judete: [...new Set(all.map(candidate => candidate.judet).filter(Boolean))].sort() });
@@ -314,6 +338,7 @@ export async function createApp({
     const posts = db.data.portal_posts.filter(post => portalPostIsPublic(post)
       && (req.params.slug === 'stiri' ? post.tip === 'stire' : section.categorii.includes(post.categorie)))
       .sort((a, b) => new Date(portalPublicationDate(b)) - new Date(portalPublicationDate(a)));
+    setPublicCdnCache(res);
     res.render('portal-section-public', { section, posts });
   });
 
@@ -337,6 +362,7 @@ export async function createApp({
 
   app.get('/actualitate/:slug', safely(async (req, res) => {
     res.set('Cache-Control', 'private, no-store');
+    ensureCsrfToken(req, res);
     const post = db.data.portal_posts.find(item => item.slug === req.params.slug && portalPostIsPublic(item));
     if (!post) return res.status(404).send('Materialul nu există.');
     post.vizualizari = (post.vizualizari || 0) + 1;
@@ -359,6 +385,7 @@ export async function createApp({
   app.get('/legal/:page', (req, res) => {
     const page = LEGAL_PAGES[req.params.page];
     if (!page) return res.status(404).send('Pagina nu există.');
+    setPublicCdnCache(res, { maxAge: 3600, stale: 86400 });
     res.render('legal-page', { page });
   });
 
@@ -1412,7 +1439,6 @@ export async function createApp({
   /* --------------------------- SITE PUBLIC (ziar) -------------------------- */
 
   app.get('/site/:subdomeniu', safely(async (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
     const user = db.data.users.find(
       (u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u)
     );
@@ -1433,49 +1459,57 @@ export async function createApp({
       user.statistici.surse[sursa] = (user.statistici.surse[sursa] || 0) + 1;
       await db.write();
     }
-    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata, activeSection: 'acasa', sondaj: activePoll('candidate', user.id),
+    const sondaj = activePoll('candidate', user.id);
+    if (sondaj) {
+      ensureCsrfToken(req, res);
+      res.set('Cache-Control', 'private, no-store');
+    } else {
+      setPublicCdnCache(res);
+    }
+    res.render('site-public', { user, candidatura, fluxIdei, categorii, cautaText, categorieSelectata, activeSection: 'acasa', sondaj,
       categoriiToate: [...new Set(toate.map(a => a.categorie || 'Actualitate'))].sort(),
       rezultatTotal: filtrate.length });
   }));
 
   for (const section of SECTIUNI_EDITORIALE) {
     app.get(`/site/:subdomeniu/${section.slug}`, (req, res) => {
-      res.set('Cache-Control', 'private, no-store');
       const user = publicCandidate(req.params.subdomeniu);
       if (!user) return res.status(404).send('Pagina nu există.');
       const articole = publicCandidateArticles(user)
         .filter(article => article.categorie === section.categorie);
+      setPublicCdnCache(res);
       res.render('site-section', { user, section, articole, activeSection: section.slug });
     });
   }
 
   app.get('/site/:subdomeniu/despre', (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
     const user = publicCandidate(req.params.subdomeniu);
     if (!user) return res.status(404).send('Pagina nu există.');
+    setPublicCdnCache(res);
     res.render('site-about', { user, activeSection: 'despre' });
   });
 
   app.get('/site/:subdomeniu/contact', (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
     const user = publicCandidate(req.params.subdomeniu);
     if (!user) return res.status(404).send('Pagina nu există.');
+    setPublicCdnCache(res);
     res.render('site-contact', { user, activeSection: 'contact' });
   });
 
   app.get('/site/:subdomeniu/transparenta', (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
     const user = publicCandidate(req.params.subdomeniu);
     if (!user) return res.status(404).send('Pagina nu există.');
     const articleId = Number(req.query.articol);
     const articol = Number.isSafeInteger(articleId) && articleId > 0
       ? db.data.articole.find(item => item.id === articleId && item.user_id === user.id && isPublished(item, now()))
       : null;
+    setPublicCdnCache(res);
     res.render('site-transparency', { user, articol, transparenta: publicTransparency(user, articol), activeSection: 'transparenta' });
   });
 
   app.get('/site/:subdomeniu/articol/:id/raporteaza', (req, res) => {
     res.set('Cache-Control', 'private, no-store');
+    ensureCsrfToken(req, res);
     const { user, articol } = publicArticle(req);
     if (!articol) return res.status(404).send('Articolul nu există sau nu este publicat.');
     const reportId = /^[a-f0-9-]{36}$/.test(String(req.query.sesizare || '')) ? String(req.query.sesizare) : '';
@@ -1499,6 +1533,7 @@ export async function createApp({
 
   async function renderPublicArticle(req, res, { error = '', values = {}, status = 200, count = false, expectedCategory = '' } = {}) {
     res.set('Cache-Control', 'private, no-store');
+    ensureCsrfToken(req, res);
     const { user, articol } = publicArticle(req);
     if (!articol || (expectedCategory && articol.categorie !== expectedCategory)) {
       return res.status(404).send('Articolul nu exista sau nu e publicat.');
