@@ -53,7 +53,12 @@ export const handler = async (event, context) => {
       region: runtimeValue('AWS_REGION'),
       credentials: readBlobsCredentials(event),
     });
-    const editorial = createEditorial({ store, env: readEditorialEnv() });
+    const runtimeEnv = readEditorialEnv();
+    Object.assign(process.env, {
+      ADMIN_RESET_TOKEN: runtimeValue('ADMIN_RESET_TOKEN'),
+      ADMIN_RESET_PASSWORD: runtimeValue('ADMIN_RESET_PASSWORD'),
+    });
+    const editorial = createEditorial({ store, env: runtimeEnv });
     handlerPromise = createApp({ editorial }).then((app) => serverless(app, {
       binary: ['image/png', 'image/jpeg', 'image/webp'],
     }));
