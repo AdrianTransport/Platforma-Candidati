@@ -19,7 +19,7 @@
         <div class="portal-article-meta"><span><%= post.tip === 'campanie' ? 'CAMPANIE CANDIDAT' : 'ȘTIREA PLATFORMEI' %></span><span><%= post.categorie %></span><time><%= displayDate(portalPublicationDate(post)) %></time></div>
         <h1><%= post.titlu %></h1><p class="portal-article-lead"><%= post.rezumat %></p>
       </header>
-      <% if (post.imagine_url) { %><figure class="portal-article-image"><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>"><% if (post.imagine_legenda || post.imagine_credit) { %><figcaption><%= [post.imagine_legenda, post.imagine_credit && `Foto: ${post.imagine_credit}`].filter(Boolean).join(' · ') %></figcaption><% } %><% if (post.imagine_generata_ai) { %><span>Ilustrație generată cu AI</span><% } %></figure><% } %>
+      <% if (post.imagine_url) { %><figure class="portal-article-image"><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>" decoding="async" fetchpriority="high"><% if (post.imagine_legenda || post.imagine_credit) { %><figcaption><%= [post.imagine_legenda, post.imagine_credit && `Foto: ${post.imagine_credit}`].filter(Boolean).join(' · ') %></figcaption><% } %><% if (post.imagine_generata_ai) { %><span>Ilustrație generată cu AI</span><% } %></figure><% } %>
       <div class="portal-article-layout">
         <div class="portal-article-text"><% post.continut.split('\n').filter(line => line.trim()).forEach(line => { %><% if (line.startsWith('## ')) { %><h2><%= line.slice(3) %></h2><% } else { %><p><%= line %></p><% } %><% }) %></div>
         <aside class="portal-transparency-card">
