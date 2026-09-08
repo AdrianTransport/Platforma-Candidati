@@ -8,29 +8,29 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="public-body portal-public-body">
-  <header class="portal-news-header">
-    <a class="platform-brand local-brand" href="/"><span>Vocea Locală</span><strong>Lenauheim</strong></a>
-    <nav><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/sectiune/evenimente">Evenimente</a><a href="/candidati">Candidați</a><a class="btn secondary" href="/login">Autentificare</a></nav>
+  <header class="portal-modern-masthead">
+    <p>O comunitate mai informată,<br>mai puternică</p>
+    <a class="portal-modern-logo" href="/"><strong>Vocea Locală Lenauheim</strong><span>Bulgăruș · Lenauheim · Grabaț</span></a>
+    <div class="portal-masthead-side"><span class="portal-village-mark" aria-hidden="true">⌂♙</span><small>Știri locale.<br>Oameni. Idei. Viitor comun.</small><div><% [['f',portalOwner?.facebook_url],['◎',portalOwner?.instagram_url],['♪',portalOwner?.tiktok_url]].forEach(([icon,url])=>{ if(url){ %><a href="<%= url %>" target="_blank" rel="noopener noreferrer"><%= icon %></a><% } }) %></div></div>
   </header>
+  <nav class="portal-modern-nav" aria-label="Meniul principal"><a href="/">⌂</a><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/candidati">Oameni</a><a href="/sectiune/evenimente">Timp liber</a><a href="/login" class="portal-nav-login">Administrare</a></nav>
 
   <main>
-    <div class="portal-edition-bar"><span>PUBLICAȚIE DIGITALĂ LOCALĂ</span><time><%= new Intl.DateTimeFormat('ro-RO', { dateStyle: 'full', timeZone: 'Europe/Bucharest' }).format(new Date()) %></time><span>BULGĂRUȘ · LENAUHEIM · GRABAȚ</span></div>
-
-    <section class="local-identity-banner" aria-labelledby="local-identity-title">
-      <div class="local-identity-copy"><span class="eyebrow">Vocea comunității</span><h1 id="local-identity-title">Bulgăruș · Lenauheim · Grabaț</h1><p>Știri, proiecte și inițiative din toate cele trei localități ale comunei, într-un singur loc.</p></div>
-      <div class="local-map"><iframe title="Harta localităților Bulgăruș, Lenauheim și Grabaț" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=20.72%2C45.83%2C20.90%2C45.96&amp;layer=mapnik&amp;marker=45.8904%2C20.799" referrerpolicy="no-referrer-when-downgrade"></iframe><a href="https://www.openstreetmap.org/?mlat=45.8904&amp;mlon=20.799#map=12/45.8904/20.799" target="_blank" rel="noopener">Deschide harta mărită ↗</a></div>
-    </section>
-
     <% if (principal) { %>
-      <section class="portal-lead">
-        <a class="portal-lead-image" href="/actualitate/<%= principal.slug %>">
-          <% if (principal.imagine_url) { %><img src="<%= principal.imagine_url %>" alt="<%= principal.imagine_alt || '' %>"><% } else { %><span><%= principal.tip === 'campanie' ? 'CAMPANIE' : 'ACTUALITATE' %></span><% } %>
-        </a>
-        <div class="portal-lead-copy"><span class="portal-section-label"><%= principal.tip === 'campanie' ? 'Campanie candidat' : principal.categorie %></span><h1><a href="/actualitate/<%= principal.slug %>"><%= principal.titlu %></a></h1><p><%= principal.rezumat %></p><% if (principal.candidat) { %><strong><%= principal.candidat.nume_candidat %> · <%= principal.candidat.functie_candidatura %></strong><% } %><a class="portal-read-more" href="/actualitate/<%= principal.slug %>">Citește materialul →</a></div>
+      <section class="portal-modern-lead">
+        <a class="portal-modern-lead-main" href="/actualitate/<%= principal.slug %>" <% if(principal.imagine_url){ %>style="background-image:linear-gradient(0deg,rgba(1,20,31,.88),rgba(1,20,31,0) 72%),url('<%= principal.imagine_url %>')"<% } %>><div><span><%= principal.tip === 'campanie' ? 'Campanie candidat' : (principal.categorie || 'Actualitate') %></span><h1><%= principal.titlu %></h1><p><%= principal.rezumat %></p><time><%= displayDate(portalPublicationDate(principal)) %></time></div></a>
+        <div class="portal-modern-side-news"><% stiri.slice(0,3).forEach(post=>{ %><a href="/actualitate/<%= post.slug %>"><% if(post.imagine_url){ %><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>"><% } else { %><span class="portal-side-placeholder">VL</span><% } %><div><small><%= post.categorie %></small><strong><%= post.titlu %></strong><time><%= displayDate(portalPublicationDate(post)) %></time></div></a><% }) %><% if(!stiri.length){ [['Educație','Noutăți din școlile și comunitatea noastră','educatie'],['Infrastructură','Drumuri, utilități și proiecte locale','administratie'],['Oameni','Povești și inițiative din comună','comunitate']].forEach(item=>{ %><a href="/sectiune/<%= item[2] %>"><span class="portal-side-placeholder"><%= item[0].slice(0,1) %></span><div><small><%= item[0] %></small><strong><%= item[1] %></strong><time>Descoperă rubrica →</time></div></a><% }) } %></div>
       </section>
     <% } else { %>
       <section class="marketing-hero portal-empty-hero"><div><span class="eyebrow">Platformă civică pentru comunitatea locală</span><h1>Știrile și ideile candidaților ajung mai ușor la comunitate.</h1><p>Un portal public administrat de Super Admin, publicații civice distincte pentru candidați și informații clare despre responsabilitatea editorială.</p><div class="hero-actions"><a class="btn btn-accent" href="#candidati">Vezi candidații</a><a class="btn secondary" href="/login">Intră în cont</a></div></div><div class="hero-preview"><div class="preview-head"><strong>COMUNITATEA</strong><span>EDIȚIE LOCALĂ</span></div><div class="preview-main"><span>ACTUALITATE</span><h2>Prima știre va apărea aici</h2><p>Super Adminul controlează integral conținutul site-ului principal.</p></div><div class="preview-grid"><i></i><i></i><i></i></div></div></section>
     <% } %>
+
+    <section class="portal-community-row">
+      <div class="portal-community-poll"><% if (sondaj) { %><%- include('partials/poll', { poll: sondaj }) %><% } else { %><span class="eyebrow">Sondajul comunității</span><h2>Spune-ne ce contează pentru tine</h2><p>Super Adminul poate publica aici o întrebare pentru locuitorii comunei.</p><a href="/login">Administrare sondaj →</a><% } %></div>
+      <div class="portal-active-people"><header><h2>Cei mai activi candidați în comunitate</h2><a href="/candidati">Vezi toți candidații →</a></header><div><% candidatiPublici.slice(0,4).forEach(c=>{ %><a href="/site/<%= c.subdomeniu %>"><span class="portal-person-photo"><% if(c.fotografie_profil_url){ %><img src="<%= c.fotografie_profil_url %>" alt="<%= c.nume_candidat %>"><% } else { %><b><%= c.nume_candidat.split(' ').map(p=>p[0]).slice(0,2).join('') %></b><% } %></span><strong><%= c.nume_candidat %></strong><small><%= c.zona || c.judet %></small><em>Vezi profilul →</em></a><% }) %></div></div>
+    </section>
+
+    <section class="portal-community-signature"><div class="portal-mini-map"><iframe title="Harta localităților Bulgăruș, Lenauheim și Grabaț" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=20.72%2C45.83%2C20.90%2C45.96&amp;layer=mapnik&amp;marker=45.8904%2C20.799" referrerpolicy="no-referrer-when-downgrade"></iframe></div><blockquote>Trei localități.<br><strong>O singură comunitate.</strong></blockquote><span class="portal-village-mark">⌂♙</span><p><strong>Bulgăruș · Lenauheim · Grabaț.</strong><br>Oameni care construiesc împreună o comunitate mai bună.</p></section>
 
     <section class="portal-news-section" id="stiri">
       <div class="portal-section-head"><div><span class="eyebrow">Actualitate</span><h2>Ultimele știri</h2></div><p>Informații publicate de operatorul platformei.</p></div>
@@ -41,8 +41,6 @@
       <div class="portal-section-head"><div><span class="eyebrow">Promovare transparentă</span><h2>Campaniile candidaților</h2></div><p>Fiecare material indică beneficiarul, finanțatorul și responsabilul editorial.</p></div>
       <% if (!campanii.length) { %><div class="empty-public dark-empty">Nu există încă alte campanii publicate.</div><% } else { %><div class="portal-campaign-grid"><% campanii.forEach(post => { %><article><span>CAMPANIE CANDIDAT</span><h3><a href="/actualitate/<%= post.slug %>"><%= post.titlu %></a></h3><p><%= post.rezumat %></p><% if (post.candidat) { %><div class="campaign-candidate"><strong><%= post.candidat.nume_candidat %></strong><small><%= [post.candidat.functie_candidatura, post.candidat.zona].filter(Boolean).join(' · ') %></small></div><% } %><small>Finanțat de: <%= post.finantator %></small><a href="/actualitate/<%= post.slug %>">Citește campania →</a></article><% }) %></div><% } %>
     </section>
-    <% if (sondaj) { %><section class="published-section portal-poll-section" id="sondaj"><%- include('partials/poll', { poll: sondaj }) %></section><% } %>
-
     <section class="published-section" id="candidati">
       <div class="portal-section-head"><div><span class="eyebrow">Publicații independente</span><h2>Site-urile candidaților</h2></div><p>Fiecare candidat își administrează și își asumă propria publicație.</p></div>
       <% if (!candidatiPublici.length) { %><div class="empty-public">Primul site de candidat va apărea aici după activare.</div><% } else { %><div class="candidate-showcase"><% candidatiPublici.forEach(c => { %><a href="/site/<%= c.subdomeniu %>"><span><%= c.functie_candidatura || 'Candidat' %></span><strong><%= c.nume_candidat %></strong><small><%= [c.zona, c.judet].filter(Boolean).join(', ') %></small><em>Deschide publicația →</em></a><% }) %></div><p class="showcase-all"><a class="btn secondary" href="/candidati">Vezi și filtrează toți candidații</a></p><% } %>

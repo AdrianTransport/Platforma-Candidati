@@ -9,25 +9,21 @@
   <link rel="stylesheet" href="/newspaper.css">
 </head>
 <body class="newspaper-body">
-  <div class="newspaper-shell">
-    <div class="newspaper-kicker"><span>VOCEA CANDIDATULUI · <%= electoralMode ? 'PUBLICAȚIE ELECTORALĂ' : 'PUBLICAȚIE CIVICĂ' %></span><span><%= new Date().toLocaleDateString('ro-RO') %></span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
-    <header class="newspaper-header">
-      <a href="/site/<%= user.subdomeniu %>" class="newspaper-logo voice-logo" aria-label="Vocea Candidatului — pagina principală"><span>Vocea</span><strong>Candidatului</strong></a>
-      <div class="candidate-identity"><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura, user.partid].filter(Boolean).join(' · ') %></span></div>
+  <div class="newspaper-shell candidate-modern-shell">
+    <header class="candidate-modern-header">
+      <a href="/site/<%= user.subdomeniu %>" class="candidate-modern-brand">Vocea Candidatului<small><%= electoralMode ? 'PUBLICAȚIE ELECTORALĂ' : 'PUBLICAȚIE CIVICĂ' %></small></a>
+      <nav aria-label="Meniul candidatului"><a href="/site/<%= user.subdomeniu %>/despre">Despre mine</a><a href="/site/<%= user.subdomeniu %>/proiecte">Proiecte</a><a href="/site/<%= user.subdomeniu %>/actualitate">Actualitate</a><a href="/site/<%= user.subdomeniu %>/evenimente">Evenimente</a><a href="/site/<%= user.subdomeniu %>/contact">Contact</a></nav>
+      <div class="candidate-modern-social"><% if (user.facebook_url) { %><a href="/site/<%= user.subdomeniu %>/social/facebook" aria-label="Facebook">f</a><% } %><% if (user.instagram_url) { %><a href="/site/<%= user.subdomeniu %>/social/instagram" aria-label="Instagram">◎</a><% } %><% if (user.tiktok_url) { %><a href="/site/<%= user.subdomeniu %>/social/tiktok" aria-label="TikTok">♪</a><% } %><a href="#cauta" aria-label="Caută">⌕</a></div>
     </header>
-    <%- include('partials/candidate-nav', { user, activeSection }) %>
     <% const transparentaPublicatie = publicTransparency(user, null); %>
-    <section class="political-ad-banner <%= electoralMode ? '' : 'civic-disclosure' %>" aria-label="Informații despre responsabilitatea editorială">
-      <strong><%= electoralMode ? 'Material electoral · publicitate politică' : 'Publicație civică independentă' %></strong>
-      <span><%= electoralMode ? `Finanțat de ${transparentaPublicatie.finantat_de} · ` : '' %>publicat și asumat de <%= transparentaPublicatie.responsabil_editorial %></span>
-      <a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența completă</a>
-    </section>
-    <section class="civic-candidate-hero" <% if (user.fotografie_coperta_url) { %>style="background-image:linear-gradient(90deg,rgba(8,32,44,.94),rgba(8,32,44,.58)),url('<%= user.fotografie_coperta_url %>')"<% } %>>
-      <div class="civic-hero-copy"><span>Pentru o comunitate unită</span><h1><%= user.nume_candidat %></h1><p class="civic-role"><%= [user.functie_candidatura, user.zona].filter(Boolean).join(' · ') %></p><p><%= user.slogan || user.mesaj_scurt || 'Oameni. Fapte. Un viitor mai bun pentru comunitate.' %></p><div><a class="civic-primary-action" href="/site/<%= user.subdomeniu %>/proiecte">Vezi proiectele →</a><a class="civic-secondary-action" href="/site/<%= user.subdomeniu %>/contact">Contact</a></div></div>
-      <div class="civic-portrait"><% if (user.fotografie_profil_url) { %><img src="<%= user.fotografie_profil_url %>" alt="<%= user.nume_candidat %>"><% } else { %><span><%= user.nume_candidat.split(' ').map(part => part[0]).slice(0,2).join('') %></span><small>Adaugă fotografia din profil</small><% } %></div>
+    <% const principal = candidatura || fluxIdei[0]; const secundare = fluxIdei.filter(a => a.id !== principal?.id); %>
+    <section class="civic-candidate-hero" <% if (user.fotografie_coperta_url || principal?.imagine_url) { %>style="--candidate-cover:url('<%= user.fotografie_coperta_url || principal.imagine_url %>')"<% } %>>
+      <div class="civic-hero-copy"><span>Pentru o comunitate unită</span><h1><%= user.nume_candidat %></h1><p class="civic-role"><%= user.zona || user.judet || 'Comunitatea locală' %></p><p><%= user.slogan || user.mesaj_scurt || 'Oameni. Fapte. Un viitor mai bun pentru comunitate.' %></p><div><a class="civic-primary-action" href="/site/<%= user.subdomeniu %>/proiecte">Vezi proiectele&nbsp; →</a><a class="civic-secondary-action" href="/site/<%= user.subdomeniu %>/contact">✉ &nbsp;Contact</a></div></div>
+      <div class="civic-portrait"><% if (user.fotografie_profil_url) { %><img src="<%= user.fotografie_profil_url %>" alt="<%= user.nume_candidat %>"><% } else { %><span><%= user.nume_candidat.split(' ').map(part => part[0]).slice(0,2).join('') %></span><strong><%= user.nume_candidat %></strong><small><%= user.functie_candidatura || 'Vocea comunității' %></small><% } %></div>
     </section>
     <nav class="civic-feature-grid" aria-label="Explorează publicația"><a href="/site/<%= user.subdomeniu %>/program"><span>◎</span><strong>Priorități</strong><small>Program și obiective pentru comunitate</small><em>Află mai multe →</em></a><a href="/site/<%= user.subdomeniu %>/proiecte"><span>⚙</span><strong>Proiecte</strong><small>Idei concrete și stadiul lor</small><em>Vezi proiectele →</em></a><a href="/site/<%= user.subdomeniu %>/actualitate"><span>▤</span><strong>Actualitate</strong><small>Noutăți și poziții publice</small><em>Citește noutățile →</em></a><a href="/site/<%= user.subdomeniu %>/evenimente"><span>□</span><strong>Evenimente</strong><small>Întâlniri și acțiuni locale</small><em>Vezi evenimentele →</em></a></nav>
-    <form method="GET" action="/site/<%= user.subdomeniu %>" class="newspaper-search" role="search">
+    <section class="political-ad-banner <%= electoralMode ? '' : 'civic-disclosure' %>" aria-label="Informații despre responsabilitatea editorială"><strong><%= electoralMode ? 'Material electoral · publicitate politică' : 'Publicație civică independentă' %></strong><span><%= electoralMode ? `Finanțat de ${transparentaPublicatie.finantat_de} · ` : '' %>publicat și asumat de <%= transparentaPublicatie.responsabil_editorial %></span><a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența completă</a></section>
+    <form id="cauta" method="GET" action="/site/<%= user.subdomeniu %>" class="newspaper-search" role="search">
       <label>Caută în articole<input type="search" name="cauta" maxlength="120" value="<%= cautaText %>" placeholder="Titlu sau conținut"></label>
       <label>Categorie<select name="categorie"><option value="">Toate categoriile</option>
         <% if (categorieSelectata && !categoriiToate.includes(categorieSelectata)) { %><option selected value="<%= categorieSelectata %>"><%= categorieSelectata %></option><% } %>
@@ -40,7 +36,6 @@
 
     <main class="edition-main">
     <div class="edition-label"><strong><%= categorieSelectata || 'Din publicație' %></strong><span>Idei, proiecte și mesaje asumate de <%= user.nume_candidat %></span></div>
-    <% const principal = candidatura || fluxIdei[0]; const secundare = fluxIdei.filter(a => a.id !== principal?.id); %>
     <% if (principal) { %>
       <section class="front-page" aria-label="În prim-plan">
         <article class="front-main">
