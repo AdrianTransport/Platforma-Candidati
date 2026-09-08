@@ -14,8 +14,16 @@ function sameSecret(actual, expected) {
   return a.length === b.length && a.length > 0 && timingSafeEqual(a, b);
 }
 
+function canonical(value) {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]));
+  }
+  return value;
+}
+
 function checksum(value) {
-  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+  return createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 }
 
 async function supabaseRequest({ url, key }, path, { method = 'GET', body, headers = {} } = {}) {
