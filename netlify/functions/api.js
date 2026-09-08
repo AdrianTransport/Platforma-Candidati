@@ -54,17 +54,8 @@ export const handler = async (event, context) => {
   if (event.path?.includes('migrate-supabase-auth')) {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
     const authorization = event.headers?.authorization || event.headers?.Authorization;
-    const migrationToken = value('AUTH_MIGRATION_TOKEN');
-    if (!authorization || !migrationToken) {
-      return {
-        statusCode: 503,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hasAuthorization: Boolean(authorization), hasMigrationToken: Boolean(migrationToken) }),
-      };
-    }
     return migrateAuth({
       authorization,
-      token: migrationToken,
       key: supabaseSecret,
     });
   }
