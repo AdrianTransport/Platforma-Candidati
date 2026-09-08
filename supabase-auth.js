@@ -1,10 +1,15 @@
 const PROJECT_URL = 'https://sfxdxatfcllwkihxqhra.supabase.co';
+const PUBLISHABLE_KEY = 'sb_publishable_kpo2tGnz7vQK6Sh72l3B9g_2-dz32Kp';
 
-async function authRequest(path, { method = 'GET', body, key = process.env.SUPABASE_SECRET_KEY } = {}) {
+async function authRequest(path, { method = 'GET', body, key = process.env.SUPABASE_SECRET_KEY, authorize = true } = {}) {
   if (!key) throw new Error('SUPABASE_SECRET_KEY lipsește.');
   const response = await fetch(`${PROJECT_URL}/auth/v1/${path}`, {
     method,
-    headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    headers: {
+      apikey: key,
+      ...(authorize ? { Authorization: `Bearer ${key}` } : {}),
+      'Content-Type': 'application/json',
+    },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const text = await response.text();
@@ -47,7 +52,12 @@ export function createAuthUserWithPassword(user, password, key) {
 }
 
 export function signInWithPassword(email, password) {
-  return authRequest('token?grant_type=password', { method: 'POST', body: { email, password } });
+  return authRequest('token?grant_type=password', {
+    method: 'POST',
+    key: PUBLISHABLE_KEY,
+    authorize: false,
+    body: { email, password },
+  });
 }
 
 export function updateAuthPassword(userId, password) {
