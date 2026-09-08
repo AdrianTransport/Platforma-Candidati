@@ -123,6 +123,37 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal((await cand('/dashboard/social')).status, 200);
     assert.equal((await cand('/admin/comentarii')).status, 403);
   });
+  await t.test('SEO public: robots, sitemap, RSS și Open Graph', async () => {
+    const robots = await guest('/robots.txt');
+    assert.equal(robots.status, 200);
+    assert.match(robots.headers.get('content-type'), /text\/plain/);
+    assert.match(robots.html, /Disallow: \/admin/);
+    assert.match(robots.html, new RegExp(`Sitemap: ${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\/sitemap\\.xml`));
+
+    const sitemap = await guest('/sitemap.xml');
+    assert.equal(sitemap.status, 200);
+    assert.match(sitemap.headers.get('content-type'), /application\/xml/);
+    assert.match(sitemap.html, /<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/);
+    assert.match(sitemap.html, /\/site\/ana\/articol\/1<\/loc>/);
+    assert.doesNotMatch(sitemap.html, /\/site\/ana\/articol\/3<\/loc>/);
+
+    const rss = await guest('/site/ana/rss.xml');
+    assert.equal(rss.status, 200);
+    assert.match(rss.headers.get('content-type'), /application\/rss\+xml/);
+    assert.match(rss.html, /<title>Școala publică<\/title>/);
+    assert.doesNotMatch(rss.html, /Ciorna secretă|Alt candidat/);
+
+    const candidatePage = await guest('/site/ana');
+    assert.match(candidatePage.html, /property="og:type" content="website"/);
+    assert.match(candidatePage.html, /property="og:url" content="http:\/\/127\.0\.0\.1:/);
+    assert.match(candidatePage.html, /type="application\/rss\+xml"/);
+
+    const articlePage = await guest('/site/ana/articol/1');
+    assert.match(articlePage.html, /property="og:type" content="article"/);
+    assert.match(articlePage.html, /property="og:title" content="Școala publică"/);
+    assert.match((await guest('/site/ana/despre')).html, /property="og:type" content="profile"/);
+    assert.match((await guest('/site/ana/contact')).html, /property="og:title" content="Contact — ana"/);
+  });
   await t.test('Rubricile au pagini proprii, iar proiectele sunt multiple, clicabile și administrate din dashboard', async () => {
     const dashboard = await cand('/dashboard');
     assert.match(dashboard.html, /Administrează fiecare pagină din meniu/);

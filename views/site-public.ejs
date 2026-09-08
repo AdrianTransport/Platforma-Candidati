@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="<%= user.mesaj_scurt || `${user.nume_candidat} — ${user.functie_candidatura || 'candidat'} pentru ${user.zona || user.judet || 'comunitate'}` %>">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="<%= user.nume_candidat %> — <%= user.functie_candidatura || user.zona %>">
+  <meta property="og:description" content="<%= user.mesaj_scurt || `${user.nume_candidat} — ${user.functie_candidatura || 'candidat'} pentru ${user.zona || user.judet || 'comunitate'}` %>">
+  <meta property="og:url" content="<%= pageUrl %>">
+  <% if (candidatura?.imagine_url) { %><meta property="og:image" content="<%= new URL(candidatura.imagine_url, pageUrl).toString() %>"><% } %>
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="alternate" type="application/rss+xml" title="<%= user.nume_candidat %>" href="/site/<%= user.subdomeniu %>/rss.xml">
   <title><%= user.nume_candidat %> — <%= user.functie_candidatura || user.zona %></title>
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/newspaper.css">

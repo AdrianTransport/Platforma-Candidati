@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ro">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Contact — <%= user.nume_candidat %></title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/newspaper.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta property="og:type" content="website"><meta property="og:title" content="Contact — <%= user.nume_candidat %>"><meta property="og:url" content="<%= pageUrl %>"><meta name="twitter:card" content="summary"><title>Contact — <%= user.nume_candidat %></title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/newspaper.css"></head>
 <body class="newspaper-body"><div class="newspaper-shell article-shell">
   <div class="newspaper-kicker"><span>VOCEA CANDIDATULUI · <%= electoralMode ? 'PUBLICAȚIE ELECTORALĂ' : 'PUBLICAȚIE CIVICĂ' %></span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
   <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo voice-logo" aria-label="Vocea Candidatului — pagina principală"><span>Vocea</span><strong>Candidatului</strong></a><a class="back-link" href="/site/<%= user.subdomeniu %>">← Prima pagină</a></header>

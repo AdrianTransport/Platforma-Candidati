@@ -203,6 +203,7 @@ export async function createApp({
     res.locals.rol = req.session.rol || null;
     res.locals.numeCandidat = req.session.numeCandidat || null;
     res.locals.csrfToken = req.session.csrfToken || '';
+    res.locals.pageUrl = `${publicBaseUrl(req)}${req.originalUrl}`;
     next();
   });
 
@@ -314,6 +315,56 @@ export async function createApp({
       sondaj,
       portalOwner,
     });
+  });
+
+  function escapeXml(text) {
+    return String(text ?? '').replace(/[<>&'"]/g, (c) => ({
+      '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;',
+    }[c]));
+  }
+
+  app.get('/robots.txt', (req, res) => {
+    res.set('Content-Type', 'text/plain').set('Cache-Control', 'public, max-age=3600').send(
+      `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /login\n\nSitemap: ${publicBaseUrl(req)}/sitemap.xml\n`
+    );
+  });
+
+  app.get('/sitemap.xml', (req, res) => {
+    const baza = publicBaseUrl(req);
+    const candidati = db.data.users.filter(poatePublicaSite);
+    const urlIntrari = [`${baza}/`, `${baza}/candidati`];
+    for (const candidat of candidati) {
+      const bazaCandidat = `${baza}/site/${encodeURIComponent(candidat.subdomeniu)}`;
+      urlIntrari.push(bazaCandidat, `${bazaCandidat}/despre`, `${bazaCandidat}/contact`);
+      for (const articol of publicCandidateArticles(candidat)) {
+        urlIntrari.push(`${bazaCandidat}/articol/${articol.id}`);
+      }
+    }
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${
+      urlIntrari.map((url) => `  <url><loc>${escapeXml(url)}</loc></url>`).join('\n')
+    }\n</urlset>`;
+    res.set('Content-Type', 'application/xml').set('Cache-Control', 'public, max-age=3600').send(xml);
+  });
+
+  app.get('/site/:subdomeniu/rss.xml', (req, res) => {
+    const user = publicCandidate(req.params.subdomeniu);
+    if (!user) return res.status(404).send('Pagina nu exista.');
+    const baza = publicBaseUrl(req);
+    const bazaCandidat = `${baza}/site/${encodeURIComponent(user.subdomeniu)}`;
+    const articole = publicCandidateArticles(user).slice(0, 30);
+    const itemsXml = articole.map((articol) => `  <item>
+    <title>${escapeXml(articol.titlu)}</title>
+    <link>${escapeXml(`${bazaCandidat}/articol/${articol.id}`)}</link>
+    <guid isPermaLink="true">${escapeXml(`${bazaCandidat}/articol/${articol.id}`)}</guid>
+    <pubDate>${new Date(publicationDate(articol)).toUTCString()}</pubDate>
+    <description>${escapeXml(articol.continut.slice(0, 400))}</description>
+  </item>`).join('\n');
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel>\n  <title>${
+      escapeXml(user.nume_candidat)
+    }</title>\n  <link>${escapeXml(bazaCandidat)}</link>\n  <description>${
+      escapeXml(user.mesaj_scurt || user.slogan || user.nume_candidat)
+    }</description>\n  <language>ro-ro</language>\n${itemsXml}\n</channel></rss>`;
+    res.set('Content-Type', 'application/rss+xml').set('Cache-Control', 'public, max-age=900').send(xml);
   });
 
   app.get('/candidati', (req, res) => {
