@@ -210,27 +210,6 @@ export async function createApp({
 
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
 
-  // Rută temporară de recuperare. Este activă numai când ambele secrete sunt
-  // configurate în mediul Netlify și este eliminată după resetarea contului.
-  app.post('/internal/reset-admin-password', safely(async (req, res) => {
-    const expectedToken = String(process.env.ADMIN_RESET_TOKEN || '');
-    const newPassword = String(process.env.ADMIN_RESET_PASSWORD || '');
-    const suppliedToken = String(req.get('authorization') || '').replace(/^Bearer\s+/i, '');
-    if (!expectedToken || !newPassword || suppliedToken !== expectedToken) {
-      return res.status(404).send('Not found');
-    }
-    if (newPassword.length < 12) return res.status(400).send('Invalid reset configuration');
-    const admin = db.data.users.find(user => user.role === 'admin');
-    if (!admin) return res.status(404).send('Admin not found');
-    admin.password_hash = bcrypt.hashSync(newPassword, 12);
-    admin.password_changed_at = new Date().toISOString();
-    admin.login_attempts = 0;
-    admin.locked_until = null;
-    admin.activ = true;
-    await db.write();
-    res.status(204).end();
-  }));
-
   app.get('/', (req, res) => {
     const candidatiPublici = db.data.users
       .filter(poatePublicaSite)
