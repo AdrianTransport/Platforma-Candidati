@@ -54,7 +54,7 @@ export const handler = async (event, context) => {
   if (event.path?.endsWith('/internal/migrate-supabase-auth')) {
     if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
     return migrateAuth({
-      authorization: event.headers?.authorization,
+      authorization: event.headers?.authorization || event.headers?.Authorization,
       token: value('AUTH_MIGRATION_TOKEN'),
       key: supabaseSecret,
     });
