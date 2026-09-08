@@ -31,7 +31,8 @@ async function supabaseRequest({ url, key }, path, { method = 'GET', body, heade
   });
   if (!response.ok) throw new Error(`Supabase ${method} ${response.status}`);
   if (response.status === 204 || method === 'HEAD') return null;
-  return response.json();
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 async function allBlobKeys(store) {
