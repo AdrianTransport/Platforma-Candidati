@@ -416,7 +416,8 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     const home = await guest('/');
     assert.match(home.html, /Vocea Locală/);
     assert.match(home.html, /Bulgăruș · Lenauheim · Grabaț/);
-    assert.match(home.html, /openstreetmap\.org\/export\/embed/);
+    assert.match(home.html, /portal-community-photo/);
+    assert.doesNotMatch(home.html, /openstreetmap\.org\/export\/embed/);
     assert.match(home.html, /Campanie pentru cartiere curate/);
     assert.match(home.html, /Campanie candidat/);
     assert.match(home.html, /href="\/sectiune\/administratie"/);
