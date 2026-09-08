@@ -12,6 +12,10 @@
       <span class="candidate-nav-icon" aria-hidden="true">◎</span>
       <span>Profil public</span>
     </a>
+    <a class="candidate-nav-link <%= activePage === 'comentarii' ? 'active' : '' %>" href="/dashboard/comentarii" <% if (activePage === 'comentarii') { %>aria-current="page"<% } %>>
+      <span class="candidate-nav-icon" aria-hidden="true">💬</span>
+      <span>Comentarii</span>
+    </a>
     <% if (user.module?.social) { %>
       <a class="candidate-nav-link <%= activePage === 'social' ? 'active' : '' %>" href="/dashboard/social" <% if (activePage === 'social') { %>aria-current="page"<% } %>>
         <span class="candidate-nav-icon" aria-hidden="true">↗</span>

@@ -919,6 +919,31 @@ export async function createApp({
 
   /* ------------------------------ CANDIDAT ------------------------------- */
 
+  app.get('/dashboard/comentarii', requireRole('candidate'), requireActiveAccount, safely(async (req, res) => {
+    const status = typeof req.query.status === 'string' ? req.query.status : 'in_asteptare';
+    if (!COMMENT_STATUS.has(status)) throw new ValidationError('Filtru de moderare invalid.');
+    const all = (await comments.list()).filter(c => c.user_id === req.session.userId);
+    const total = all.filter(c => c.status === status).length;
+    const pages = Math.max(1, Math.ceil(total / 25));
+    const page = Math.min(pages, Math.max(1, Number.parseInt(req.query.pagina, 10) || 1));
+    const lista = all.filter(c => c.status === status).slice((page - 1) * 25, page * 25).map(c => {
+      const articol = db.data.articole.find(a => a.id === c.articol_id && a.user_id === req.session.userId);
+      return { ...c, articol };
+    });
+    res.render('candidate-comments', { lista, status, page, pages, total,
+      counts: Object.fromEntries([...COMMENT_STATUS].map(s => [s, all.filter(c => c.status === s).length])) });
+  }));
+
+  app.post('/dashboard/comentarii/:articleId/:id', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const articleId = Number(req.params.articleId);
+    if (!Number.isSafeInteger(articleId) || articleId <= 0) throw new ValidationError('Identificator invalid.');
+    const articolPropriu = db.data.articole.find(a => a.id === articleId && a.user_id === req.session.userId);
+    if (!articolPropriu) throw new ValidationError('Acest articol nu iti apartine.', 403);
+    await comments.moderate({ candidateId: req.session.userId, articleId, id: req.params.id, status: req.body.status,
+      adminId: req.session.userId, version: req.body.version });
+    res.redirect(303, '/dashboard/comentarii');
+  }));
+
   app.get('/admin/comentarii', requireRole('admin'), requireActiveAccount, safely(async (req, res) => {
     const status = typeof req.query.status === 'string' ? req.query.status : 'in_asteptare';
     if (!COMMENT_STATUS.has(status)) throw new ValidationError('Filtru de moderare invalid.');
