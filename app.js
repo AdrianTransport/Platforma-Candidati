@@ -152,6 +152,10 @@ export async function createApp({
 } = {}) {
   await initDB();
   const platform = platformInfo();
+  const isLenauheimCivicPortal = platform.operatorId.includes('44420154');
+  const portalEditorialResponsible = process.env.PLATFORM_EDITORIAL_RESPONSIBLE
+    || (isLenauheimCivicPortal ? 'Droc Cristian Dan' : platform.operatorName);
+  const portalTechnicalProvider = isLenauheimCivicPortal ? 'CristianWeb' : platform.operatorName;
   const electoralMode = isElectoralMode(now());
   const ownerPolls = (role, ownerId = null) => db.data.polls
     .filter(poll => poll.owner_role === role && poll.owner_id === ownerId)
@@ -171,6 +175,8 @@ export async function createApp({
   app.locals.displayDate = displayDate;
   app.locals.publicTransparency = publicTransparency;
   app.locals.platform = platform;
+  app.locals.portalEditorialResponsible = portalEditorialResponsible;
+  app.locals.isLenauheimCivicPortal = isLenauheimCivicPortal;
   app.locals.termsVersion = TERMS_VERSION;
   app.locals.electoralMode = electoralMode;
   app.use(express.static(path.join(baseDir, 'public')));
@@ -521,8 +527,11 @@ export async function createApp({
         : {
           material: 'stire_platforma',
           publicat_de: platform.name,
-          responsabil_editorial: platform.operatorName,
-          finantat_de: platform.operatorName,
+          responsabil_editorial: portalEditorialResponsible,
+          finantat_de: isLenauheimCivicPortal ? 'Inițiativă civică personală' : platform.operatorName,
+          furnizor_tehnic: portalTechnicalProvider,
+          serviciu_tehnic: isLenauheimCivicPortal
+            ? 'Livrat gratuit persoanei fizice Droc Cristian Dan' : '',
           recorded_at: recordedAt,
         };
       return fields;

@@ -29,7 +29,7 @@
             <dl><dt>Responsabil editorial</dt><dd><%= post.transparenta?.responsabil_editorial || candidat.entitate_responsabila %></dd><dt>Finanțat de</dt><dd><%= post.transparenta?.finantat_de || post.finantator %></dd><dt>Scrutin</dt><dd><%= post.transparenta?.scrutin || candidat.scrutin %></dd><dt>Cod mandatar</dt><dd><%= post.transparenta?.cod_mandatar_financiar || candidat.cod_mandatar_financiar %></dd></dl>
             <a class="btn" href="/site/<%= candidat.subdomeniu %>">Vezi publicația candidatului</a>
           <% } else { %>
-            <h2><%= platform.name %></h2><p>Știre publicată și asumată editorial de <strong><%= platform.operatorName %></strong>.</p><a href="/legal/continut">Politica editorială</a>
+            <h2><%= platform.name %></h2><p>Știre publicată și asumată editorial de <strong><%= portalEditorialResponsible %></strong>.<% if (isLenauheimCivicPortal) { %> Material al inițiativei civice personale.<% } %></p><a href="/legal/continut">Politica editorială</a>
           <% } %>
           <p class="portal-read-count"><%= post.vizualizari || 0 %> citiri</p>
         </aside>
@@ -38,7 +38,7 @@
       <% if (post.generat_de_ai) { %><p class="ai-disclosure">Text redactat cu ajutorul OpenAI și verificat de editor înainte de publicare.</p><% } %>
     </article>
   </main>
-  <footer class="marketing-footer"><strong><%= platform.name %></strong><span>Operator: <%= platform.operatorName %> · <%= platform.operatorId %></span><nav class="legal-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a></nav></footer>
+  <footer class="marketing-footer"><strong><%= platform.name %></strong><span><% if (isLenauheimCivicPortal) { %>Inițiativă civică independentă a persoanei fizice Droc Cristian Dan. Publicația nu este afiliată Primăriei Comunei Lenauheim.<% } else { %>Responsabil editorial: <%= portalEditorialResponsible %><% } %></span><nav class="legal-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a></nav></footer>
   <%- include('partials/cristianweb-credit') %>
 </body>
 </html>
