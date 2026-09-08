@@ -2,7 +2,6 @@ import { connectLambda } from '@netlify/blobs';
 import serverless from 'serverless-http';
 import { createApp } from '../../app.js';
 import { createEditorial, createEditorialStore } from '../../editorial.js';
-import { migrateBlobsToSupabase } from '../../migrate-supabase.js';
 
 let handlerPromise;
 
@@ -44,18 +43,6 @@ export const handler = async (event, context) => {
   connectLambda(event);
 
   const value = key => typeof Netlify === 'undefined' ? process.env[key] : Netlify.env.get(key);
-
-  if (event.path === '/internal/migrate-supabase') {
-    if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
-    return migrateBlobsToSupabase({
-      authorization: event.headers?.authorization,
-      env: {
-        MIGRATION_TOKEN: value('MIGRATION_TOKEN'),
-        SUPABASE_URL: value('SUPABASE_URL'),
-        SUPABASE_SECRET_KEY: value('SUPABASE_SECRET_KEY'),
-      },
-    });
-  }
 
   const supabaseSecret = value('SUPABASE_SECRET_KEY');
   Object.assign(process.env, {
