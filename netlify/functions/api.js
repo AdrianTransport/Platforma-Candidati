@@ -2,6 +2,7 @@ import { connectLambda } from '@netlify/blobs';
 import serverless from 'serverless-http';
 import { createApp } from '../../app.js';
 import { createEditorial, createEditorialStore } from '../../editorial.js';
+import { migrateBlobsToSupabase } from '../../migrate-supabase.js';
 
 let handlerPromise;
 
@@ -41,6 +42,19 @@ export const handler = async (event, context) => {
   // mod, Netlify Blobs nu primeste automat contextul cererii - trebuie legat
   // explicit, la FIECARE invocare, inainte de orice citire/scriere in Blobs.
   connectLambda(event);
+
+  if (event.path === '/internal/migrate-supabase') {
+    if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+    const value = key => typeof Netlify === 'undefined' ? process.env[key] : Netlify.env.get(key);
+    return migrateBlobsToSupabase({
+      authorization: event.headers?.authorization,
+      env: {
+        MIGRATION_TOKEN: value('MIGRATION_TOKEN'),
+        SUPABASE_URL: value('SUPABASE_URL'),
+        SUPABASE_SECRET_KEY: value('SUPABASE_SECRET_KEY'),
+      },
+    });
+  }
 
   if (!handlerPromise) {
     // Păstrăm adaptorul existent; imaginile trebuie codate binar, nu ca text UTF-8.
