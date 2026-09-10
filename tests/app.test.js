@@ -193,6 +193,67 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.match((await guest('/site/ana/despre')).html, /property="og:type" content="profile"/);
     assert.match((await guest('/site/ana/contact')).html, /property="og:title" content="Contact — ana"/);
   });
+  await t.test('Sitemap: toate știrile publicate, URL-uri codificate și numai campanii accesibile public', async () => {
+    const originalPosts = db.data.portal_posts;
+    const originalUsers = db.data.users;
+    const locations = html => [...html.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
+    const existingUrls = locations((await guest('/sitemap.xml')).html);
+    const news = Array.from({ length: 8 }, (_, index) => ({
+      id: 900 + index, tip: 'stire', status: 'publicat', slug: `stire-publicata-${index}`,
+    }));
+    news[0].slug = 'știre & buget';
+    try {
+      db.data.users = [...originalUsers, { ...candidate(90, 'inactiv'), activ: false }];
+      db.data.portal_posts = [
+        ...news,
+        { id: 910, tip: 'stire', status: 'ciorna', slug: 'stire-secreta' },
+        { id: 911, tip: 'stire', status: 'programat', data_programata: '2099-01-01T00:00:00Z', slug: 'stire-viitoare' },
+        { id: 912, tip: 'campanie', status: 'publicat', candidate_id: 2, slug: 'campanie-publica' },
+        { id: 913, tip: 'campanie', status: 'publicat', candidate_id: 90, slug: 'campanie-inactiva' },
+        { id: 914, tip: 'campanie', status: 'publicat', candidate_id: 999, slug: 'campanie-fara-candidat' },
+        { id: 915, tip: 'campanie', status: 'ciorna', candidate_id: 2, slug: 'campanie-ciorna' },
+      ];
+      const sitemap = await guest('/sitemap.xml');
+      assert.equal(sitemap.status, 200);
+      assert.match(sitemap.headers.get('content-type'), /application\/xml/);
+      assert.equal(sitemap.headers.get('set-cookie'), null);
+      assert.deepEqual(locations(sitemap.html).sort(), [
+        ...existingUrls,
+        ...news.map(post => `${base}/actualitate/${encodeURIComponent(post.slug)}`),
+        `${base}/actualitate/campanie-publica`,
+      ].sort());
+      assert.doesNotMatch(sitemap.html, /stire-secreta|stire-viitoare|campanie-inactiva|campanie-fara-candidat|campanie-ciorna/);
+
+      // Știrile Super Adminului trebuie incluse chiar și fără niciun candidat activ.
+      db.data.users = originalUsers.filter(user => user.role === 'admin');
+      assert.deepEqual(locations((await guest('/sitemap.xml')).html).sort(), [
+        `${base}/`, `${base}/candidati`,
+        ...news.map(post => `${base}/actualitate/${encodeURIComponent(post.slug)}`),
+      ].sort());
+    } finally {
+      db.data.portal_posts = originalPosts;
+      db.data.users = originalUsers;
+    }
+  });
+  await t.test('Sitemap: publicarea, retragerea și ștergerea știrilor se reflectă automat', async () => {
+    const originalPosts = db.data.portal_posts;
+    const post = { id: 920, tip: 'stire', status: 'ciorna', slug: 'stire-ciclu-publicare' };
+    const entry = `<loc>${base}/actualitate/${post.slug}</loc>`;
+    try {
+      db.data.portal_posts = [post];
+      assert.ok(!(await guest('/sitemap.xml')).html.includes(entry));
+      post.status = 'publicat';
+      assert.ok((await guest('/sitemap.xml')).html.includes(entry));
+      post.status = 'ciorna';
+      assert.ok(!(await guest('/sitemap.xml')).html.includes(entry));
+      post.status = 'publicat';
+      assert.ok((await guest('/sitemap.xml')).html.includes(entry));
+      db.data.portal_posts = [];
+      assert.ok(!(await guest('/sitemap.xml')).html.includes(entry));
+    } finally {
+      db.data.portal_posts = originalPosts;
+    }
+  });
   await t.test('Rubricile au pagini proprii, iar proiectele sunt multiple, clicabile și administrate din dashboard', async () => {
     const dashboard = await cand('/dashboard');
     assert.match(dashboard.html, /Administrează fiecare pagină din meniu/);

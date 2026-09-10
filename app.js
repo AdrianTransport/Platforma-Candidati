@@ -358,6 +358,9 @@ export async function createApp({
     const baza = publicBaseUrl(req);
     const candidati = db.data.users.filter(poatePublicaSite);
     const urlIntrari = [`${baza}/`, `${baza}/candidati`];
+    for (const post of db.data.portal_posts.filter(portalPostIsPublic)) {
+      urlIntrari.push(`${baza}/actualitate/${encodeURIComponent(post.slug)}`);
+    }
     for (const candidat of candidati) {
       const bazaCandidat = `${baza}/site/${encodeURIComponent(candidat.subdomeniu)}`;
       urlIntrari.push(bazaCandidat, `${bazaCandidat}/despre`, `${bazaCandidat}/contact`);
