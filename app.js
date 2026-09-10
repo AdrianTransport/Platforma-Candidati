@@ -1651,6 +1651,15 @@ export async function createApp({
   app.post('/dashboard/profil', requireRole('candidate'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (!user) return res.redirect('/login');
+    const photos = {};
+    for (const field of ['fotografie_profil_url', 'fotografie_coperta_url']) {
+      photos[field] = editorialImageUrl(req.body[field]);
+      const imageId = internalImageId(photos[field]);
+      if (imageId) {
+        const image = await editorial.media(imageId);
+        if (!image || image.userId !== user.id) throw new ValidationError('Folosește o fotografie încărcată în contul tău.');
+      }
+    }
     const before = Object.fromEntries(ACCEPTANCE_FIELDS.map(field => [field, user[field]]));
     Object.assign(user, profileInput(req.body));
     const requiresNewAcceptance = acceptanceChanged(before, user);
@@ -1661,8 +1670,7 @@ export async function createApp({
       user.tiktok_url = urlSigur(req.body.tiktok_url);
       user.youtube_url = urlSigur(req.body.youtube_url);
     }
-    user.fotografie_profil_url = urlSigur(req.body.fotografie_profil_url);
-    user.fotografie_coperta_url = urlSigur(req.body.fotografie_coperta_url);
+    Object.assign(user, photos);
     await db.write();
     await compliance.audit({ actorId: user.id, actorRole: 'candidate', action: 'candidate_profile_changed',
       targetType: 'candidate', targetId: user.id, details: { acceptance_invalidated: requiresNewAcceptance } });

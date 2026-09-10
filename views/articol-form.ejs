@@ -68,7 +68,7 @@
                 <input type="file" id="fisier-imagine" accept="image/jpeg,image/png,image/webp">
                 <label class="editor-consent"><input type="checkbox" id="acord-imagine"> Am dreptul să folosesc și să public această imagine.</label>
                 <button type="button" class="candidate-btn secondary" id="incarca-imagine">Încarcă fotografia selectată</button>
-                <p class="editor-help" id="stare-imagine" role="status" aria-live="polite">PNG, JPEG sau WebP. Fotografia este redimensionată în browser și salvată în Netlify Blobs, maximum 3 MB. Nu devine publică până nu publici un articol care o folosește.</p>
+                <p class="editor-help" id="stare-imagine" role="status" aria-live="polite">PNG, JPEG sau WebP. Fotografia este redimensionată în browser și salvată în Netlify Blobs, maximum 3 MB. Devine publică atunci când publici un articol care o folosește sau îi salvezi adresa în profilul public.</p>
                 <label for="imagine-url">Sau folosește adresa unei imagini publice</label>
                 <input type="text" name="imagine_url" id="imagine-url" maxlength="2048" value="<%= articol?.imagine_url || '' %>" placeholder="https://exemplu.ro/fotografie.jpg">
                 <figure class="editor-image-preview" id="image-preview" hidden><img id="preview-image" alt="Previzualizare a fotografiei articolului"><figcaption>Imaginea selectată pentru articol</figcaption></figure>

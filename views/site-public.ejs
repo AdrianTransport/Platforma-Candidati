@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="/newspaper.css">
 </head>
 <body class="newspaper-body">
-  <div class="newspaper-shell candidate-modern-shell">
+  <div class="newspaper-shell candidate-modern-shell" <% if (user.fotografie_coperta_url) { %>style="--candidate-cover:url('<%= user.fotografie_coperta_url %>')"<% } %>>
     <header class="candidate-modern-header">
       <a href="/site/<%= user.subdomeniu %>" class="candidate-modern-brand">Vocea Candidatului<small><%= electoralMode ? 'PUBLICAȚIE ELECTORALĂ' : 'PUBLICAȚIE CIVICĂ' %></small></a>
       <nav aria-label="Meniul candidatului"><a href="/site/<%= user.subdomeniu %>/despre">Despre mine</a><a href="/site/<%= user.subdomeniu %>/proiecte">Proiecte</a><a href="/site/<%= user.subdomeniu %>/actualitate">Actualitate</a><a href="/site/<%= user.subdomeniu %>/evenimente">Evenimente</a><a href="/site/<%= user.subdomeniu %>/contact">Contact</a></nav>
@@ -28,6 +28,12 @@
       <div class="civic-hero-copy"><span>Pentru o comunitate unită</span><h1><%= user.nume_candidat %></h1><p class="civic-role"><%= user.zona || user.judet || 'Comunitatea locală' %></p><p><%= user.slogan || user.mesaj_scurt || 'Oameni. Fapte. Un viitor mai bun pentru comunitate.' %></p><div><a class="civic-primary-action" href="/site/<%= user.subdomeniu %>/proiecte">Vezi proiectele&nbsp; →</a><a class="civic-secondary-action" href="/site/<%= user.subdomeniu %>/contact">✉ &nbsp;Contact</a></div></div>
       <div class="civic-portrait"><% if (user.fotografie_profil_url) { %><img src="<%= user.fotografie_profil_url %>" alt="<%= user.nume_candidat %>"><% } else { %><span><%= user.nume_candidat.split(' ').map(part => part[0]).slice(0,2).join('') %></span><strong><%= user.nume_candidat %></strong><small><%= user.functie_candidatura || 'Vocea comunității' %></small><% } %></div>
     </section>
+    <% if (['AUR', 'ALIANȚA PENTRU UNIREA ROMÂNILOR'].includes(String(user.partid || '').trim().toLocaleUpperCase('ro'))) { %>
+      <div class="candidate-party-identity">
+        <img src="https://partidulaur.ro/wp-content/uploads/2021/06/cropped-cropped-cropped-partidulaurlogo-2.png" alt="Sigla AUR" width="96" height="64" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+        <div><small>Afiliere politică</small><strong>AUR — Alianța pentru Unirea Românilor</strong></div>
+      </div>
+    <% } %>
     <nav class="civic-feature-grid" aria-label="Explorează publicația"><a href="/site/<%= user.subdomeniu %>/program"><span>◎</span><strong>Priorități</strong><small>Program și obiective pentru comunitate</small><em>Află mai multe →</em></a><a href="/site/<%= user.subdomeniu %>/proiecte"><span>⚙</span><strong>Proiecte</strong><small>Idei concrete și stadiul lor</small><em>Vezi proiectele →</em></a><a href="/site/<%= user.subdomeniu %>/actualitate"><span>▤</span><strong>Actualitate</strong><small>Noutăți și poziții publice</small><em>Citește noutățile →</em></a><a href="/site/<%= user.subdomeniu %>/evenimente"><span>□</span><strong>Evenimente</strong><small>Întâlniri și acțiuni locale</small><em>Vezi evenimentele →</em></a></nav>
     <section class="candidate-modern-community">
       <a href="/site/<%= user.subdomeniu %>/despre" class="candidate-modern-quote"><blockquote>„<%= user.mesaj_scurt || user.slogan || 'Comunitatea are oameni frumoși și un potențial real. Împreună putem construi mai mult.' %>”</blockquote><strong><%= user.nume_candidat %></strong></a>

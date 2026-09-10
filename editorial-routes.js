@@ -41,7 +41,9 @@ export function attachEditorialRoutes(app, {
       && internalImageId(a.imagine_url) === req.params.id && isPublished(a, now()));
     const publishedOnPortal = adminOwner && db.data.portal_posts.some(post =>
       internalImageId(post.imagine_url) === req.params.id && isPortalPostPublished(post));
-    if (!owner || (!ownPreview && !published && !publishedOnPortal)) {
+    const publishedOnProfile = candidateOwner && [owner.fotografie_profil_url, owner.fotografie_coperta_url]
+      .some(url => internalImageId(url) === req.params.id);
+    if (!owner || (!ownPreview && !published && !publishedOnPortal && !publishedOnProfile)) {
       res.set('Cache-Control', 'private, no-store');
       return res.status(404).send('Imagine inexistentă.');
     }
@@ -52,7 +54,7 @@ export function attachEditorialRoutes(app, {
       res.set('Cache-Control', 'public, max-age=31536000, immutable');
       res.set('Netlify-CDN-Cache-Control', 'public, durable, max-age=31536000, immutable');
     } else {
-      // Previzualizare privata (ciorna, inca nepublicata) - nu se cacheuieste nicaieri.
+      // Profilul și previzualizările reevaluează accesul la fiecare cerere.
       res.set('Cache-Control', 'private, no-store');
     }
     const { bytes, mime } = imageBytes(image.base64);

@@ -928,6 +928,31 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     db.data.articole = db.data.articole.filter(a => a.id < 100);
     assert.equal((await cand('/dashboard/articol/1', { ...fields, status: 'publicat' })).status, 302);
   });
+  await t.test('Fotografiile profilului: proprietar, acces public și retragere', async () => {
+    const user = db.data.users.find(u => u.id === 2);
+    const original = structuredClone(user);
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==';
+    const own = await editorial.upload(2, png);
+    const foreign = await editorial.upload(3, png);
+    const profile = { ...original, csrf_token: candidateToken, fotografie_profil_url: own.imagine_url };
+    try {
+      assert.equal((await guest(own.imagine_url)).status, 404);
+      assert.equal((await cand('/dashboard/profil', { ...profile, fotografie_profil_url: foreign.imagine_url })).status, 400);
+      assert.equal(user.fotografie_profil_url, original.fotografie_profil_url);
+      assert.equal((await cand('/dashboard/profil', profile)).status, 302);
+      assert.equal(user.fotografie_profil_url, own.imagine_url);
+      const publicPhoto = await guest(own.imagine_url);
+      assert.equal(publicPhoto.status, 200);
+      assert.equal(publicPhoto.headers.get('cache-control'), 'private, no-store');
+      assert.ok((await guest('/site/ana')).html.includes(`src="${own.imagine_url}"`));
+      user.module.site = false;
+      assert.equal((await guest(own.imagine_url)).status, 404);
+      user.module.site = true;
+      assert.equal((await cand('/dashboard/profil', { ...profile, fotografie_profil_url: '' })).status, 302);
+      assert.equal((await guest(own.imagine_url)).status, 404);
+      assert.equal((await guest(foreign.imagine_url)).status, 404);
+    } finally { Object.assign(user, original); }
+  });
   await t.test('Handlerul Netlify real păstrează octeții imaginii în răspunsul Lambda', async () => {
     const article = db.data.articole.find(a => a.id === 1);
     const id = article.imagine_url.split('/').pop();
