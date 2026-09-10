@@ -16,7 +16,7 @@
     <a class="back-home" href="/">← Înapoi la prima pagină</a>
     <article class="portal-article">
       <header>
-        <div class="portal-article-meta"><span><%= post.tip === 'campanie' ? 'CAMPANIE CANDIDAT' : 'ȘTIREA PLATFORMEI' %></span><span><%= post.categorie %></span><time><%= displayDate(portalPublicationDate(post)) %></time></div>
+        <div class="portal-article-meta"><span><%= post.tip === 'campanie' ? 'CAMPANIE CANDIDAT' : 'ȘTIREA ZILEI' %></span><span><%= post.categorie %></span><time><%= displayDate(portalPublicationDate(post)) %></time></div>
         <h1><%= post.titlu %></h1><p class="portal-article-lead"><%= post.rezumat %></p>
       </header>
       <% if (post.imagine_url) { %><figure class="portal-article-image"><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>" decoding="async" fetchpriority="high"><% if (post.imagine_legenda || post.imagine_credit) { %><figcaption><%= [post.imagine_legenda, post.imagine_credit && `Foto: ${post.imagine_credit}`].filter(Boolean).join(' · ') %></figcaption><% } %><% if (post.imagine_generata_ai) { %><span>Ilustrație generată cu AI</span><% } %></figure><% } %>
