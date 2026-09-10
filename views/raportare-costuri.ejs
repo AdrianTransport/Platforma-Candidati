@@ -39,6 +39,20 @@
         <p>Poți răspunde anonim, fără să introduci un nume. Dacă alegi să completezi numele, acesta este folosit numai pentru verificarea răspunsului, poate fi văzut doar de administrator și nu este publicat niciodată. Publicul vede localitatea, perioada și un interval al sumei, nu suma exactă. Datele care te pot identifica sunt șterse după 90 de zile, dar statistica anonimă rămâne.</p>
       </details>
 
+      <section class="cost-legal-notice" aria-labelledby="informare-confidentialitate">
+        <span class="cost-step">Informare privind datele personale</span>
+        <h2 id="informare-confidentialitate">Înainte să trimiți raportarea</h2>
+        <p><strong>Responsabil pentru formular:</strong> Droc Cristian Dan<% if (platform.legalEmail) { %>, contact: <a href="mailto:<%= platform.legalEmail %>"><%= platform.legalEmail %></a><% } %>.</p>
+        <ul>
+          <li>Scopul este realizarea unei statistici comunitare despre costurile pentru apă și salubritate și prevenirea raportărilor abuzive.</li>
+          <li>Localitatea, perioada și suma sunt necesare pentru statistică. Numele, observațiile și informațiile generale despre dispozitiv sunt opționale.</li>
+          <li>Publicăm numai localitatea, perioada și intervalul sumei. Numele, suma exactă, IP-ul și dispozitivul nu sunt publicate.</li>
+          <li>Datele individuale sunt șterse după 90 de zile. Statistica anonimă rămâne disponibilă.</li>
+          <li>Poți solicita accesul, corectarea sau ștergerea datelor și poți retrage acordul pentru datele opționale.</li>
+        </ul>
+        <p><a href="/legal/confidentialitate" target="_blank" rel="noopener">Citește Politica de confidențialitate completă</a></p>
+      </section>
+
       <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
 
       <div class="cost-form-card">
@@ -105,6 +119,11 @@
               <span>Sunt de acord ca tipul general al dispozitivului, sistemul de operare și browserul să fie păstrate maximum 90 de zile pentru verificarea autenticității raportării. Aceste informații nu vor fi publicate.</span>
             </label>
 
+            <label class="cost-consent cost-required-confirmation">
+              <input type="checkbox" name="confirmare_informare" required>
+              <span>Am citit informarea de confidențialitate și confirm că datele introduse sunt reale și sunt trimise voluntar.</span>
+            </label>
+
             <div class="cost-submit-row">
               <p>Maximum 3 raportări pentru fiecare serviciu în 90 de zile. Adresa IP nu este păstrată în clar.</p>
               <button type="submit">Trimite raportarea →</button>
@@ -128,6 +147,7 @@
         document.getElementById('mod_nume').addEventListener('change', actualizeazaModRaspuns);
       </script>
     <% } %>
+    <nav class="cost-legal-links" aria-label="Informații legale"><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/">Vocea Locală Lenauheim</a></nav>
   </main>
 </body>
 </html>

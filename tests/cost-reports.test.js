@@ -6,7 +6,7 @@ import { descriereDispozitiv, limitaRaportariDepasita, purjeazaRaportariExpirate
 test('raportarea anonimă nu stochează un nume', () => {
   const raportare = raportareInput({
     localitate: 'Bulgăruș', perioada: 'august 2026', suma: '218',
-    mod_raspuns: 'anonim', tip_platitor: 'fizica',
+    mod_raspuns: 'anonim', tip_platitor: 'fizica', confirmare_informare: 'on',
   }, 'salubritate');
   assert.equal(raportare.nume, '');
   assert.equal(raportare.mod_raspuns, 'anonim');
@@ -15,8 +15,15 @@ test('raportarea anonimă nu stochează un nume', () => {
 test('raportarea cu nume cere acordul explicit', () => {
   assert.throws(() => raportareInput({
     localitate: 'Lenauheim', perioada: 'august 2026', suma: '180',
-    mod_raspuns: 'nume', nume: 'Persoană Test', consum_mc: '12',
+    mod_raspuns: 'nume', nume: 'Persoană Test', consum_mc: '12', confirmare_informare: 'on',
   }, 'apa'), /acordul/);
+});
+
+test('raportarea cere confirmarea informării și a caracterului voluntar', () => {
+  assert.throws(() => raportareInput({
+    localitate: 'Grabaț', perioada: 'august 2026', suma: '200',
+    mod_raspuns: 'anonim', consum_mc: '10',
+  }, 'apa'), /informarea de confidențialitate/);
 });
 
 test('prima raportare este afișată public numai ca interval', () => {

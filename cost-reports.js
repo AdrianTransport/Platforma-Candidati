@@ -74,6 +74,9 @@ export function descriereDispozitiv(userAgent = '') {
 
 export function raportareInput(body, tip) {
   if (!['apa', 'salubritate'].includes(tip)) throw new ValidationError('Tip de raportare invalid.');
+  if (body.confirmare_informare !== 'on' && body.confirmare_informare !== true) {
+    throw new ValidationError('Trebuie să confirmi că ai citit informarea de confidențialitate și că datele trimise sunt reale.');
+  }
   const localitate = textField(body.localitate, 'Localitate', 60, true);
   if (!LOCALITATI.includes(localitate)) throw new ValidationError('Localitate invalidă.');
   const perioada = textField(body.perioada, 'Perioadă', 40, true);
