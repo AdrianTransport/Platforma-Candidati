@@ -19,11 +19,13 @@
     <% } else { %>
       <div class="card">
         <p class="note">
-          Numele este colectat exclusiv pentru verificarea autenticității răspunsului și prevenirea înregistrărilor duplicate.
-          Numele va fi păstrat confidențial în baza de date, va fi accesibil numai administratorului platformei și nu va fi
-          afișat public. În rezultatele publicate vor apărea numai un interval al sumei (nu suma exactă), localitatea,
-          serviciul și perioada selectată — iar rezultatele nu se afișează deloc dacă sunt prea puține răspunsuri într-un
-          grup, ca să nu poată fi identificată nicio persoană. Datele vor fi șterse automat în maximum 90 de zile de la trimitere.
+          Poți răspunde <strong>anonim</strong> (nu colectăm niciun nume), sau <strong>cu numele tău</strong>, dacă alegi
+          asta — numele e folosit exclusiv pentru verificarea autenticității răspunsului și prevenirea înregistrărilor
+          duplicate. Dacă alegi să dai numele, el va fi păstrat confidențial în baza de date, accesibil numai
+          administratorului platformei, și nu va fi afișat public niciodată. În rezultatele publicate vor apărea numai
+          un interval al sumei (nu suma exactă), localitatea, serviciul și perioada selectată — iar rezultatele nu se
+          afișează deloc dacă sunt prea puține răspunsuri într-un grup, ca să nu poată fi identificată nicio persoană.
+          Datele sunt șterse automat în maximum 90 de zile de la trimitere.
         </p>
       </div>
 
@@ -55,20 +57,44 @@
               <label>Numărul persoanelor taxate — opțional<input type="number" min="1" max="30" name="numar_persoane"></label>
             <% } %>
 
+            <label class="full-field">Cum vrei să răspunzi?
+              <div style="display:flex; gap:18px; margin-top:6px; font-weight:400">
+                <label style="display:flex; align-items:center; gap:6px; font-weight:400"><input type="radio" name="mod_raspuns" value="anonim" id="mod_anonim" checked style="width:auto; margin:0"> Anonim</label>
+                <label style="display:flex; align-items:center; gap:6px; font-weight:400"><input type="radio" name="mod_raspuns" value="nume" id="mod_nume" style="width:auto; margin:0"> Cu numele meu</label>
+              </div>
+            </label>
+
             <label>Suma plătită (lei)<input type="number" step="0.01" min="0.01" name="suma" required></label>
-            <label>Numele tău (stocat privat, nu se publică)<input name="nume" required maxlength="120"></label>
+
+            <div id="bloc_nume" class="full-field" style="display:none">
+              <label>Numele tău (stocat privat, nu se publică niciodată)<input name="nume" id="camp_nume" maxlength="120"></label>
+              <label style="display:flex; gap:10px; align-items:flex-start; font-weight:400; margin-top:8px">
+                <input type="checkbox" name="acord_stocare_nume" id="acord_nume" style="width:auto; margin-top:3px">
+                <span>Am citit informațiile de mai sus și sunt de acord cu stocarea confidențială a numelui meu pentru verificarea răspunsului.</span>
+              </label>
+            </div>
 
             <label class="full-field">Observații — opțional<textarea name="observatii" rows="3" maxlength="500"></textarea></label>
-
-            <label class="full-field" style="display:flex; gap:10px; align-items:flex-start; font-weight:400">
-              <input type="checkbox" name="acord_stocare_nume" required style="width:auto; margin-top:3px">
-              <span>Am citit informațiile de mai sus și sunt de acord cu stocarea confidențială a numelui meu pentru verificarea răspunsului.</span>
-            </label>
 
             <div class="form-actions"><button type="submit">Trimite raportarea</button></div>
           </div>
         </form>
       </div>
+
+      <script>
+        const blocNume = document.getElementById('bloc_nume');
+        const campNume = document.getElementById('camp_nume');
+        const acordNume = document.getElementById('acord_nume');
+        function actualizeazaModRaspuns() {
+          const cuNume = document.getElementById('mod_nume').checked;
+          blocNume.style.display = cuNume ? 'block' : 'none';
+          campNume.required = cuNume;
+          acordNume.required = cuNume;
+          if (!cuNume) { campNume.value = ''; acordNume.checked = false; }
+        }
+        document.getElementById('mod_anonim').addEventListener('change', actualizeazaModRaspuns);
+        document.getElementById('mod_nume').addEventListener('change', actualizeazaModRaspuns);
+      </script>
     <% } %>
   </main>
 </body>

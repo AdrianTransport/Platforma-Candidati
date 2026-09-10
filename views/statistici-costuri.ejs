@@ -19,7 +19,7 @@
 
     <% if (total) { %>
       <div class="card" style="text-align:center">
-        <p class="note" style="margin:0">Total raportat de cetățeni, <%= tip === 'apa' ? 'apă' : 'salubritate' %> (<%= total.numarRaspunsuri %> raportări)</p>
+        <p class="note" style="margin:0">Total declarat de cetățeni pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %> (<%= total.numarRaspunsuri %> raportări)</p>
         <p style="font-size:32px; font-weight:800; margin:6px 0 0"><%= total.suma.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> lei</p>
       </div>
     <% } else { %>

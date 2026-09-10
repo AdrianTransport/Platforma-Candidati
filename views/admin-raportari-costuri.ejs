@@ -18,7 +18,7 @@
         <tbody>
           <% lista.forEach(r => { %>
             <tr>
-              <td><%= r.nume %></td>
+              <td><%= r.mod_raspuns === 'nume' && r.nume ? r.nume : 'Anonim' %></td>
               <td><%= r.localitate %></td>
               <td><%= r.perioada %></td>
               <td><%= r.suma.toFixed(2) %> lei</td>

@@ -38,9 +38,16 @@ export function raportareInput(body, tip) {
   if (!Number.isFinite(suma) || suma <= 0 || suma > 100000) {
     throw new ValidationError('Suma trebuie să fie un număr valid, mai mare decât 0.');
   }
-  const nume = textField(body.nume, 'Nume', 120, true);
-  if (body.acord_stocare_nume !== 'on' && body.acord_stocare_nume !== true) {
-    throw new ValidationError('Trebuie să confirmi acordul pentru stocarea confidențială a numelui.');
+  const modRaspuns = String(body.mod_raspuns || '').trim();
+  if (!['anonim', 'nume'].includes(modRaspuns)) {
+    throw new ValidationError('Alege dacă răspunzi anonim sau cu numele tău.');
+  }
+  let nume = '';
+  if (modRaspuns === 'nume') {
+    nume = textField(body.nume, 'Nume', 120, true);
+    if (body.acord_stocare_nume !== 'on' && body.acord_stocare_nume !== true) {
+      throw new ValidationError('Trebuie să confirmi acordul pentru stocarea confidențială a numelui.');
+    }
   }
   const comun = {
     id: null, // atribuit de apelant
@@ -49,6 +56,7 @@ export function raportareInput(body, tip) {
     perioada,
     suma,
     nume, // privat - niciodata afisat public, vezi vizualizarePublica()
+    mod_raspuns: modRaspuns,
     observatii: textField(body.observatii, 'Observații', 500),
     created_at: new Date().toISOString(),
   };
