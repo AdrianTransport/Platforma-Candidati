@@ -42,7 +42,14 @@
 
           <div class="form-grid form-grid-2 portal-form-grid">
             <label>Tip material<select name="tip" id="portal-tip"><option value="stire" <%= post?.tip !== 'campanie' ? 'selected' : '' %>>Știre a platformei</option><option value="campanie" <%= post?.tip === 'campanie' ? 'selected' : '' %>>Campanie pentru candidat</option></select></label>
-            <label>Categorie<input name="categorie" maxlength="60" value="<%= post?.categorie || '' %>" placeholder="Actualitate, Comunitate, Campanie…"></label>
+            <label>Categorie (determină în ce secțiune din meniu apare)
+              <select name="categorie">
+                <option value="Actualitate" <%= (!post?.categorie || post.categorie === 'Actualitate') ? 'selected' : '' %>>Actualitate (apare doar la Știri)</option>
+                <% categoriiPortal.forEach(c => { %>
+                  <option value="<%= c %>" <%= post?.categorie === c ? 'selected' : '' %>><%= c %></option>
+                <% }) %>
+              </select>
+            </label>
           </div>
 
           <fieldset class="editor-media campaign-fields" id="campaign-fields">

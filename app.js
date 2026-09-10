@@ -581,6 +581,7 @@ export async function createApp({
       post,
       eroare,
       candidati: portalCandidates(),
+      categoriiPortal: [...Object.values(PORTAL_SECTIONS).flatMap(sectiune => sectiune.categorii).filter(Boolean), 'Campanie'],
     });
   }
 
@@ -697,6 +698,16 @@ export async function createApp({
     await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'portal_post_updated',
       targetType: 'portal_post', targetId: post.id, details: { type: post.tip, status: post.status, title: post.titlu } });
     res.redirect('/admin/portal?mesaj=Materialul%20a%20fost%20actualizat.');
+  }));
+
+  app.post('/admin/portal/:id(\\d+)/sterge', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const post = db.data.portal_posts.find(item => item.id === Number(req.params.id));
+    if (!post) return res.redirect('/admin/portal');
+    db.data.portal_posts = db.data.portal_posts.filter(item => item.id !== post.id);
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'portal_post_deleted',
+      targetType: 'portal_post', targetId: post.id, details: { type: post.tip, title: post.titlu } });
+    res.redirect('/admin/portal?mesaj=Materialul%20a%20fost%20sters.');
   }));
 
   const adminJson = handler => async (req, res) => {
