@@ -6,41 +6,70 @@
   <title>Statistici costuri <%= tip === 'apa' ? 'apă' : 'salubritate' %> — Vocea Locală Lenauheim</title>
   <link rel="stylesheet" href="/style.css">
 </head>
-<body class="public-body">
-  <main class="legal-page-shell">
-    <a class="back-home" href="/">← Înapoi la platformă</a>
-    <span class="eyebrow">Date agregate, anonime</span>
-    <h1>Cât plătesc locuitorii pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %></h1>
-    <nav style="display:flex; gap:10px; margin-bottom:14px">
-      <a class="btn <%= tip === 'apa' ? '' : 'secondary' %>" href="/statistici/apa">Apă</a>
-      <a class="btn <%= tip === 'salubritate' ? '' : 'secondary' %>" href="/statistici/salubritate">Salubritate</a>
+<body class="public-body cost-body">
+  <main class="cost-shell">
+    <a class="back-home" href="/">← Înapoi la Vocea Locală</a>
+    <header class="cost-page-header">
+      <span class="cost-kicker">Informații trimise de comunitate</span>
+      <h1>Cât plătim pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %>?</h1>
+      <p>Compară simplu sumele declarate de locuitorii din Bulgăruș, Lenauheim și Grabaț.</p>
+    </header>
+
+    <nav class="cost-tabs" aria-label="Alege serviciul">
+      <a class="<%= tip === 'apa' ? 'active' : '' %>" href="/statistici/apa">💧 Apă</a>
+      <a class="<%= tip === 'salubritate' ? 'active' : '' %>" href="/statistici/salubritate">♻ Salubritate</a>
     </nav>
-    <p class="note">Sumele sunt afișate ca interval, nu exact, iar rezultatele apar doar acolo unde au răspuns suficiente persoane — ca nicio raportare individuală să nu poată fi identificată. <a href="/raportare/<%= tip %>">Adaugă o raportare</a></p>
+
+    <section class="cost-explainer">
+      <div><strong>Vizibil de la primul răspuns</strong><span>Fiecare raportare apare imediat în statistici.</span></div>
+      <div><strong>Suma exactă rămâne privată</strong><span>Publicăm doar un interval de 50 lei.</span></div>
+      <div><strong>Numele nu apare niciodată</strong><span>Poți completa formularul și anonim.</span></div>
+    </section>
+
+    <div class="cost-primary-action">
+      <div><strong>Ai plătit recent?</strong><span>Ajută comunitatea cu o raportare care durează mai puțin de un minut.</span></div>
+      <a class="btn" href="/raportare/<%= tip %>">Adaugă suma plătită →</a>
+    </div>
 
     <% if (total) { %>
-      <div class="card" style="text-align:center">
-        <p class="note" style="margin:0">Total declarat de cetățeni pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %> (<%= total.numarRaspunsuri %> raportări)</p>
-        <p style="font-size:32px; font-weight:800; margin:6px 0 0"><%= total.suma.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> lei</p>
+      <div class="cost-total-card">
+        <span>Totalul sumelor declarate</span>
+        <strong><%= total.suma.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> lei</strong>
+        <small>Calculat din <%= total.numarRaspunsuri %> raportări</small>
       </div>
     <% } else { %>
-      <div class="card"><p class="note" style="margin:0">Totalul apare public după ce sunt cel puțin 5 raportări trimise.</p></div>
+      <p class="cost-total-note">Raportările sunt vizibile de la primul răspuns. Totalul exact al tuturor sumelor va apărea numai după minimum 5 raportări, pentru protejarea participanților.</p>
     <% } %>
 
     <% if (!grupuri.length) { %>
-      <div class="card"><p>Încă nu sunt suficiente răspunsuri publicate pentru nicio localitate/perioadă.</p></div>
+      <div class="cost-empty">
+        <span>📋</span>
+        <h2>Nu există încă nicio raportare</h2>
+        <p>Fii prima persoană care declară cât a plătit. Rezultatul va apărea imediat, ca interval anonim.</p>
+        <a class="btn" href="/raportare/<%= tip %>">Trimite prima raportare</a>
+      </div>
     <% } %>
 
-    <% grupuri.forEach(g => { %>
-      <div class="card">
-        <h2 style="margin-top:0"><%= g.localitate %> · <%= g.perioada %></h2>
-        <p class="note"><%= g.numarRaspunsuri %> răspunsuri</p>
-        <table>
-          <tr><th>Suma mediană</th><td><%= g.sumaMedianaInterval %></td></tr>
-          <tr><th>Interval minim</th><td><%= g.sumaMinInterval %></td></tr>
-          <tr><th>Interval maxim</th><td><%= g.sumaMaxInterval %></td></tr>
-        </table>
-      </div>
-    <% }) %>
+    <% if (grupuri.length) { %>
+      <section class="cost-results">
+        <h2>Raportări publicate</h2>
+        <div class="cost-results-grid">
+          <% grupuri.forEach(g => { %>
+            <article class="cost-result-card">
+              <div class="cost-result-head">
+                <div><strong><%= g.localitate %></strong><span><%= g.perioada %></span></div>
+                <small><%= g.numarRaspunsuri %> <%= g.numarRaspunsuri === 1 ? 'raportare' : 'raportări' %></small>
+              </div>
+              <p><%= g.numarRaspunsuri === 1 ? 'Suma declarată se află în intervalul:' : 'Valoarea de mijloc se află în intervalul:' %></p>
+              <strong class="cost-main-value"><%= g.sumaMedianaInterval %></strong>
+              <% if (g.numarRaspunsuri > 1) { %>
+                <div class="cost-range"><span>Cea mai mică: <b><%= g.sumaMinInterval %></b></span><span>Cea mai mare: <b><%= g.sumaMaxInterval %></b></span></div>
+              <% } %>
+            </article>
+          <% }) %>
+        </div>
+      </section>
+    <% } %>
   </main>
 </body>
 </html>

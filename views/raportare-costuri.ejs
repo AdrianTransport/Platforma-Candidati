@@ -6,77 +6,104 @@
   <title>Raportare costuri <%= tip === 'apa' ? 'apă' : 'salubritate' %> — Vocea Locală Lenauheim</title>
   <link rel="stylesheet" href="/style.css">
 </head>
-<body class="public-body">
-  <main class="legal-page-shell">
-    <a class="back-home" href="/">← Înapoi la platformă</a>
-    <span class="eyebrow">Raportare cetățenească · date confidențiale</span>
-    <h1>Cât plătești pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %>?</h1>
+<body class="public-body cost-body">
+  <main class="cost-shell">
+    <a class="back-home" href="/statistici/<%= tip %>">← Înapoi la rezultate</a>
+    <header class="cost-page-header">
+      <span class="cost-kicker">Raportare cetățenească</span>
+      <h1>Cât ai plătit pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %>?</h1>
+      <p>Completează datele de mai jos. Durează mai puțin de un minut.</p>
+    </header>
 
     <% if (trimis) { %>
-      <div class="card">
-        <p class="parola-noua">Mulțumim! Raportarea a fost înregistrată. Datele individuale nu sunt publicate — vezi rezultatele agregate la <a href="/statistici/<%= tip %>">statistici <%= tip === 'apa' ? 'apă' : 'salubritate' %></a>.</p>
+      <div class="cost-success">
+        <span>✓</span>
+        <h2>Raportarea a fost înregistrată</h2>
+        <p>Mulțumim! Rezultatul este vizibil acum ca interval anonim. Numele și suma exactă nu sunt publicate.</p>
+        <div><a class="btn" href="/statistici/<%= tip %>">Vezi rezultatele</a><a class="btn secondary" href="/">Pagina principală</a></div>
       </div>
     <% } else { %>
-      <div class="card">
-        <p class="note">
-          Poți răspunde <strong>anonim</strong> (nu colectăm niciun nume), sau <strong>cu numele tău</strong>, dacă alegi
-          asta — numele e folosit exclusiv pentru verificarea autenticității răspunsului și prevenirea înregistrărilor
-          duplicate. Dacă alegi să dai numele, el va fi păstrat confidențial în baza de date, accesibil numai
-          administratorului platformei, și nu va fi afișat public niciodată. În rezultatele publicate vor apărea numai
-          un interval al sumei (nu suma exactă), localitatea, serviciul și perioada selectată — iar rezultatele nu se
-          afișează deloc dacă sunt prea puține răspunsuri într-un grup, ca să nu poată fi identificată nicio persoană.
-          Datele sunt șterse automat în maximum 90 de zile de la trimitere.
-        </p>
-      </div>
+      <nav class="cost-tabs" aria-label="Alege serviciul">
+        <a class="<%= tip === 'apa' ? 'active' : '' %>" href="/raportare/apa">💧 Apă</a>
+        <a class="<%= tip === 'salubritate' ? 'active' : '' %>" href="/raportare/salubritate">♻ Salubritate</a>
+      </nav>
+
+      <section class="cost-privacy-summary">
+        <div><span>✓</span><p><strong>Poți răspunde anonim</strong>Numele nu este obligatoriu.</p></div>
+        <div><span>✓</span><p><strong>Suma exactă rămâne privată</strong>Publicăm numai intervalul de 50 lei.</p></div>
+        <div><span>✓</span><p><strong>Date șterse după 90 de zile</strong>Nu le păstrăm mai mult decât este necesar.</p></div>
+      </section>
+
+      <details class="cost-privacy-details">
+        <summary>Cum îți protejăm datele?</summary>
+        <p>Poți răspunde anonim, fără să introduci un nume. Dacă alegi să completezi numele, acesta este folosit numai pentru verificarea răspunsului, poate fi văzut doar de administrator și nu este publicat niciodată. Publicul vede localitatea, perioada și un interval al sumei, nu suma exactă.</p>
+      </details>
 
       <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
 
-      <div class="card">
+      <div class="cost-form-card">
         <form method="POST" action="/raportare/<%= tip %>">
           <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
-          <div class="form-grid form-grid-2">
-            <label>Localitate
+          <div class="cost-form-section">
+            <span class="cost-step">Pasul 1</span>
+            <h2>Unde și pentru ce perioadă?</h2>
+            <div class="form-grid form-grid-2">
+            <label>Localitatea ta
               <select name="localitate" required>
-                <option value="">Alege...</option>
+                <option value="">Alege localitatea</option>
                 <% localitati.forEach(l => { %><option value="<%= l %>"><%= l %></option><% }) %>
               </select>
             </label>
-            <label>Perioada (ex: 2026 trimestrul 3)<input name="perioada" required maxlength="40"></label>
+            <label>Perioada facturată<input name="perioada" required maxlength="40" placeholder="Exemplu: august 2026"></label>
+            </div>
+          </div>
 
+          <div class="cost-form-section">
+            <span class="cost-step">Pasul 2</span>
+            <h2>Ce sumă ai plătit?</h2>
+            <div class="form-grid form-grid-2">
             <% if (tip === 'apa') { %>
-              <label>Consum (m³) — opțional<input type="number" step="0.1" min="0" name="consum_mc"></label>
-              <label>Numărul persoanelor din gospodărie — opțional<input type="number" min="1" max="30" name="numar_persoane"></label>
+              <label>Suma plătită (lei)<input type="number" step="0.01" min="0.01" name="suma" required placeholder="Exemplu: 185,50"></label>
+              <label>Consum în m³ <small>opțional</small><input type="number" step="0.1" min="0" name="consum_mc" placeholder="Exemplu: 12"></label>
+              <label>Persoane în gospodărie <small>opțional</small><input type="number" min="1" max="30" name="numar_persoane" placeholder="Exemplu: 3"></label>
             <% } else { %>
-              <label>Persoană fizică sau juridică
+              <label>Suma plătită (lei)<input type="number" step="0.01" min="0.01" name="suma" required placeholder="Exemplu: 218"></label>
+              <label>Cine a plătit?
                 <select name="tip_platitor" required>
-                  <option value="">Alege...</option>
+                  <option value="">Alege varianta</option>
                   <option value="fizica">Persoană fizică</option>
                   <option value="juridica">Persoană juridică</option>
                 </select>
               </label>
-              <label>Numărul persoanelor taxate — opțional<input type="number" min="1" max="30" name="numar_persoane"></label>
+              <label>Persoane taxate <small>opțional</small><input type="number" min="1" max="30" name="numar_persoane" placeholder="Exemplu: 2"></label>
             <% } %>
+            </div>
+          </div>
 
-            <label class="full-field">Cum vrei să răspunzi?
-              <div style="display:flex; gap:18px; margin-top:6px; font-weight:400">
-                <label style="display:flex; align-items:center; gap:6px; font-weight:400"><input type="radio" name="mod_raspuns" value="anonim" id="mod_anonim" checked style="width:auto; margin:0"> Anonim</label>
-                <label style="display:flex; align-items:center; gap:6px; font-weight:400"><input type="radio" name="mod_raspuns" value="nume" id="mod_nume" style="width:auto; margin:0"> Cu numele meu</label>
-              </div>
-            </label>
+          <div class="cost-form-section">
+            <span class="cost-step">Pasul 3</span>
+            <h2>Cum vrei să trimiți?</h2>
+            <div class="cost-answer-options">
+              <label><input type="radio" name="mod_raspuns" value="anonim" id="mod_anonim" checked><span><strong>Anonim</strong><small>Nu introduci niciun nume</small></span></label>
+              <label><input type="radio" name="mod_raspuns" value="nume" id="mod_nume"><span><strong>Cu numele meu</strong><small>Numele rămâne privat</small></span></label>
+            </div>
 
-            <label>Suma plătită (lei)<input type="number" step="0.01" min="0.01" name="suma" required></label>
-
-            <div id="bloc_nume" class="full-field" style="display:none">
-              <label>Numele tău (stocat privat, nu se publică niciodată)<input name="nume" id="camp_nume" maxlength="120"></label>
-              <label style="display:flex; gap:10px; align-items:flex-start; font-weight:400; margin-top:8px">
-                <input type="checkbox" name="acord_stocare_nume" id="acord_nume" style="width:auto; margin-top:3px">
-                <span>Am citit informațiile de mai sus și sunt de acord cu stocarea confidențială a numelui meu pentru verificarea răspunsului.</span>
+            <div id="bloc_nume" class="cost-name-block" style="display:none">
+              <label>Numele tău<input name="nume" id="camp_nume" maxlength="120" placeholder="Nume și prenume"></label>
+              <label class="cost-consent">
+                <input type="checkbox" name="acord_stocare_nume" id="acord_nume">
+                <span>Sunt de acord cu stocarea confidențială a numelui pentru verificarea răspunsului.</span>
               </label>
             </div>
 
-            <label class="full-field">Observații — opțional<textarea name="observatii" rows="3" maxlength="500"></textarea></label>
+            <label>Vrei să adaugi o explicație? <small>opțional</small>
+              <textarea name="observatii" rows="3" maxlength="500" placeholder="De exemplu: suma include restanțe sau regularizare"></textarea>
+            </label>
 
-            <div class="form-actions"><button type="submit">Trimite raportarea</button></div>
+            <div class="cost-submit-row">
+              <p>Prin trimitere confirmi că informațiile completate sunt reale.</p>
+              <button type="submit">Trimite raportarea →</button>
+            </div>
           </div>
         </form>
       </div>

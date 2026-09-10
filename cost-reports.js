@@ -99,9 +99,9 @@ export function totalPublic(raportari, tip) {
     numarRaspunsuri: ale_tipului.length,
   };
 }
-// Agrega raportarile pentru afisare publica - fara nume, fara sume exacte,
-// si ascunde complet grupurile cu prea putine raspunsuri (protectie impotriva
-// re-identificarii intr-o localitate mica).
+// Agrega raportarile pentru afisare publica - fara nume si fara sume exacte.
+// Fiecare grup devine vizibil de la prima raportare, dar suma ramane protejata
+// prin incadrarea intr-un interval de 50 lei.
 export function statisticiPublice(raportari, tip) {
   const grupuri = new Map();
   for (const r of raportari.filter((r) => r.tip === tip)) {
@@ -110,7 +110,6 @@ export function statisticiPublice(raportari, tip) {
     grupuri.get(cheie).raspunsuri.push(r);
   }
   return [...grupuri.values()]
-    .filter((g) => g.raspunsuri.length >= MIN_RASPUNSURI_PUBLICE)
     .map((g) => {
       const sume = g.raspunsuri.map((r) => r.suma).sort((a, b) => a - b);
       const mediana = sume[Math.floor(sume.length / 2)];

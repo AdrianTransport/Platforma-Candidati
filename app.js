@@ -559,7 +559,10 @@ export async function createApp({
   app.get('/statistici/:tip(apa|salubritate)', safely(async (req, res) => {
     const auPurjat = purjeazaRaportariExpirate(db, Date.now());
     if (auPurjat) await db.write();
-    setPublicCdnCache(res, { maxAge: 1800, stale: 21600 });
+    // Statisticile se schimba la fiecare raportare si trebuie sa afiseze
+    // inclusiv primul raspuns imediat, fara o versiune veche din CDN.
+    res.set('Cache-Control', 'no-store');
+    res.set('Netlify-CDN-Cache-Control', 'no-store');
     res.render('statistici-costuri', {
       tip: req.params.tip,
       grupuri: statisticiPublice(db.data.raportari_costuri, req.params.tip),
