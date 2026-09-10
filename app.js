@@ -150,6 +150,13 @@ export async function createApp({
   compliance = createCompliance({ now }),
   auth = productionAuth(),
 } = {}) {
+  const sessionSecret = String(process.env.SESSION_SECRET || '').trim();
+  const isNetlify = Boolean(
+    process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY
+  );
+  if (isNetlify && !sessionSecret) {
+    throw new Error('SESSION_SECRET este obligatorie in productie');
+  }
   await initDB();
   const platform = platformInfo();
   const isLenauheimCivicPortal = platform.operatorId.includes('44420154');
@@ -190,7 +197,8 @@ export async function createApp({
   app.use(
     cookieSession({
       name: 'sesiune',
-      keys: [process.env.SESSION_SECRET || 'schimba-acest-secret-in-productie'],
+      // Fallback permis exclusiv pentru development/test; productia este validata la pornire.
+      keys: [sessionSecret || 'secret-local-doar-pentru-development'],
       maxAge: 1000 * 60 * 60 * 8, // 8 ore
       httpOnly: true,
       sameSite: 'lax',
