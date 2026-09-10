@@ -32,7 +32,6 @@ export function attachEditorialRoutes(app, {
     res.status(201).json(await editorial.upload(req.session.userId, req.body.base64));
   }));
   app.get('/media/:id', json(async (req, res) => {
-    res.set('Cache-Control', 'private, no-store');
     const image = await editorial.media(req.params.id);
     const owner = image && db.data.users.find(u => u.id === image.userId && u.activ);
     const candidateOwner = owner?.role === 'candidate' && owner.status_cont === 'activ' && owner.module?.site;
@@ -42,7 +41,20 @@ export function attachEditorialRoutes(app, {
       && internalImageId(a.imagine_url) === req.params.id && isPublished(a, now()));
     const publishedOnPortal = adminOwner && db.data.portal_posts.some(post =>
       internalImageId(post.imagine_url) === req.params.id && isPortalPostPublished(post));
-    if (!owner || (!ownPreview && !published && !publishedOnPortal)) return res.status(404).send('Imagine inexistentă.');
+    if (!owner || (!ownPreview && !published && !publishedOnPortal)) {
+      res.set('Cache-Control', 'private, no-store');
+      return res.status(404).send('Imagine inexistentă.');
+    }
+    if (published || publishedOnPortal) {
+      // Imagine publica, deja publicata: continutul de la acest ID nu se mai schimba
+      // niciodata (ID unic per imagine) - cache lung, atat in browser cat si in CDN,
+      // ca sa nu se re-descarce la fiecare vizita.
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      res.set('Netlify-CDN-Cache-Control', 'public, durable, max-age=31536000, immutable');
+    } else {
+      // Previzualizare privata (ciorna, inca nepublicata) - nu se cacheuieste nicaieri.
+      res.set('Cache-Control', 'private, no-store');
+    }
     const { bytes, mime } = imageBytes(image.base64);
     res.set({ 'Content-Type': mime, 'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': "default-src 'none'; sandbox" });
