@@ -52,7 +52,15 @@
     <% const portalSocial = [['facebook', portalOwner?.facebook_url], ['instagram', portalOwner?.instagram_url], ['tiktok', portalOwner?.tiktok_url]].filter(([, url]) => url); %>
     <% if (portalSocial.length) { %><section class="portal-social-strip" aria-label="Rețelele sociale Vocea Locală"><strong>Urmărește Vocea Locală Lenauheim</strong><div><% portalSocial.forEach(([network, url]) => { %><a href="<%= url %>" target="_blank" rel="noopener noreferrer"><%= network %></a><% }) %></div></section><% } %>
 
-    <section class="marketing-section" id="despre"><div class="section-heading"><span class="eyebrow">Platformă completă</span><h2>Comunicare civică organizată, simplă și transparentă.</h2></div><div class="feature-grid"><article><span>01</span><h3>Portal administrat</h3><p>Super Adminul publică știri, inițiative și articolul principal.</p></article><article><span>02</span><h3>Site tip ziar</h3><p>Fiecare candidat are propriul site cu program, proiecte și articole.</p></article><article><span>03</span><h3>Text și imagini</h3><p>Editor manual și instrumente OpenAI disponibile după activarea administratorului.</p></article><article><span>04</span><h3>Statistici clare</h3><p>Citiri și surse generale de trafic, fără profilarea politică a vizitatorilor.</p></article></div></section>
+    <section class="marketing-section" id="despre">
+      <div class="section-heading"><span class="eyebrow">Platformă completă</span><h2>Comunicare civică organizată, simplă și transparentă.</h2></div>
+      <div class="feature-grid">
+        <article><img src="/assets/lenauheim-centru-v1.webp" alt="Centrul comunității Lenauheim" width="680" height="425" loading="lazy" decoding="async"><div><span>01</span><h3>Portal administrat</h3><p>Super Adminul publică știri, inițiative și articolul principal.</p></div></article>
+        <article><img src="/assets/lenauheim-panorama-v1.webp" alt="Panoramă asupra comunității Lenauheim" width="1000" height="417" loading="lazy" decoding="async"><div><span>02</span><h3>Site tip ziar</h3><p>Fiecare candidat are propriul site cu program, proiecte și articole.</p></div></article>
+        <article><img src="/assets/lenauheim-centru-v1.webp" alt="Spațiu public din centrul localității" width="680" height="425" loading="lazy" decoding="async"><div><span>03</span><h3>Text și imagini</h3><p>Editor manual și instrumente OpenAI disponibile după activarea administratorului.</p></div></article>
+        <article><img src="/assets/lenauheim-panorama-v1.webp" alt="Localitățile comunității văzute panoramic" width="1000" height="417" loading="lazy" decoding="async"><div><span>04</span><h3>Statistici clare</h3><p>Citiri și surse generale de trafic, fără profilarea politică a vizitatorilor.</p></div></article>
+      </div>
+    </section>
   </main>
 
   <footer class="marketing-footer"><strong>Vocea Locală Lenauheim</strong><span>Inițiativă civică independentă a persoanei fizice Droc Cristian Dan. Publicația nu este afiliată Primăriei Comunei Lenauheim.</span><nav class="legal-links"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav></footer>
