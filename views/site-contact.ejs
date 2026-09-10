@@ -14,5 +14,5 @@
     <% if (!user.email_contact && !user.telefon_contact) { %><p>Candidatul nu a publicat încă date de contact.</p><% } %>
     <p class="note">Date publicate voluntar de candidat. Mesajele sunt trimise prin aplicația ta de email sau telefon; această pagină nu colectează mesaje.</p>
   </main>
-  <footer class="newspaper-footer"><p><%= electoralMode ? `Material electoral finanțat de ${transparenta.finantat_de}. ` : 'Publicație civică. ' %>Conținut asumat de <%= transparenta.responsabil_editorial %>.</p><nav class="footer-links"><a href="/site/<%= user.subdomeniu %>/transparenta">Transparență</a><a href="/legal/termeni">Termeni</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/">Vocea Locală Lenauheim</a></nav></footer>
+  <footer class="newspaper-footer"><p><%= electoralMode ? `Material electoral finanțat de ${transparenta.finantat_de}. ` : 'Publicație civică. ' %>Conținut asumat de <%= transparenta.responsabil_editorial %>.</p><nav class="footer-links"><a href="/site/<%= user.subdomeniu %>/transparenta">Transparență</a><a href="/legal/termeni">Termeni</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/">Vocea Locală Lenauheim</a></nav></footer>
 </div><%- include('partials/cristianweb-credit') %></body></html>

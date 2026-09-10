@@ -32,7 +32,7 @@
       <p class="legal-warning">Furnizorul tehnic nu redactează și nu aprobă mesajul. Această delimitare nu împiedică platforma să suspende un material reclamat sau aparent ilegal.</p>
       <% if (articol) { %><p><a class="btn secondary" href="/site/<%= user.subdomeniu %>/articol/<%= articol.id %>/raporteaza">Raportează acest material</a></p><% } %>
     </section>
-    <footer class="newspaper-footer"><p><%= articol && !articol.transparenta ? 'Material publicat înaintea funcției de arhivare: sunt afișate datele curente ale candidatului.' : 'Versiunea informațiilor este păstrată la momentul publicării materialului.' %></p><nav class="footer-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a></nav></footer>
+    <footer class="newspaper-footer"><p><%= articol && !articol.transparenta ? 'Material publicat înaintea funcției de arhivare: sunt afișate datele curente ale candidatului.' : 'Versiunea informațiilor este păstrată la momentul publicării materialului.' %></p><nav class="footer-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/legal/raportare">Raportare</a></nav></footer>
   </main>
   <%- include('partials/cristianweb-credit') %>
 </body>

@@ -9,11 +9,16 @@
 <body class="public-body">
   <main class="legal-page-shell">
     <a class="back-home" href="/">← Înapoi la platformă</a>
-    <span class="eyebrow">Document operațional · versiunea <%= termsVersion %></span>
+    <span class="eyebrow">Document operațional · actualizat la <%= page.updated || termsVersion %></span>
     <h1><%= page.title %></h1><p class="legal-intro"><%= page.intro %></p>
+    <% if (page.cookies) { %>
+      <section><h2>Tehnologiile folosite</h2><div class="legal-table-wrap"><table class="legal-table"><thead><tr><th>Nume</th><th>Scop</th><th>Durată</th><th>Categorie</th></tr></thead><tbody>
+        <% page.cookies.forEach(([name, purpose, duration, category]) => { %><tr><td><code><%= name %></code></td><td><%= purpose %></td><td><%= duration %></td><td><%= category %></td></tr><% }) %>
+      </tbody></table></div></section>
+    <% } %>
     <% page.sections.forEach(([title, text]) => { %><section><h2><%= title %></h2><p><%= text %></p></section><% }) %>
-    <section class="operator-box"><h2>Responsabil editorial</h2><p><strong>Droc Cristian Dan</strong></p></section>
-    <nav class="legal-links"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/raportare">Raportare</a></nav>
+    <section class="operator-box"><h2>Responsabil și contact</h2><p><strong>Droc Cristian Dan</strong><% if (platform.legalEmail) { %><br>Email: <a href="mailto:<%= platform.legalEmail %>"><%= platform.legalEmail %></a><% } %><% if (platform.legalAddress) { %><br>Adresă: <%= platform.legalAddress %><% } %></p></section>
+    <nav class="legal-links"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/legal/raportare">Raportare</a></nav>
   </main>
 </body>
 </html>

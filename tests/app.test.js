@@ -283,6 +283,17 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     const legalTerms = await guest('/legal/termeni');
     assert.match(legalTerms.html, /Droc Cristian Dan/);
     assert.doesNotMatch(legalTerms.html, /Operator Test SRL|RO12345678/);
+    const privacy = await guest('/legal/confidentialitate');
+    assert.equal(privacy.status, 200);
+    assert.match(privacy.html, /Raportările de costuri/);
+    assert.match(privacy.html, /90 de zile/);
+    assert.match(privacy.html, /juridic@example\.test/);
+    const cookies = await guest('/legal/cookies');
+    assert.equal(cookies.status, 200);
+    assert.match(cookies.html, /sesiune\.sig/);
+    assert.match(cookies.html, /Cel mult 8 ore/);
+    assert.match(cookies.html, /nu folosim cookie-uri de publicitate sau analiză/i);
+    assert.match(listing.html, /href="\/legal\/cookies"/);
     assert.equal((await guest('/legal/inexistent')).status, 404);
   });
   await t.test('Profil și contact opțional, fără expunerea adresei de login', async () => {
