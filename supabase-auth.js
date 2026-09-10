@@ -64,6 +64,10 @@ export function updateAuthPassword(userId, password) {
   return authRequest(`admin/users/${encodeURIComponent(userId)}`, { method: 'PUT', body: { password } });
 }
 
+export function updateAuthEmail(userId, email) {
+  return authRequest(`admin/users/${encodeURIComponent(userId)}`, { method: 'PUT', body: { email, email_confirm: true } });
+}
+
 export function deleteAuthUser(userId) {
   return authRequest(`admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE' });
 }

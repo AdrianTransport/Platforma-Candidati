@@ -2,7 +2,7 @@ import express from 'express';
 import ejs from 'ejs';
 import cookieSession from 'cookie-session';
 import bcrypt from 'bcryptjs';
-import { createHmac } from 'node:crypto';
+import { createHmac, randomBytes, createHash, timingSafeEqual } from 'node:crypto';
 import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { requireRole } from './middleware/auth.js';
@@ -10,9 +10,10 @@ import { articleInput, profileInput, filterArticles, isPublished, publicationDat
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
 import { attachEditorialRoutes } from './editorial-routes.js';
-import { createAuthUserWithPassword, deleteAuthUser, signInWithPassword, updateAuthPassword } from './supabase-auth.js';
+import { createAuthUserWithPassword, deleteAuthUser, signInWithPassword, updateAuthPassword, updateAuthEmail } from './supabase-auth.js';
 import { LEGAL_PAGES } from './legal-pages.js';
 import { isPortalPublished, portalPostInput, portalPublicationDate } from './portal.js';
+import { mailConfigured, sendMail } from './mail.js';
 import {
   TERMS_VERSION,
   REPORT_STATUS,
@@ -140,6 +141,7 @@ function productionAuth() {
     createUser: createAuthUserWithPassword,
     deleteUser: deleteAuthUser,
     updatePassword: updateAuthPassword,
+    updateEmail: updateAuthEmail,
   };
 }
 
@@ -438,8 +440,80 @@ export async function createApp({
   }));
 
   app.get('/login', (req, res) => {
-    res.render('login', { eroare: null });
+    res.render('login', { eroare: null, mesaj: req.query.mesaj || null });
   });
+
+  app.get('/parola-uitata', (req, res) => {
+    ensureCsrfToken(req, res);
+    res.render('parola-uitata', { trimis: false });
+  });
+
+  app.post('/parola-uitata', safely(async (req, res) => {
+    if (!req.body?.csrf_token || req.body.csrf_token !== req.session.csrfToken) {
+      throw new ValidationError('Cererea a expirat. Reîncarcă pagina și încearcă din nou.', 403);
+    }
+    const acumMs = Date.now();
+    if (req.session.ultimaCerereResetare && acumMs - req.session.ultimaCerereResetare < 60000) {
+      throw new ValidationError('Ai cerut deja o resetare recent. Mai așteaptă un minut.', 429);
+    }
+    req.session.ultimaCerereResetare = acumMs;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const admin = db.data.users.find((u) => u.role === 'admin' && u.email.toLowerCase() === email);
+    if (admin && mailConfigured()) {
+      const tokenBrut = randomBytes(32).toString('hex');
+      admin.reset_token_hash = createHash('sha256').update(tokenBrut).digest('hex');
+      admin.reset_token_expires = new Date(acumMs + 60 * 60 * 1000).toISOString();
+      await db.write();
+      const link = `${publicBaseUrl(req)}/reseteaza-parola?token=${tokenBrut}&email=${encodeURIComponent(admin.email)}`;
+      await sendMail({
+        to: admin.email,
+        subject: 'Resetare parolă - Super Admin',
+        text: `Ai cerut resetarea parolei. Link valabil o oră: ${link}\n\nDacă nu ai cerut tu asta, ignoră acest email.`,
+        html: `<p>Ai cerut resetarea parolei contului de Super Admin.</p><p><a href="${link}">Setează o parolă nouă</a> (link valabil o oră).</p><p>Dacă nu ai cerut tu asta, ignoră acest email.</p>`,
+      }).catch(() => {});
+    }
+    res.render('parola-uitata', { trimis: true });
+  }));
+
+  app.get('/reseteaza-parola', (req, res) => {
+    ensureCsrfToken(req, res);
+    const email = String(req.query.email || '').trim().toLowerCase();
+    const token = String(req.query.token || '');
+    const admin = db.data.users.find((u) => u.role === 'admin' && u.email.toLowerCase() === email);
+    const valid = Boolean(admin?.reset_token_hash && admin.reset_token_expires && new Date(admin.reset_token_expires) > new Date());
+    res.render('reseteaza-parola', { email, token, valid });
+  });
+
+  app.post('/reseteaza-parola', safely(async (req, res) => {
+    if (!req.body?.csrf_token || req.body.csrf_token !== req.session.csrfToken) {
+      throw new ValidationError('Cererea a expirat. Reîncarcă pagina și încearcă din nou.', 403);
+    }
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const token = String(req.body.token || '');
+    const admin = db.data.users.find((u) => u.role === 'admin' && u.email.toLowerCase() === email);
+    const tokenValid = admin?.reset_token_hash && token
+      && admin.reset_token_hash.length === createHash('sha256').update(token).digest('hex').length
+      && timingSafeEqual(Buffer.from(admin.reset_token_hash), Buffer.from(createHash('sha256').update(token).digest('hex')));
+    const neexpirat = admin?.reset_token_expires && new Date(admin.reset_token_expires) > new Date();
+    if (!admin || !tokenValid || !neexpirat) {
+      return res.render('reseteaza-parola', { email, token, valid: false });
+    }
+    const parolaNoua = String(req.body.parola_noua || '');
+    if (parolaNoua.length < 12 || parolaNoua !== String(req.body.confirma_parola || '')) {
+      throw new ValidationError('Parola nouă trebuie să aibă minimum 12 caractere și să fie confirmată.');
+    }
+    if (auth && admin.auth_user_id) await auth.updatePassword(admin.auth_user_id, parolaNoua);
+    admin.password_hash = bcrypt.hashSync(parolaNoua, 12);
+    admin.password_changed_at = new Date().toISOString();
+    admin.reset_token_hash = null;
+    admin.reset_token_expires = null;
+    admin.login_attempts = 0;
+    admin.locked_until = null;
+    await db.write();
+    await compliance.audit({ actorId: admin.id, actorRole: 'admin', action: 'admin_password_reset_via_email',
+      targetType: 'admin', targetId: admin.id, details: {} });
+    res.redirect('/login?mesaj=Parola%20a%20fost%20resetata.%20Te%20poti%20autentifica.');
+  }));
 
   app.get('/legal/:page', (req, res) => {
     const page = LEGAL_PAGES[req.params.page];
@@ -453,7 +527,7 @@ export async function createApp({
     const parola = String(req.body.parola || '');
     const user = db.data.users.find((u) => u.email.toLowerCase() === email);
     if (user?.locked_until && new Date(user.locked_until) > new Date()) {
-      return res.render('login', { eroare: 'Cont blocat temporar după prea multe încercări. Încearcă din nou peste 15 minute.' });
+      return res.render('login', { eroare: 'Cont blocat temporar după prea multe încercări. Încearcă din nou peste 15 minute.', mesaj: null });
     }
     const contPermis = user?.role === 'admin'
       ? user.activ
@@ -480,7 +554,7 @@ export async function createApp({
         }
         await db.write();
       }
-      return res.render('login', { eroare: 'Email sau parola incorecte.' });
+      return res.render('login', { eroare: 'Email sau parola incorecte.', mesaj: null });
     }
     user.login_attempts = 0;
     user.locked_until = null;
@@ -560,6 +634,7 @@ export async function createApp({
       complianceMissing: Object.fromEntries(candidati.map(candidate =>
         [candidate.id, candidateComplianceMissing(candidate, platform)])),
       sondaje: ownerPolls('admin'),
+      user: db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin'),
     });
   });
 
@@ -828,6 +903,39 @@ export async function createApp({
     await db.write();
     res.redirect('/admin?mesaj=Parola%20Super%20Adminului%20a%20fost%20schimbata.');
   });
+
+  app.post('/admin/email', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const admin = db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin');
+    if (!admin) return res.redirect('/admin?eroare=Cont%20invalid.');
+    const parolaActuala = String(req.body.parola_actuala || '');
+    let parolaActualaValida = false;
+    if (auth && admin.auth_user_id) {
+      try {
+        const result = await auth.signIn(admin.email, parolaActuala);
+        parolaActualaValida = result?.user?.id === admin.auth_user_id;
+      } catch {
+        parolaActualaValida = false;
+      }
+    } else if (!auth) {
+      parolaActualaValida = bcrypt.compareSync(parolaActuala, admin.password_hash);
+    }
+    if (!parolaActualaValida) {
+      return res.redirect('/admin?eroare=Parola%20actuala%20nu%20este%20corecta.');
+    }
+    const emailNou = String(req.body.email_nou || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNou)) {
+      return res.redirect('/admin?eroare=Adresa%20de%20email%20nu%20este%20valida.');
+    }
+    if (db.data.users.some((u) => u.id !== admin.id && u.email.toLowerCase() === emailNou)) {
+      return res.redirect('/admin?eroare=Acest%20email%20este%20deja%20folosit.');
+    }
+    if (auth && admin.auth_user_id) await auth.updateEmail(admin.auth_user_id, emailNou);
+    admin.email = emailNou;
+    await db.write();
+    await compliance.audit({ actorId: admin.id, actorRole: 'admin', action: 'admin_email_changed',
+      targetType: 'admin', targetId: admin.id, details: {} });
+    res.redirect('/admin?mesaj=Emailul%20de%20logare%20a%20fost%20schimbat.');
+  }));
 
   app.post('/admin/candidati/:id/status', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === Number(req.params.id));

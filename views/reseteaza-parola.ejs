@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resetează parola - Platforma campanie</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <a class="back-home" href="/login">← Înapoi la autentificare</a>
+    <h1>Resetează parola</h1>
+    <div class="card">
+      <% if (!valid) { %>
+        <div class="eroare">Linkul de resetare este invalid sau a expirat. Cere unul nou din pagina <a href="/parola-uitata">Am uitat parola</a>.</div>
+      <% } else { %>
+        <form method="POST" action="/reseteaza-parola">
+          <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+          <input type="hidden" name="email" value="<%= email %>">
+          <input type="hidden" name="token" value="<%= token %>">
+          <label>Parola nouă</label>
+          <input type="password" name="parola_noua" minlength="12" required autocomplete="new-password">
+          <label>Confirmă parola nouă</label>
+          <input type="password" name="confirma_parola" minlength="12" required autocomplete="new-password">
+          <button type="submit" style="width:100%">Setează parola nouă</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>

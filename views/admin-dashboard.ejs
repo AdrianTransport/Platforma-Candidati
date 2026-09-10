@@ -41,6 +41,13 @@
         <label>Confirmă parola<input type="password" name="confirma_parola" minlength="12" required autocomplete="new-password"></label>
         <div class="form-actions"><button class="secondary" type="submit">Schimbă parola</button></div>
       </form>
+
+      <form method="POST" action="/admin/email" class="form-grid form-grid-3">
+        <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+        <label>Parola actuală<input type="password" name="parola_actuala" required autocomplete="current-password"></label>
+        <label>Email nou de logare<input type="email" name="email_nou" required value="<%= user.email %>"></label>
+        <div class="form-actions"><button class="secondary" type="submit">Schimbă emailul</button></div>
+      </form>
     </details>
 
     <details class="card admin-create" open>

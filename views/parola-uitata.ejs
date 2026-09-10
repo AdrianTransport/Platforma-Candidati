@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Am uitat parola - Platforma campanie</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <a class="back-home" href="/login">← Înapoi la autentificare</a>
+    <h1>Am uitat parola</h1>
+    <div class="card">
+      <% if (trimis) { %>
+        <p class="parola-noua">Dacă adresa introdusă corespunde unui cont de Super Admin, a fost trimis un email cu instrucțiuni de resetare. Verifică și folderul de spam.</p>
+      <% } else { %>
+        <p class="note">Introdu adresa de email a contului de Super Admin. Dacă există, primești un link valabil o oră pentru a-ți seta o parolă nouă.</p>
+        <form method="POST" action="/parola-uitata">
+          <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+          <label>Email</label>
+          <input type="email" name="email" required autofocus>
+          <button type="submit" style="width:100%">Trimite linkul de resetare</button>
+        </form>
+      <% } %>
+    </div>
+  </div>
+</body>
+</html>
