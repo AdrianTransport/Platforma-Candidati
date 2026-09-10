@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Statistici costuri <%= tip === 'apa' ? 'apă' : 'salubritate' %> — Vocea Locală Lenauheim</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="public-body">
+  <main class="legal-page-shell">
+    <a class="back-home" href="/">← Înapoi la platformă</a>
+    <span class="eyebrow">Date agregate, anonime</span>
+    <h1>Cât plătesc locuitorii pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %></h1>
+    <nav style="display:flex; gap:10px; margin-bottom:14px">
+      <a class="btn <%= tip === 'apa' ? '' : 'secondary' %>" href="/statistici/apa">Apă</a>
+      <a class="btn <%= tip === 'salubritate' ? '' : 'secondary' %>" href="/statistici/salubritate">Salubritate</a>
+    </nav>
+    <p class="note">Sumele sunt afișate ca interval, nu exact, iar rezultatele apar doar acolo unde au răspuns suficiente persoane — ca nicio raportare individuală să nu poată fi identificată. <a href="/raportare/<%= tip %>">Adaugă o raportare</a></p>
+
+    <% if (total) { %>
+      <div class="card" style="text-align:center">
+        <p class="note" style="margin:0">Total raportat de cetățeni, <%= tip === 'apa' ? 'apă' : 'salubritate' %> (<%= total.numarRaspunsuri %> raportări)</p>
+        <p style="font-size:32px; font-weight:800; margin:6px 0 0"><%= total.suma.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> lei</p>
+      </div>
+    <% } else { %>
+      <div class="card"><p class="note" style="margin:0">Totalul apare public după ce sunt cel puțin 5 raportări trimise.</p></div>
+    <% } %>
+
+    <% if (!grupuri.length) { %>
+      <div class="card"><p>Încă nu sunt suficiente răspunsuri publicate pentru nicio localitate/perioadă.</p></div>
+    <% } %>
+
+    <% grupuri.forEach(g => { %>
+      <div class="card">
+        <h2 style="margin-top:0"><%= g.localitate %> · <%= g.perioada %></h2>
+        <p class="note"><%= g.numarRaspunsuri %> răspunsuri</p>
+        <table>
+          <tr><th>Suma mediană</th><td><%= g.sumaMedianaInterval %></td></tr>
+          <tr><th>Interval minim</th><td><%= g.sumaMinInterval %></td></tr>
+          <tr><th>Interval maxim</th><td><%= g.sumaMaxInterval %></td></tr>
+        </table>
+      </div>
+    <% }) %>
+  </main>
+</body>
+</html>

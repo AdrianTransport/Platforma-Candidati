@@ -39,10 +39,12 @@ export async function initDB() {
   db.data.articole ||= [];
   db.data.portal_posts ||= [];
   db.data.polls ||= [];
+  db.data.raportari_costuri ||= [];
   db.data.nextUserId ||= 1;
   db.data.nextArticolId ||= 1;
   db.data.nextPortalPostId ||= 1;
   db.data.nextPollId ||= 1;
+  db.data.nextRaportareId ||= 1;
 
   for (const user of db.data.users) {
     user.login_attempts ||= 0;

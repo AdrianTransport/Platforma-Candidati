@@ -10,7 +10,7 @@
   <div class="app-shell app-shell-wide">
     <div class="topbar admin-topbar">
       <div><span class="eyebrow">Administrare platformă</span><h1>Super Admin</h1></div>
-      <div class="topbar-actions"><a class="btn secondary" href="/" target="_blank">Vezi site-ul public</a><form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Ieșire</button></form></div>
+      <div class="topbar-actions"><a class="btn secondary" href="/admin/raportari-costuri">Raportări costuri</a><a class="btn secondary" href="/" target="_blank">Vezi site-ul public</a><form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Ieșire</button></form></div>
     </div>
 
     <div class="stats-grid admin-stats">

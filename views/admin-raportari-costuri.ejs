@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Raportări costuri — Super Admin</title><link rel="stylesheet" href="/style.css"></head>
+<body><main class="app-shell app-shell-wide">
+  <div class="topbar"><div><span class="eyebrow">Super Admin · date confidențiale</span><h1>Raportări costuri</h1></div><a class="btn secondary" href="/admin">Înapoi la admin</a></div>
+  <p class="note">Aceste date (inclusiv numele) sunt vizibile doar aici, niciodată public. Se șterg automat după <%= retentionDays %> de zile de la trimitere.</p>
+  <nav style="display:flex; gap:10px; margin-bottom:16px">
+    <a class="btn <%= tip === 'apa' ? '' : 'secondary' %>" href="/admin/raportari-costuri?tip=apa">Apă</a>
+    <a class="btn <%= tip === 'salubritate' ? '' : 'secondary' %>" href="/admin/raportari-costuri?tip=salubritate">Salubritate</a>
+  </nav>
+  <div class="card table-card">
+    <% if (!lista.length) { %>
+      <p class="note">Nicio raportare momentan.</p>
+    <% } else { %>
+      <div class="responsive-table">
+      <table>
+        <thead><tr><th>Nume</th><th>Localitate</th><th>Perioadă</th><th>Sumă</th><th><%= tip === 'apa' ? 'Consum/Persoane' : 'Tip/Persoane' %></th><th>Trimis</th></tr></thead>
+        <tbody>
+          <% lista.forEach(r => { %>
+            <tr>
+              <td><%= r.nume %></td>
+              <td><%= r.localitate %></td>
+              <td><%= r.perioada %></td>
+              <td><%= r.suma.toFixed(2) %> lei</td>
+              <td><% if (tip === 'apa') { %><%= r.consum_mc ? r.consum_mc + ' m³' : '—' %> / <%= r.numar_persoane || '—' %><% } else { %><%= r.tip_platitor === 'fizica' ? 'Fizică' : 'Juridică' %> / <%= r.numar_persoane || '—' %><% } %></td>
+              <td><%= new Date(r.created_at).toLocaleDateString('ro-RO') %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      </div>
+    <% } %>
+  </div>
+</main></body>
+</html>

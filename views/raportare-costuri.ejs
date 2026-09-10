@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raportare costuri <%= tip === 'apa' ? 'apă' : 'salubritate' %> — Vocea Locală Lenauheim</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="public-body">
+  <main class="legal-page-shell">
+    <a class="back-home" href="/">← Înapoi la platformă</a>
+    <span class="eyebrow">Raportare cetățenească · date confidențiale</span>
+    <h1>Cât plătești pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %>?</h1>
+
+    <% if (trimis) { %>
+      <div class="card">
+        <p class="parola-noua">Mulțumim! Raportarea a fost înregistrată. Datele individuale nu sunt publicate — vezi rezultatele agregate la <a href="/statistici/<%= tip %>">statistici <%= tip === 'apa' ? 'apă' : 'salubritate' %></a>.</p>
+      </div>
+    <% } else { %>
+      <div class="card">
+        <p class="note">
+          Numele este colectat exclusiv pentru verificarea autenticității răspunsului și prevenirea înregistrărilor duplicate.
+          Numele va fi păstrat confidențial în baza de date, va fi accesibil numai administratorului platformei și nu va fi
+          afișat public. În rezultatele publicate vor apărea numai un interval al sumei (nu suma exactă), localitatea,
+          serviciul și perioada selectată — iar rezultatele nu se afișează deloc dacă sunt prea puține răspunsuri într-un
+          grup, ca să nu poată fi identificată nicio persoană. Datele vor fi șterse automat în maximum 90 de zile de la trimitere.
+        </p>
+      </div>
+
+      <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
+
+      <div class="card">
+        <form method="POST" action="/raportare/<%= tip %>">
+          <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+          <div class="form-grid form-grid-2">
+            <label>Localitate
+              <select name="localitate" required>
+                <option value="">Alege...</option>
+                <% localitati.forEach(l => { %><option value="<%= l %>"><%= l %></option><% }) %>
+              </select>
+            </label>
+            <label>Perioada (ex: 2026 trimestrul 3)<input name="perioada" required maxlength="40"></label>
+
+            <% if (tip === 'apa') { %>
+              <label>Consum (m³) — opțional<input type="number" step="0.1" min="0" name="consum_mc"></label>
+              <label>Numărul persoanelor din gospodărie — opțional<input type="number" min="1" max="30" name="numar_persoane"></label>
+            <% } else { %>
+              <label>Persoană fizică sau juridică
+                <select name="tip_platitor" required>
+                  <option value="">Alege...</option>
+                  <option value="fizica">Persoană fizică</option>
+                  <option value="juridica">Persoană juridică</option>
+                </select>
+              </label>
+              <label>Numărul persoanelor taxate — opțional<input type="number" min="1" max="30" name="numar_persoane"></label>
+            <% } %>
+
+            <label>Suma plătită (lei)<input type="number" step="0.01" min="0.01" name="suma" required></label>
+            <label>Numele tău (stocat privat, nu se publică)<input name="nume" required maxlength="120"></label>
+
+            <label class="full-field">Observații — opțional<textarea name="observatii" rows="3" maxlength="500"></textarea></label>
+
+            <label class="full-field" style="display:flex; gap:10px; align-items:flex-start; font-weight:400">
+              <input type="checkbox" name="acord_stocare_nume" required style="width:auto; margin-top:3px">
+              <span>Am citit informațiile de mai sus și sunt de acord cu stocarea confidențială a numelui meu pentru verificarea răspunsului.</span>
+            </label>
+
+            <div class="form-actions"><button type="submit">Trimite raportarea</button></div>
+          </div>
+        </form>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

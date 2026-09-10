@@ -13,7 +13,7 @@
     <a class="portal-modern-logo" href="/"><strong>Vocea Locală Lenauheim</strong><span>Bulgăruș · Lenauheim · Grabaț</span></a>
     <div class="portal-masthead-side"><span class="portal-village-mark" aria-hidden="true">⌂♙</span><small>Știri locale.<br>Oameni. Idei. Viitor comun.</small><div class="public-social-icons"><% [['facebook','f',portalOwner?.facebook_url],['instagram','◎',portalOwner?.instagram_url],['tiktok','♪',portalOwner?.tiktok_url]].forEach(([network,icon,url])=>{ %><% if(url){ %><a class="social-icon <%= network %>" href="<%= url %>" target="_blank" rel="noopener noreferrer" aria-label="<%= network %>"><%= icon %></a><% } else { %><span class="social-icon <%= network %> is-unconfigured" title="Se configurează din Super Admin" aria-label="<%= network %> neconfigurat"><%= icon %></span><% } %><% }) %></div></div>
   </header>
-  <nav class="portal-modern-nav" aria-label="Meniul principal"><a href="/">⌂</a><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/candidati">Oameni</a><a href="/sectiune/evenimente">Timp liber</a><a href="/login" class="portal-nav-login">Administrare</a></nav>
+  <nav class="portal-modern-nav" aria-label="Meniul principal"><a href="/">⌂</a><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/candidati">Oameni</a><a href="/sectiune/evenimente">Timp liber</a><a href="/statistici/apa">Costuri</a><a href="/login" class="portal-nav-login">Administrare</a></nav>
 
   <main>
     <% if (principal) { %>
@@ -27,7 +27,10 @@
 
     <section class="portal-community-row">
       <div class="portal-community-poll"><% if (sondaj) { %><%- include('partials/poll', { poll: sondaj }) %><% } else { %><span class="eyebrow">Sondajul comunității</span><h2>Spune-ne ce contează pentru tine</h2><p>Super Adminul poate publica aici o întrebare pentru locuitorii comunei.</p><a href="/login">Administrare sondaj →</a><% } %></div>
+      <% /* Sectiunea "Cei mai activi candidati" e ascunsa temporar - decomenteaza mai jos ca sa o repui. */ %>
+      <% if (false) { %>
       <div class="portal-active-people"><header><h2>Cei mai activi candidați în comunitate</h2><a href="/candidati">Vezi toți candidații →</a></header><div><% candidatiPublici.slice(0,4).forEach(c=>{ %><a href="/site/<%= c.subdomeniu %>"><span class="portal-person-photo"><% if(c.fotografie_profil_url){ %><img src="<%= c.fotografie_profil_url %>" alt="<%= c.nume_candidat %>" loading="lazy" decoding="async"><% } else { %><b><%= c.nume_candidat.split(' ').map(p=>p[0]).slice(0,2).join('') %></b><% } %></span><strong><%= c.nume_candidat %></strong><small><%= c.zona || c.judet %></small><em>Vezi profilul →</em></a><% }) %></div></div>
+      <% } %>
     </section>
 
     <section class="portal-community-signature"><div class="portal-community-photo" role="img" aria-label="Panoramă a comunității Lenauheim"></div><blockquote>Trei localități.<br><strong>O singură comunitate.</strong></blockquote><span class="portal-village-mark" aria-hidden="true">⌂♙</span><p><strong>Bulgăruș · Lenauheim · Grabaț.</strong><br>Oameni care construiesc împreună o comunitate mai bună.</p></section>

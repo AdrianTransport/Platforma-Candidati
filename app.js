@@ -7,6 +7,7 @@ import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { requireRole } from './middleware/auth.js';
 import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, textField, ValidationError } from './publication.js';
+import { raportareInput, statisticiPublice, totalPublic, purjeazaRaportariExpirate, LOCALITATI, RETENTION_DAYS } from './cost-reports.js';
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
 import { attachEditorialRoutes } from './editorial-routes.js';
@@ -521,6 +522,60 @@ export async function createApp({
     setPublicCdnCache(res, { maxAge: 3600, stale: 86400 });
     res.render('legal-page', { page });
   });
+
+  app.get('/raportare/:tip(apa|salubritate)', (req, res) => {
+    ensureCsrfToken(req, res);
+    res.set('Cache-Control', 'private, no-store');
+    res.render('raportare-costuri', { tip: req.params.tip, localitati: LOCALITATI, eroare: null, trimis: false });
+  });
+
+  app.post('/raportare/:tip(apa|salubritate)', safely(async (req, res) => {
+    if (!req.body?.csrf_token || req.body.csrf_token !== req.session.csrfToken) {
+      throw new ValidationError('Cererea a expirat. Reîncarcă pagina și încearcă din nou.', 403);
+    }
+    const acumMs = Date.now();
+    if (req.session.ultimaRaportareCosturi && acumMs - req.session.ultimaRaportareCosturi < 30000) {
+      throw new ValidationError('Ai trimis deja o raportare recent. Mai așteaptă puțin.', 429);
+    }
+    let fields;
+    try {
+      fields = raportareInput(req.body, req.params.tip);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        return res.status(error.status).render('raportare-costuri', {
+          tip: req.params.tip, localitati: LOCALITATI, eroare: error.message, trimis: false,
+        });
+      }
+      throw error;
+    }
+    req.session.ultimaRaportareCosturi = acumMs;
+    purjeazaRaportariExpirate(db, acumMs);
+    fields.id = db.data.nextRaportareId++;
+    db.data.raportari_costuri.push(fields);
+    await db.write();
+    res.render('raportare-costuri', { tip: req.params.tip, localitati: LOCALITATI, eroare: null, trimis: true });
+  }));
+
+  app.get('/statistici/:tip(apa|salubritate)', safely(async (req, res) => {
+    const auPurjat = purjeazaRaportariExpirate(db, Date.now());
+    if (auPurjat) await db.write();
+    setPublicCdnCache(res, { maxAge: 1800, stale: 21600 });
+    res.render('statistici-costuri', {
+      tip: req.params.tip,
+      grupuri: statisticiPublice(db.data.raportari_costuri, req.params.tip),
+      total: totalPublic(db.data.raportari_costuri, req.params.tip),
+    });
+  }));
+
+  app.get('/admin/raportari-costuri', requireRole('admin'), requireActiveAccount, safely(async (req, res) => {
+    const auPurjat = purjeazaRaportariExpirate(db, Date.now());
+    if (auPurjat) await db.write();
+    const tip = ['apa', 'salubritate'].includes(req.query.tip) ? req.query.tip : 'apa';
+    const lista = db.data.raportari_costuri
+      .filter((r) => r.tip === tip)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    res.render('admin-raportari-costuri', { tip, lista, retentionDays: RETENTION_DAYS });
+  }));
 
   app.post('/login', async (req, res) => {
     const email = String(req.body.email || '').trim().toLowerCase();

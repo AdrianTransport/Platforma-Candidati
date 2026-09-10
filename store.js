@@ -4,8 +4,8 @@ import { readSupabaseState, useSupabase, writeSupabaseState } from './supabase-s
 
 const LOCAL_FILE = path.join(process.cwd(), 'data', 'db.json');
 const DEFAULT_DATA = {
-  users: [], articole: [], portal_posts: [], polls: [],
-  nextUserId: 1, nextArticolId: 1, nextPortalPostId: 1, nextPollId: 1,
+  users: [], articole: [], portal_posts: [], polls: [], raportari_costuri: [],
+  nextUserId: 1, nextArticolId: 1, nextPortalPostId: 1, nextPollId: 1, nextRaportareId: 1,
 };
 
 // "process.env.NETLIFY" NU e setat garantat in interiorul unei functii Netlify -
