@@ -7,7 +7,7 @@ import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { requireRole } from './middleware/auth.js';
 import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, textField, ValidationError } from './publication.js';
-import { raportareInput, statisticiPublice, totalPublic, purjeazaRaportariExpirate, limitaRaportariDepasita,
+import { raportareInput, moderareRaportareInput, statisticiPublice, totalPublic, purjeazaRaportariExpirate, limitaRaportariDepasita,
   descriereDispozitiv, LOCALITATI, RETENTION_DAYS, MAX_RAPORTARI_PER_IP } from './cost-reports.js';
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
@@ -593,7 +593,33 @@ export async function createApp({
     const lista = db.data.raportari_costuri
       .filter((r) => r.tip === tip)
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    res.render('admin-raportari-costuri', { tip, lista, retentionDays: RETENTION_DAYS });
+    res.render('admin-raportari-costuri', {
+      tip, lista, retentionDays: RETENTION_DAYS, localitati: LOCALITATI,
+      mesaj: req.query.mesaj || '', eroare: req.query.eroare || '',
+    });
+  }));
+
+  app.post('/admin/raportari-costuri/:id(\\d+)/modifica', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const raportare = db.data.raportari_costuri.find((r) => r.id === Number(req.params.id));
+    if (!raportare) return res.redirect('/admin/raportari-costuri?eroare=Raportarea%20nu%20mai%20exista.');
+    const inainte = { localitate: raportare.localitate, perioada: raportare.perioada, suma: raportare.suma };
+    const fields = moderareRaportareInput(req.body, raportare.tip);
+    Object.assign(raportare, fields);
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'cost_report_updated',
+      targetType: 'cost_report', targetId: raportare.id, details: { inainte, dupa: fields } });
+    res.redirect(`/admin/raportari-costuri?tip=${raportare.tip}&mesaj=Raportarea%20a%20fost%20corectata.`);
+  }));
+
+  app.post('/admin/raportari-costuri/:id(\\d+)/sterge', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const raportare = db.data.raportari_costuri.find((r) => r.id === Number(req.params.id));
+    if (!raportare) return res.redirect('/admin/raportari-costuri?eroare=Raportarea%20nu%20mai%20exista.');
+    db.data.raportari_costuri = db.data.raportari_costuri.filter((r) => r.id !== raportare.id);
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'cost_report_deleted',
+      targetType: 'cost_report', targetId: raportare.id,
+      details: { tip: raportare.tip, localitate: raportare.localitate, perioada: raportare.perioada, suma: raportare.suma } });
+    res.redirect(`/admin/raportari-costuri?tip=${raportare.tip}&mesaj=Raportarea%20a%20fost%20stearsa.`);
   }));
 
   app.post('/login', async (req, res) => {

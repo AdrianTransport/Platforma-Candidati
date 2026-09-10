@@ -404,6 +404,34 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal((await admin(url, { csrf_token: adminToken, status: 'sters', version: current.version })).status, 303);
     assert.match((await admin('/admin/comentarii?status=sters')).html, /Istoric moderare \(3\)/);
   });
+  await t.test('Super Admin corectează și șterge raportări de cost, cu rol și CSRF verificate', async () => {
+    db.data.raportari_costuri.push({
+      id: 1, tip: 'apa', localitate: 'Bulgăruș', perioada: 'iulie 2026', suma: 99999,
+      consum_mc: 12, numar_persoane: 2, mod_raspuns: 'nume', nume: 'Nume privat',
+      ip_hash: 'hash-privat', dispozitiv: 'Calculator · Windows · Chrome',
+      created_at: new Date(clock).toISOString(),
+    });
+    const pagina = await admin('/admin/raportari-costuri?tip=apa');
+    assert.equal(pagina.status, 200);
+    assert.match(pagina.html, /Corectează/);
+    assert.match(pagina.html, /Șterge/);
+    assert.equal((await cand('/admin/raportari-costuri/1/sterge', { csrf_token: candidateToken })).status, 403);
+    assert.equal((await admin('/admin/raportari-costuri/1/modifica', {
+      localitate: 'Lenauheim', perioada: 'august 2026', suma: '245.50', consum_mc: '11.5', numar_persoane: '3',
+    })).status, 403);
+    const modificata = await admin('/admin/raportari-costuri/1/modifica', {
+      csrf_token: adminToken, localitate: 'Lenauheim', perioada: 'august 2026', suma: '245.50',
+      consum_mc: '11.5', numar_persoane: '3',
+    });
+    assert.equal(modificata.status, 302);
+    assert.equal(db.data.raportari_costuri[0].suma, 245.5);
+    assert.equal(db.data.raportari_costuri[0].nume, 'Nume privat');
+    assert.equal(db.data.raportari_costuri[0].ip_hash, 'hash-privat');
+    const stearsa = await admin('/admin/raportari-costuri/1/sterge', { csrf_token: adminToken });
+    assert.equal(stearsa.status, 302);
+    assert.equal(db.data.raportari_costuri.length, 0);
+    assert.doesNotMatch((await guest('/statistici/apa')).html, /august 2026/);
+  });
   await t.test('Sondaje separate pentru portal și candidat, vot unic și vitrină filtrabilă', async () => {
     const portalPoll = await admin('/admin/sondaje', { csrf_token: adminToken,
       intrebare: 'Care este prioritatea comunității?', optiuni: 'Drumuri\nȘcoli\nCurățenie', rezultate_publice: 'on' });

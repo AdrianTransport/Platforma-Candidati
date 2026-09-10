@@ -4,6 +4,8 @@
 <body><main class="app-shell app-shell-wide">
   <div class="topbar"><div><span class="eyebrow">Super Admin · date confidențiale</span><h1>Raportări costuri</h1></div><a class="btn secondary" href="/admin">Înapoi la admin</a></div>
   <p class="note">Datele individuale (inclusiv numele și dispozitivul comunicat voluntar) sunt vizibile doar aici și se șterg după <%= retentionDays %> de zile. Sumele continuă să existe numai în statistica anonimă.</p>
+  <% if (mesaj) { %><div class="parola-noua"><%= mesaj %></div><% } %>
+  <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
   <nav style="display:flex; gap:10px; margin-bottom:16px">
     <a class="btn <%= tip === 'apa' ? '' : 'secondary' %>" href="/admin/raportari-costuri?tip=apa">Apă</a>
     <a class="btn <%= tip === 'salubritate' ? '' : 'secondary' %>" href="/admin/raportari-costuri?tip=salubritate">Salubritate</a>
@@ -14,7 +16,7 @@
     <% } else { %>
       <div class="responsive-table">
       <table>
-        <thead><tr><th>Nume</th><th>Localitate</th><th>Perioadă</th><th>Sumă</th><th><%= tip === 'apa' ? 'Consum/Persoane' : 'Tip/Persoane' %></th><th>Dispozitiv</th><th>Trimis</th></tr></thead>
+        <thead><tr><th>Nume</th><th>Localitate</th><th>Perioadă</th><th>Sumă</th><th><%= tip === 'apa' ? 'Consum/Persoane' : 'Tip/Persoane' %></th><th>Dispozitiv</th><th>Trimis</th><th>Moderare</th></tr></thead>
         <tbody>
           <% lista.forEach(r => { %>
             <tr>
@@ -25,6 +27,28 @@
               <td><% if (tip === 'apa') { %><%= r.consum_mc ? r.consum_mc + ' m³' : '—' %> / <%= r.numar_persoane || '—' %><% } else { %><%= r.tip_platitor === 'fizica' ? 'Fizică' : 'Juridică' %> / <%= r.numar_persoane || '—' %><% } %></td>
               <td><%= r.dispozitiv || 'Necomunicat' %></td>
               <td><%= new Date(r.created_at).toLocaleDateString('ro-RO') %></td>
+              <td>
+                <details>
+                  <summary class="btn secondary">Corectează</summary>
+                  <form method="POST" action="/admin/raportari-costuri/<%= r.id %>/modifica" style="min-width:240px; margin-top:10px">
+                    <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+                    <label>Localitate<select name="localitate" required><% localitati.forEach(localitate => { %><option value="<%= localitate %>" <%= r.localitate === localitate ? 'selected' : '' %>><%= localitate %></option><% }) %></select></label>
+                    <label>Perioadă<input name="perioada" maxlength="40" required value="<%= r.perioada %>"></label>
+                    <label>Sumă (lei)<input type="number" name="suma" min="0.01" max="100000" step="0.01" required value="<%= r.suma %>"></label>
+                    <% if (tip === 'apa') { %>
+                      <label>Consum m³<input type="number" name="consum_mc" min="0" max="10000" step="0.01" value="<%= r.consum_mc ?? '' %>"></label>
+                    <% } else { %>
+                      <label>Tip plătitor<select name="tip_platitor" required><option value="fizica" <%= r.tip_platitor === 'fizica' ? 'selected' : '' %>>Persoană fizică</option><option value="juridica" <%= r.tip_platitor === 'juridica' ? 'selected' : '' %>>Persoană juridică</option></select></label>
+                    <% } %>
+                    <label>Număr persoane<input type="number" name="numar_persoane" min="1" max="30" step="1" value="<%= r.numar_persoane ?? '' %>"></label>
+                    <button type="submit">Salvează corectarea</button>
+                  </form>
+                </details>
+                <form method="POST" action="/admin/raportari-costuri/<%= r.id %>/sterge" onsubmit="return confirm('Ștergi definitiv această raportare și o elimini din statistici?')" style="margin-top:8px">
+                  <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+                  <button class="danger" type="submit">Șterge</button>
+                </form>
+              </td>
             </tr>
           <% }) %>
         </tbody>

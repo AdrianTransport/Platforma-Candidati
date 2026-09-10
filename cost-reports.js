@@ -133,6 +133,37 @@ export function raportareInput(body, tip) {
   return { ...comun, tip_platitor: tipPlatitor, numar_persoane };
 }
 
+// Super Adminul poate corecta numai datele folosite în statistică. Datele
+// confidențiale ale persoanei (nume, IP, dispozitiv) rămân nemodificate.
+export function moderareRaportareInput(body, tip) {
+  if (!['apa', 'salubritate'].includes(tip)) throw new ValidationError('Tip de raportare invalid.');
+  const localitate = textField(body.localitate, 'Localitate', 60, true);
+  if (!LOCALITATI.includes(localitate)) throw new ValidationError('Localitate invalidă.');
+  const perioada = textField(body.perioada, 'Perioadă', 40, true);
+  const suma = Number(String(body.suma ?? '').replace(',', '.').trim());
+  if (!Number.isFinite(suma) || suma <= 0 || suma > 100000) {
+    throw new ValidationError('Suma trebuie să fie un număr valid, mai mare decât 0 și de cel mult 100.000 lei.');
+  }
+  const persoaneBruta = String(body.numar_persoane ?? '').trim();
+  const numar_persoane = persoaneBruta ? Number(persoaneBruta) : null;
+  if (numar_persoane !== null && (!Number.isInteger(numar_persoane) || numar_persoane < 1 || numar_persoane > 30)) {
+    throw new ValidationError('Numărul de persoane trebuie să fie un întreg valid.');
+  }
+  if (tip === 'apa') {
+    const consumBruta = String(body.consum_mc ?? '').replace(',', '.').trim();
+    const consum_mc = consumBruta ? Number(consumBruta) : null;
+    if (consum_mc !== null && (!Number.isFinite(consum_mc) || consum_mc < 0 || consum_mc > 10000)) {
+      throw new ValidationError('Consumul în m³ trebuie să fie un număr valid.');
+    }
+    return { localitate, perioada, suma, consum_mc, numar_persoane };
+  }
+  const tip_platitor = String(body.tip_platitor || '').trim();
+  if (!['fizica', 'juridica'].includes(tip_platitor)) {
+    throw new ValidationError('Alege dacă raportarea este pentru persoană fizică sau juridică.');
+  }
+  return { localitate, perioada, suma, tip_platitor, numar_persoane };
+}
+
 // Suma totala raportata pentru un tip (apa/salubritate), afisata public.
 // Aplicam acelasi prag minim de raspunsuri ca la statisticile pe grup, ca sa
 // nu devina posibila identificarea unei persoane cand sunt foarte putine

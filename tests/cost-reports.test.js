@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { descriereDispozitiv, limitaRaportariDepasita, purjeazaRaportariExpirate,
-  raportareInput, statisticiPublice, totalPublic } from '../cost-reports.js';
+  moderareRaportareInput, raportareInput, statisticiPublice, totalPublic } from '../cost-reports.js';
 
 test('raportarea anonimă nu stochează un nume', () => {
   const raportare = raportareInput({
@@ -24,6 +24,19 @@ test('raportarea cere confirmarea informării și a caracterului voluntar', () =
     localitate: 'Grabaț', perioada: 'august 2026', suma: '200',
     mod_raspuns: 'anonim', consum_mc: '10',
   }, 'apa'), /informarea de confidențialitate/);
+});
+
+test('Super Adminul poate corecta datele statistice, dar nu poate introduce sume de ordinul milioanelor', () => {
+  assert.deepEqual(moderareRaportareInput({
+    localitate: 'Lenauheim', perioada: 'septembrie 2026', suma: '245,50',
+    consum_mc: '11,5', numar_persoane: '3',
+  }, 'apa'), {
+    localitate: 'Lenauheim', perioada: 'septembrie 2026', suma: 245.5,
+    consum_mc: 11.5, numar_persoane: 3,
+  });
+  assert.throws(() => moderareRaportareInput({
+    localitate: 'Lenauheim', perioada: 'septembrie 2026', suma: '1000000',
+  }, 'apa'), /cel mult 100\.000 lei/);
 });
 
 test('prima raportare este afișată public numai ca interval', () => {
