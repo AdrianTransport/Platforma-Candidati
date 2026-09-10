@@ -54,14 +54,16 @@ export const LEGAL_PAGES = {
   cookies: {
     title: 'Politica de cookies',
     updated: '10 septembrie 2026',
-    intro: 'Folosim numai tehnologii strict necesare pentru autentificare, securitate și funcționarea formularelor. În prezent nu folosim cookie-uri de publicitate sau analiză a comportamentului.',
+    intro: 'Folosim tehnologii strict necesare pentru autentificare, securitate și funcționarea formularelor. Reținem și alegerea de a închide informarea despre cookies. În prezent nu folosim cookie-uri de publicitate sau analiză a comportamentului.',
     cookies: [
       ['sesiune', 'Menține sesiunea de autentificare și informațiile tehnice necesare formularelor, sondajelor și reacțiilor; este protejat împotriva accesului din JavaScript.', 'Cel mult 8 ore', 'Strict necesar'],
       ['sesiune.sig', 'Verifică integritatea cookie-ului de sesiune și împiedică modificarea lui neautorizată.', 'Cel mult 8 ore', 'Strict necesar'],
+      ['vocea-cookie-notice-v1 (localStorage)', 'Reține pe acest browser închiderea informării despre cookies. Conține numai momentul expirării, fără identificator de vizitator; nu este transmis serverului.', '180 de zile; valoarea expirată este eliminată la următoarea vizită pe pagina principală', 'Preferință pentru afișarea informării'],
     ],
     sections: [
       ['Ce este un cookie', 'Un cookie este un fișier text de dimensiuni mici salvat de browser pentru ca un site să recunoască o sesiune și să păstreze în siguranță starea necesară între cereri.'],
-      ['De ce nu apare un banner de acceptare', 'Cookie-urile enumerate sunt strict necesare pentru serviciul cerut și pentru securitatea lui. Ele nu sunt folosite pentru reclamă, profilare sau analiză de marketing și nu pot fi dezactivate separat din platformă.'],
+      ['Informarea de pe pagina principală', 'La prima vizită afișăm un mesaj cu linkuri către această politică și politica de confidențialitate. Butonul „Am înțeles” închide mesajul și reține această alegere timp de 180 de zile în browser. Îl poți redeschide oricând prin „Informații despre cookies” din subsolul paginii principale. Dacă stocarea este blocată sau ștearsă, mesajul poate reapărea.'],
+      ['Cookie-uri strict necesare', 'Cookie-urile de sesiune sunt necesare pentru serviciul cerut și securitatea lui. Nu sunt folosite pentru reclamă sau profilare și nu cer consimțământ separat. Butonul „Am înțeles” confirmă citirea informării; nu reprezintă acord pentru cookie-uri opționale și nu acceptă Termenii de utilizare.'],
       ['Stocare temporară în browser', 'Editorul asistat folosește sessionStorage, care nu este cookie, pentru a păstra temporar starea unei sarcini de redactare în browserul utilizatorului autentificat. În mod normal, informația rămâne până la închiderea sesiunii filei de browser.'],
       ['Controlul din browser', 'Poți șterge sau bloca aceste date din setările browserului, dar autentificarea, protecția formularelor, sondajele ori reacțiile pot înceta să funcționeze corect. Ștergerea cookie-urilor închide, de regulă, sesiunea activă.'],
       ['Servicii și pagini externe', 'Linkurile, fonturile sau imaginile furnizate de servicii externe pot fi supuse propriilor politici și pot folosi tehnologii asupra cărora această platformă nu are control. Verifică politica serviciului respectiv înainte de a-l utiliza.'],

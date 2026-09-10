@@ -58,7 +58,16 @@
     </section>
   </main>
 
-  <footer class="marketing-footer"><strong>Vocea Locală Lenauheim</strong><span>Inițiativă civică independentă a persoanei fizice Droc Cristian Dan. Publicația nu este afiliată Primăriei Comunei Lenauheim.</span><nav class="legal-links"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav></footer>
+  <footer class="marketing-footer"><strong>Vocea Locală Lenauheim</strong><span>Inițiativă civică independentă a persoanei fizice Droc Cristian Dan. Publicația nu este afiliată Primăriei Comunei Lenauheim.</span><nav class="legal-links"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Politica de cookies</a><button class="cookie-notice-reopen" type="button" data-cookie-reopen aria-controls="cookie-notice" aria-expanded="false" hidden>Informații despre cookies</button><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav></footer>
+  <section class="cookie-notice" id="cookie-notice" aria-labelledby="cookie-notice-title" hidden>
+    <div class="cookie-notice-copy">
+      <h2 id="cookie-notice-title" tabindex="-1">Cookie-uri pe acest site</h2>
+      <p>Folosim cookie-uri strict necesare pentru autentificare, securitate și funcționarea formularelor. Nu folosim cookie-uri de publicitate sau analiză a comportamentului.</p>
+      <div class="cookie-notice-links"><a href="/legal/cookies">Citește politica de cookies</a><a href="/legal/confidentialitate">Confidențialitate</a></div>
+    </div>
+    <button type="button" class="cookie-notice-acknowledge" data-cookie-acknowledge>Am înțeles</button>
+  </section>
+  <script src="/cookie-notice.js" defer></script>
 <script>document.querySelectorAll('.portal-news-card,.portal-campaign-grid article').forEach(card=>{const link=card.querySelector('a[href]');if(!link)return;card.tabIndex=0;card.setAttribute('role','link');card.addEventListener('click',event=>{if(!event.target.closest('a,button'))location.href=link.href;});card.addEventListener('keydown',event=>{if(event.key==='Enter')location.href=link.href;});});</script>
 <%- include('partials/cristianweb-credit') %>
 </body>
