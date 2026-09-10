@@ -4,7 +4,7 @@ import { readSupabaseState, useSupabase, writeSupabaseState } from './supabase-s
 
 const LOCAL_FILE = path.join(process.cwd(), 'data', 'db.json');
 const DEFAULT_DATA = {
-  users: [], articole: [], portal_posts: [], polls: [], raportari_costuri: [],
+  users: [], articole: [], portal_posts: [], polls: [], raportari_costuri: [], raportari_costuri_arhiva: [],
   nextUserId: 1, nextArticolId: 1, nextPortalPostId: 1, nextPollId: 1, nextRaportareId: 1,
 };
 

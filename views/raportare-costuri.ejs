@@ -31,12 +31,12 @@
       <section class="cost-privacy-summary">
         <div><span>✓</span><p><strong>Poți răspunde anonim</strong>Numele nu este obligatoriu.</p></div>
         <div><span>✓</span><p><strong>Suma exactă rămâne privată</strong>Publicăm numai intervalul de 50 lei.</p></div>
-        <div><span>✓</span><p><strong>Date șterse după 90 de zile</strong>Nu le păstrăm mai mult decât este necesar.</p></div>
+        <div><span>✓</span><p><strong>Date personale șterse după 90 de zile</strong>Statistica anonimă rămâne disponibilă.</p></div>
       </section>
 
       <details class="cost-privacy-details">
         <summary>Cum îți protejăm datele?</summary>
-        <p>Poți răspunde anonim, fără să introduci un nume. Dacă alegi să completezi numele, acesta este folosit numai pentru verificarea răspunsului, poate fi văzut doar de administrator și nu este publicat niciodată. Publicul vede localitatea, perioada și un interval al sumei, nu suma exactă.</p>
+        <p>Poți răspunde anonim, fără să introduci un nume. Dacă alegi să completezi numele, acesta este folosit numai pentru verificarea răspunsului, poate fi văzut doar de administrator și nu este publicat niciodată. Publicul vede localitatea, perioada și un interval al sumei, nu suma exactă. Datele care te pot identifica sunt șterse după 90 de zile, dar statistica anonimă rămâne.</p>
       </details>
 
       <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
@@ -100,8 +100,13 @@
               <textarea name="observatii" rows="3" maxlength="500" placeholder="De exemplu: suma include restanțe sau regularizare"></textarea>
             </label>
 
+            <label class="cost-consent">
+              <input type="checkbox" name="acord_dispozitiv">
+              <span>Sunt de acord ca tipul general al dispozitivului, sistemul de operare și browserul să fie păstrate maximum 90 de zile pentru verificarea autenticității raportării. Aceste informații nu vor fi publicate.</span>
+            </label>
+
             <div class="cost-submit-row">
-              <p>Prin trimitere confirmi că informațiile completate sunt reale.</p>
+              <p>Maximum 3 raportări pentru fiecare serviciu în 90 de zile. Adresa IP nu este păstrată în clar.</p>
               <button type="submit">Trimite raportarea →</button>
             </div>
           </div>

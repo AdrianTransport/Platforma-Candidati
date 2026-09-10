@@ -7,7 +7,8 @@ import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { requireRole } from './middleware/auth.js';
 import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, textField, ValidationError } from './publication.js';
-import { raportareInput, statisticiPublice, totalPublic, purjeazaRaportariExpirate, LOCALITATI, RETENTION_DAYS } from './cost-reports.js';
+import { raportareInput, statisticiPublice, totalPublic, purjeazaRaportariExpirate, limitaRaportariDepasita,
+  descriereDispozitiv, LOCALITATI, RETENTION_DAYS, MAX_RAPORTARI_PER_IP } from './cost-reports.js';
 import { createComments, COMMENT_STATUS } from './comments.js';
 import { createEditorial, editorialImageUrl, internalImageId } from './editorial.js';
 import { attachEditorialRoutes } from './editorial-routes.js';
@@ -253,7 +254,7 @@ export async function createApp({
   }
 
   function requestIp(req) {
-    return (process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME)
+    return (process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY)
       ? req.get('x-nf-client-connection-ip') || req.socket.remoteAddress || 'unknown'
       : req.socket.remoteAddress || 'unknown';
   }
@@ -537,6 +538,13 @@ export async function createApp({
     if (req.session.ultimaRaportareCosturi && acumMs - req.session.ultimaRaportareCosturi < 30000) {
       throw new ValidationError('Ai trimis deja o raportare recent. Mai așteaptă puțin.', 429);
     }
+    const ipHash = createHmac('sha256', sessionSecret || 'secret-local-doar-pentru-development')
+      .update(`raportare-costuri-ip-v1:${requestIp(req)}`).digest('hex');
+    const auAnonimizat = purjeazaRaportariExpirate(db, acumMs);
+    if (limitaRaportariDepasita(db.data.raportari_costuri, req.params.tip, ipHash, acumMs)) {
+      if (auAnonimizat) await db.write();
+      throw new ValidationError(`Ai trimis deja numărul maxim de ${MAX_RAPORTARI_PER_IP} raportări pentru acest serviciu în ultimele ${RETENTION_DAYS} de zile.`, 429);
+    }
     let fields;
     try {
       fields = raportareInput(req.body, req.params.tip);
@@ -549,7 +557,15 @@ export async function createApp({
       throw error;
     }
     req.session.ultimaRaportareCosturi = acumMs;
-    purjeazaRaportariExpirate(db, acumMs);
+    fields.created_at = new Date(acumMs).toISOString();
+    fields.ip_hash = ipHash;
+    if (req.body.acord_dispozitiv === 'on' || req.body.acord_dispozitiv === true) {
+      fields.dispozitiv = descriereDispozitiv(req.get('user-agent'));
+      fields.dispozitiv_acord_at = fields.created_at;
+    } else {
+      fields.dispozitiv = '';
+      fields.dispozitiv_acord_at = null;
+    }
     fields.id = db.data.nextRaportareId++;
     db.data.raportari_costuri.push(fields);
     await db.write();
@@ -565,8 +581,8 @@ export async function createApp({
     res.set('Netlify-CDN-Cache-Control', 'no-store');
     res.render('statistici-costuri', {
       tip: req.params.tip,
-      grupuri: statisticiPublice(db.data.raportari_costuri, req.params.tip),
-      total: totalPublic(db.data.raportari_costuri, req.params.tip),
+      grupuri: statisticiPublice(db.data.raportari_costuri, req.params.tip, db.data.raportari_costuri_arhiva),
+      total: totalPublic(db.data.raportari_costuri, req.params.tip, db.data.raportari_costuri_arhiva),
     });
   }));
 

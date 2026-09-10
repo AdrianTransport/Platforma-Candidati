@@ -40,6 +40,7 @@ export async function initDB() {
   db.data.portal_posts ||= [];
   db.data.polls ||= [];
   db.data.raportari_costuri ||= [];
+  db.data.raportari_costuri_arhiva ||= [];
   db.data.nextUserId ||= 1;
   db.data.nextArticolId ||= 1;
   db.data.nextPortalPostId ||= 1;

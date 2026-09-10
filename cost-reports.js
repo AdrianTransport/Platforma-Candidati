@@ -1,6 +1,7 @@
 import { textField, ValidationError } from './publication.js';
 
 export const RETENTION_DAYS = 90;
+export const MAX_RAPORTARI_PER_IP = 3;
 export const MIN_RASPUNSURI_PUBLICE = 5;
 export const LOCALITATI = ['Bulgăruș', 'Lenauheim', 'Grabaț'];
 
@@ -18,14 +19,57 @@ export function esteExpirata(raportare, now = Date.now()) {
   return varstaZile > RETENTION_DAYS;
 }
 
-// Sterge efectiv (nu doar ascunde) raportarile mai vechi de termenul de
-// retentie - conformitatea GDPR ceruta cere stergere reala, nu doar o
-// promisiune in text. Returneaza true daca a sters ceva (candidat pentru
-// db.write() de catre apelant).
+// Dupa termenul de retentie, elimina inregistrarea individuala si toate
+// datele care pot identifica expeditorul. Pastreaza permanent doar o
+// statistica anonima agregata pe serviciu, localitate, perioada si interval.
 export function purjeazaRaportariExpirate(db, now = Date.now()) {
-  const inainte = db.data.raportari_costuri.length;
-  db.data.raportari_costuri = db.data.raportari_costuri.filter((r) => !esteExpirata(r, now));
-  return db.data.raportari_costuri.length !== inainte;
+  db.data.raportari_costuri_arhiva ||= [];
+  const active = [];
+  let schimbat = false;
+  for (const raportare of db.data.raportari_costuri) {
+    if (!esteExpirata(raportare, now)) {
+      active.push(raportare);
+      continue;
+    }
+    const sumaInterval = bucketSuma(raportare.suma);
+    const agregat = db.data.raportari_costuri_arhiva.find((r) => r.tip === raportare.tip
+      && r.localitate === raportare.localitate && r.perioada === raportare.perioada
+      && r.suma_interval === sumaInterval);
+    if (agregat) {
+      agregat.numar_raportari += 1;
+      agregat.suma_totala += raportare.suma;
+    } else {
+      db.data.raportari_costuri_arhiva.push({
+        tip: raportare.tip,
+        localitate: raportare.localitate,
+        perioada: raportare.perioada,
+        suma_interval: sumaInterval,
+        numar_raportari: 1,
+        suma_totala: raportare.suma,
+      });
+    }
+    schimbat = true;
+  }
+  db.data.raportari_costuri = active;
+  return schimbat;
+}
+
+export function limitaRaportariDepasita(raportari, tip, ipHash, now = Date.now()) {
+  return raportari.filter((r) => r.tip === tip && r.ip_hash === ipHash && !esteExpirata(r, now)).length
+    >= MAX_RAPORTARI_PER_IP;
+}
+
+export function descriereDispozitiv(userAgent = '') {
+  const ua = String(userAgent);
+  const dispozitiv = /iPad|Android(?!.*Mobile)/i.test(ua) ? 'Tabletă'
+    : /iPhone|iPod/i.test(ua) ? 'Telefon iPhone'
+      : /Android.*Mobile/i.test(ua) ? 'Telefon Android' : 'Calculator';
+  const sistem = /Windows/i.test(ua) ? 'Windows' : /iPhone|iPad|iPod/i.test(ua) ? 'iOS/iPadOS'
+    : /Android/i.test(ua) ? 'Android' : /Mac OS X|Macintosh/i.test(ua) ? 'macOS'
+      : /Linux/i.test(ua) ? 'Linux' : 'sistem necunoscut';
+  const browser = /Edg\//i.test(ua) ? 'Edge' : /Firefox\//i.test(ua) ? 'Firefox'
+    : /Chrome\//i.test(ua) ? 'Chrome' : /Safari\//i.test(ua) ? 'Safari' : 'browser necunoscut';
+  return `${dispozitiv} · ${sistem} · ${browser}`;
 }
 
 export function raportareInput(body, tip) {
@@ -91,35 +135,45 @@ export function raportareInput(body, tip) {
 // nu devina posibila identificarea unei persoane cand sunt foarte putine
 // raportari in total (ex: daca stii ca e un singur raspuns, suma totala
 // exacta iti spune exact cat a platit acea persoana).
-export function totalPublic(raportari, tip) {
+export function totalPublic(raportari, tip, arhiva = []) {
   const ale_tipului = raportari.filter((r) => r.tip === tip);
-  if (ale_tipului.length < MIN_RASPUNSURI_PUBLICE) return null;
+  const arhivate = arhiva.filter((r) => r.tip === tip);
+  const numarRaspunsuri = ale_tipului.length + arhivate.reduce((acc, r) => acc + r.numar_raportari, 0);
+  if (numarRaspunsuri < MIN_RASPUNSURI_PUBLICE) return null;
   return {
-    suma: ale_tipului.reduce((acc, r) => acc + r.suma, 0),
-    numarRaspunsuri: ale_tipului.length,
+    suma: ale_tipului.reduce((acc, r) => acc + r.suma, 0) + arhivate.reduce((acc, r) => acc + r.suma_totala, 0),
+    numarRaspunsuri,
   };
 }
 // Agrega raportarile pentru afisare publica - fara nume si fara sume exacte.
 // Fiecare grup devine vizibil de la prima raportare, dar suma ramane protejata
 // prin incadrarea intr-un interval de 50 lei.
-export function statisticiPublice(raportari, tip) {
+export function statisticiPublice(raportari, tip, arhiva = []) {
   const grupuri = new Map();
   for (const r of raportari.filter((r) => r.tip === tip)) {
     const cheie = `${r.localitate}__${r.perioada}`;
-    if (!grupuri.has(cheie)) grupuri.set(cheie, { localitate: r.localitate, perioada: r.perioada, raspunsuri: [] });
-    grupuri.get(cheie).raspunsuri.push(r);
+    if (!grupuri.has(cheie)) grupuri.set(cheie, { localitate: r.localitate, perioada: r.perioada, intervale: [] });
+    grupuri.get(cheie).intervale.push({ interval: bucketSuma(r.suma), numar: 1 });
+  }
+  for (const r of arhiva.filter((r) => r.tip === tip)) {
+    const cheie = `${r.localitate}__${r.perioada}`;
+    if (!grupuri.has(cheie)) grupuri.set(cheie, { localitate: r.localitate, perioada: r.perioada, intervale: [] });
+    grupuri.get(cheie).intervale.push({ interval: r.suma_interval, numar: r.numar_raportari });
   }
   return [...grupuri.values()]
     .map((g) => {
-      const sume = g.raspunsuri.map((r) => r.suma).sort((a, b) => a - b);
-      const mediana = sume[Math.floor(sume.length / 2)];
+      const intervale = g.intervale.sort((a, b) => Number(a.interval.split('-')[0]) - Number(b.interval.split('-')[0]));
+      const numarRaspunsuri = intervale.reduce((acc, r) => acc + r.numar, 0);
+      const pozitieMediana = Math.floor(numarRaspunsuri / 2);
+      let cumulative = 0;
+      const mediana = intervale.find((r) => (cumulative += r.numar) > pozitieMediana)?.interval;
       return {
         localitate: g.localitate,
         perioada: g.perioada,
-        numarRaspunsuri: g.raspunsuri.length,
-        sumaMedianaInterval: bucketSuma(mediana),
-        sumaMinInterval: bucketSuma(sume[0]),
-        sumaMaxInterval: bucketSuma(sume[sume.length - 1]),
+        numarRaspunsuri,
+        sumaMedianaInterval: mediana,
+        sumaMinInterval: intervale[0].interval,
+        sumaMaxInterval: intervale[intervale.length - 1].interval,
       };
     });
 }
