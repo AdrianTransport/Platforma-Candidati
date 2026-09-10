@@ -167,6 +167,7 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal(robots.status, 200);
     assert.match(robots.headers.get('content-type'), /text\/plain/);
     assert.match(robots.html, /Disallow: \/admin/);
+    assert.doesNotMatch(robots.html, /Disallow: \/login/);
     assert.match(robots.html, new RegExp(`Sitemap: ${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\/sitemap\\.xml`));
 
     const sitemap = await guest('/sitemap.xml');
@@ -227,7 +228,7 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
       // Știrile Super Adminului trebuie incluse chiar și fără niciun candidat activ.
       db.data.users = originalUsers.filter(user => user.role === 'admin');
       assert.deepEqual(locations((await guest('/sitemap.xml')).html).sort(), [
-        `${base}/`, `${base}/candidati`,
+        ...existingUrls.filter(url => !url.includes('/site/')),
         ...news.map(post => `${base}/actualitate/${encodeURIComponent(post.slug)}`),
       ].sort());
     } finally {
@@ -252,6 +253,118 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
       assert.ok(!(await guest('/sitemap.xml')).html.includes(entry));
     } finally {
       db.data.portal_posts = originalPosts;
+    }
+  });
+  await t.test('SEO portal: metadate unice, canonical fără tracking și sitemap pentru rubrici/statistici', async () => {
+    const publicRoutes = ['/', '/sectiune/stiri', '/sectiune/administratie', '/sectiune/comunitate',
+      '/sectiune/educatie', '/sectiune/economie', '/sectiune/evenimente', '/statistici/apa',
+      '/statistici/salubritate', '/candidati', '/legal/statut'];
+    const titles = new Set();
+    for (const route of publicRoutes) {
+      const response = await guest(`${route}?utm_source=facebook&fbclid=test`);
+      assert.equal(response.status, 200, route);
+      const head = response.html.split('</head>')[0];
+      assert.equal((head.match(/<title>/g) || []).length, 1, route);
+      assert.equal((head.match(/name="description"/g) || []).length, 1, route);
+      assert.ok(head.includes(`rel="canonical" href="${base}${route}"`), route);
+      assert.ok(head.includes(`property="og:url" content="${base}${route}"`), route);
+      assert.match(head, /name="description" content="[^"]+"/);
+      assert.match(head, /og:site_name" content="Vocea Locală Lenauheim"/);
+      assert.doesNotMatch(head, /utm_source|fbclid|noindex/);
+      assert.equal(response.headers.get('x-robots-tag'), null, route);
+      titles.add(head.match(/<title>(.*?)<\/title>/s)[1]);
+    }
+    assert.equal(titles.size, publicRoutes.length);
+    const sitemap = await guest('/sitemap.xml');
+    for (const route of publicRoutes.filter(route => route !== '/legal/statut')) {
+      assert.ok(sitemap.html.includes(`<loc>${base}${route}</loc>`), route);
+    }
+    for (const [, url] of sitemap.html.matchAll(/<loc>([^<]+)<\/loc>/g)) {
+      assert.doesNotMatch(new URL(url).pathname, /^\/(?:admin|login|dashboard|raportare|reseteaza-parola)(?:\/|$)/);
+    }
+    const home = await guest('/');
+    const website = JSON.parse(home.html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+    assert.equal(website['@type'], 'WebSite');
+    assert.equal(website.url, `${base}/`);
+
+    const previousUrl = process.env.URL;
+    try {
+      process.env.URL = 'https://vocealenauheim.ro';
+      assert.ok((await guest('/?utm_source=test')).html.includes('rel="canonical" href="https://vocealenauheim.ro/"'));
+      assert.ok((await guest('/sitemap.xml')).html.includes('<loc>https://vocealenauheim.ro/</loc>'));
+    } finally {
+      if (previousUrl === undefined) delete process.env.URL;
+      else process.env.URL = previousUrl;
+    }
+  });
+  await t.test('SEO știri: JSON-LD sigur, date persistente și aceeași adresă la distribuire', async () => {
+    const originalPosts = db.data.portal_posts;
+    const post = { id: 925, tip: 'stire', status: 'publicat', slug: 'test-seo-stire',
+      titlu: 'Știre </script><script>alert(1)</script>', rezumat: 'Rezumat "citat" & informații locale.',
+      continut: 'Textul știrii.', categorie: 'Administrație', imagine_url: '',
+      data_publicare: '2026-07-01T10:00:00Z', updated_at: '2026-07-02T10:00:00Z' };
+    try {
+      db.data.portal_posts = [post];
+      const page = await guest(`/actualitate/${post.slug}?utm_source=facebook`);
+      assert.equal(page.status, 200);
+      assert.ok(!page.html.includes('<script>alert(1)</script>'));
+      const head = page.html.split('</head>')[0];
+      assert.ok(head.includes(`rel="canonical" href="${base}/actualitate/${post.slug}"`));
+      assert.doesNotMatch(head, /utm_source/);
+      const schema = JSON.parse(head.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+      assert.equal(schema['@type'], 'NewsArticle');
+      assert.equal(schema.headline, post.titlu);
+      assert.equal(schema.datePublished, '2026-07-01T10:00:00.000Z');
+      assert.equal(schema.dateModified, '2026-07-02T10:00:00.000Z');
+      assert.equal(schema.image, undefined);
+      assert.equal(schema.author, undefined);
+      assert.match(page.html, /<time datetime="2026-07-01T10:00:00.000Z">/);
+      const sitemap = (await guest('/sitemap.xml')).html;
+      assert.ok(sitemap.includes(`<loc>${base}/actualitate/${post.slug}</loc><lastmod>2026-07-02T10:00:00.000Z</lastmod>`));
+      await guest(`/actualitate/${post.slug}`);
+      assert.equal((await guest('/sitemap.xml')).html, sitemap, 'Citirile nu schimbă lastmod');
+      post.imagine_url = '/media/fotografie-publica';
+      post.imagine_alt = 'Ședința consiliului "local"';
+      const illustrated = (await guest(`/actualitate/${post.slug}`)).html.split('</head>')[0];
+      assert.ok(illustrated.includes(`property="og:image" content="${base}/media/fotografie-publica"`));
+      assert.match(illustrated, /property="og:image:alt" content="Ședința consiliului &#34;local&#34;"/);
+      assert.match(illustrated, /name="twitter:card" content="summary_large_image"/);
+    } finally {
+      db.data.portal_posts = originalPosts;
+    }
+    const article = await guest('/site/ana/proiect/1?utm_source=facebook');
+    assert.ok(article.html.includes(`rel="canonical" href="${base}/site/ana/articol/1"`));
+    assert.ok(article.html.includes(`property="og:url" content="${base}/site/ana/articol/1"`));
+  });
+  await t.test('SEO: noindex pentru administrare, resetare, formulare și previzualizări private', async () => {
+    for (const route of ['/login', '/parola-uitata', '/reseteaza-parola?token=test&email=test@example.test',
+      '/admin', '/dashboard', '/activare', '/raportare/apa', '/site/ana/articol/1/raporteaza']) {
+      const response = await guest(route);
+      assert.ok(response.status < 500, route);
+      assert.equal(response.headers.get('x-robots-tag'), 'noindex, nofollow', route);
+    }
+    const preview = await cand('/dashboard/articol/1/preview');
+    assert.equal(preview.status, 200);
+    assert.equal(preview.headers.get('x-robots-tag'), 'noindex, nofollow');
+    assert.doesNotMatch(preview.html, /rel="canonical"/);
+  });
+  await t.test('SEO candidați: pagina 2 are canonical propriu, căutările sunt noindex', async () => {
+    const originalUsers = db.data.users;
+    try {
+      db.data.users = [...originalUsers, ...Array.from({ length: 15 }, (_, index) => ({
+        ...candidate(100 + index, `seo-candidat-${index}`), module: { site: true },
+      }))];
+      const page = await guest('/candidati?pagina=2&utm_source=test');
+      assert.equal(page.status, 200);
+      assert.ok(page.html.includes(`rel="canonical" href="${base}/candidati?pagina=2"`));
+      assert.match(page.html, /pagina 2 — Vocea Locală/);
+      assert.equal(page.headers.get('x-robots-tag'), null);
+      const filtered = await guest('/candidati?cauta=ana&judet=Timis&utm_source=test');
+      assert.equal(filtered.status, 200);
+      assert.equal(filtered.headers.get('x-robots-tag'), 'noindex, follow');
+      assert.ok(filtered.html.includes(`rel="canonical" href="${base}/candidati?cauta=ana&amp;judet=timis"`));
+    } finally {
+      db.data.users = originalUsers;
     }
   });
   await t.test('Rubricile au pagini proprii, iar proiectele sunt multiple, clicabile și administrate din dashboard', async () => {

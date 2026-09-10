@@ -17,6 +17,7 @@ import { createAuthUserWithPassword, deleteAuthUser, signInWithPassword, updateA
 import { LEGAL_PAGES } from './legal-pages.js';
 import { isPortalPublished, portalPostInput, portalPublicationDate } from './portal.js';
 import { mailConfigured, sendMail } from './mail.js';
+import { PORTAL_SITE_NAME, portalPageSeo, portalArticleSeo, seoDate, jsonLd } from './seo.js';
 import {
   TERMS_VERSION,
   REPORT_STATUS,
@@ -190,6 +191,7 @@ export async function createApp({
   app.locals.isPublished = article => isPublished(article, now());
   app.locals.publicationDate = publicationDate;
   app.locals.portalPublicationDate = portalPublicationDate;
+  app.locals.jsonLd = jsonLd;
   app.locals.displayDate = displayDate;
   app.locals.publicTransparency = publicTransparency;
   app.locals.platform = platform;
@@ -229,6 +231,11 @@ export async function createApp({
     res.locals.numeCandidat = req.session.numeCandidat || null;
     res.locals.csrfToken = req.session.csrfToken || '';
     res.locals.pageUrl = `${publicBaseUrl(req)}${req.originalUrl}`;
+    if (/^\/(?:admin|dashboard|activare|login|logout|parola-uitata|reseteaza-parola|oauth)(?:\/|$)/i.test(req.path)
+      || /^\/raportare\/(?:apa|salubritate)\/?$/i.test(req.path)
+      || /^\/site\/[^/]+\/articol\/[^/]+\/raporteaza\/?$/i.test(req.path)) {
+      res.set('X-Robots-Tag', 'noindex, nofollow');
+    }
     next();
   });
 
@@ -333,6 +340,7 @@ export async function createApp({
       setPublicCdnCache(res);
     }
     res.render('landing', {
+      seo: portalPageSeo(publicBaseUrl(req)),
       candidatiPublici,
       principal: mainPost ? withCandidate(mainPost) : null,
       stiri: portalPosts.filter(post => post.tip === 'stire' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
@@ -350,26 +358,29 @@ export async function createApp({
 
   app.get('/robots.txt', (req, res) => {
     res.set('Content-Type', 'text/plain').set('Cache-Control', 'public, max-age=3600').send(
-      `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /login\n\nSitemap: ${publicBaseUrl(req)}/sitemap.xml\n`
+      `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\n\nSitemap: ${publicBaseUrl(req)}/sitemap.xml\n`
     );
   });
 
   app.get('/sitemap.xml', (req, res) => {
     const baza = publicBaseUrl(req);
     const candidati = db.data.users.filter(poatePublicaSite);
-    const urlIntrari = [`${baza}/`, `${baza}/candidati`];
+    const urlIntrari = ['/', '/candidati', ...Object.keys(PORTAL_SECTIONS).map(slug => `/sectiune/${slug}`),
+      '/statistici/apa', '/statistici/salubritate'].map(route => ({ url: `${baza}${route}` }));
     for (const post of db.data.portal_posts.filter(portalPostIsPublic)) {
-      urlIntrari.push(`${baza}/actualitate/${encodeURIComponent(post.slug)}`);
+      urlIntrari.push({ url: `${baza}/actualitate/${encodeURIComponent(post.slug)}`,
+        lastmod: seoDate(post.updated_at || portalPublicationDate(post)) });
     }
     for (const candidat of candidati) {
       const bazaCandidat = `${baza}/site/${encodeURIComponent(candidat.subdomeniu)}`;
-      urlIntrari.push(bazaCandidat, `${bazaCandidat}/despre`, `${bazaCandidat}/contact`);
+      urlIntrari.push(...[bazaCandidat, `${bazaCandidat}/despre`, `${bazaCandidat}/contact`].map(url => ({ url })));
       for (const articol of publicCandidateArticles(candidat)) {
-        urlIntrari.push(`${bazaCandidat}/articol/${articol.id}`);
+        urlIntrari.push({ url: `${bazaCandidat}/articol/${articol.id}`,
+          lastmod: seoDate(articol.updated_at || publicationDate(articol)) });
       }
     }
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${
-      urlIntrari.map((url) => `  <url><loc>${escapeXml(url)}</loc></url>`).join('\n')
+      urlIntrari.map(({ url, lastmod }) => `  <url><loc>${escapeXml(url)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>`).join('\n')
     }\n</urlset>`;
     res.set('Content-Type', 'application/xml').set('Cache-Control', 'public, max-age=3600').send(xml);
   });
@@ -406,7 +417,17 @@ export async function createApp({
     const pages = Math.max(1, Math.ceil(filtered.length / 12));
     const page = Math.min(pages, Math.max(1, Number.parseInt(req.query.pagina, 10) || 1));
     setPublicCdnCache(res);
+    const canonicalQuery = new URLSearchParams();
+    for (const [key, value] of [['cauta', cauta], ['judet', judet], ['functie', functie]]) {
+      if (value) canonicalQuery.set(key, value);
+    }
+    if (page > 1) canonicalQuery.set('pagina', String(page));
+    const hasFilters = Boolean(cauta || judet || functie);
+    if (hasFilters) res.set('X-Robots-Tag', 'noindex, follow');
     res.render('candidate-showcase', { candidati: filtered.slice((page - 1) * 12, page * 12), total: filtered.length, page, pages,
+      seo: portalPageSeo(publicBaseUrl(req), { path: `/candidati${canonicalQuery.size ? `?${canonicalQuery}` : ''}`,
+        title: `Candidați și publicații locale${page > 1 ? ` — pagina ${page}` : ''} — ${PORTAL_SITE_NAME}`,
+        description: 'Descoperă candidații activi, proiectele și publicațiile lor. Filtrează după nume, județ sau funcție.', noindex: hasFilters }),
       judet: req.query.judet || '', functie: req.query.functie || '', cauta: req.query.cauta || '',
       judete: [...new Set(all.map(candidate => candidate.judet).filter(Boolean))].sort() });
   });
@@ -418,7 +439,10 @@ export async function createApp({
       && (req.params.slug === 'stiri' ? post.tip === 'stire' : section.categorii.includes(post.categorie)))
       .sort((a, b) => new Date(portalPublicationDate(b)) - new Date(portalPublicationDate(a)));
     setPublicCdnCache(res);
-    res.render('portal-section-public', { section, posts });
+    res.render('portal-section-public', { section, posts,
+      seo: portalPageSeo(publicBaseUrl(req), { path: `/sectiune/${req.params.slug}`,
+        title: `${section.titlu} — ${PORTAL_SITE_NAME}`,
+        description: `${section.descriere} Bulgăruș, Lenauheim și Grabaț, județul Timiș.` }) });
   });
 
   app.post('/sondaje/:id/vot', requireCsrf, safely(async (req, res) => {
@@ -446,7 +470,8 @@ export async function createApp({
     if (!post) return res.status(404).send('Materialul nu există.');
     post.vizualizari = (post.vizualizari || 0) + 1;
     await db.write();
-    res.render('portal-post', { post, candidat: portalCandidate(post), postUrl: `${publicBaseUrl(req)}/actualitate/${encodeURIComponent(post.slug)}` });
+    res.render('portal-post', { post, candidat: portalCandidate(post), postUrl: `${publicBaseUrl(req)}/actualitate/${encodeURIComponent(post.slug)}`,
+      seo: portalArticleSeo(publicBaseUrl(req), post) });
   }));
 
   app.post('/actualitate/:slug/reactie', requireCsrf, safely(async (req, res) => {
@@ -537,7 +562,9 @@ export async function createApp({
     const page = LEGAL_PAGES[req.params.page];
     if (!page) return res.status(404).send('Pagina nu există.');
     setPublicCdnCache(res, { maxAge: 3600, stale: 86400 });
-    res.render('legal-page', { page });
+    res.render('legal-page', { page, seo: portalPageSeo(publicBaseUrl(req), {
+      path: `/legal/${req.params.page}`, title: `${page.title} — ${PORTAL_SITE_NAME}`, description: page.intro,
+    }) });
   });
 
   app.get('/raportare/:tip(apa|salubritate)', (req, res) => {
@@ -596,6 +623,9 @@ export async function createApp({
     res.set('Cache-Control', 'no-store');
     res.set('Netlify-CDN-Cache-Control', 'no-store');
     res.render('statistici-costuri', {
+      seo: portalPageSeo(publicBaseUrl(req), { path: `/statistici/${req.params.tip}`,
+        title: `Cât plătim pentru ${req.params.tip === 'apa' ? 'apă' : 'salubritate'}? — ${PORTAL_SITE_NAME}`,
+        description: `Compară costurile pentru ${req.params.tip === 'apa' ? 'apă' : 'salubritate'} declarate voluntar în Bulgăruș, Lenauheim și Grabaț. Rezultate publicate pe intervale, fără nume.` }),
       tip: req.params.tip,
       grupuri: statisticiPublice(db.data.raportari_costuri, req.params.tip, db.data.raportari_costuri_arhiva),
       total: totalPublic(db.data.raportari_costuri, req.params.tip, db.data.raportari_costuri_arhiva),

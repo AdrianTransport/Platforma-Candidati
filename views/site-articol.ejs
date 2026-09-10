@@ -7,7 +7,8 @@
   <meta property="og:type" content="article">
   <meta property="og:title" content="<%= articol.titlu %>">
   <meta property="og:description" content="<%= articol.continut.slice(0, 155) %>">
-  <meta property="og:url" content="<%= pageUrl %>">
+  <meta property="og:url" content="<%= articolUrl %>">
+  <% if (!preview) { %><link rel="canonical" href="<%= articolUrl %>"><% } %>
   <% if (articol.imagine_url) { %><meta property="og:image" content="<%= new URL(articol.imagine_url, pageUrl).toString() %>"><% } %>
   <meta name="twitter:card" content="summary_large_image">
   <title><%= articol.titlu %> — <%= user.nume_candidat %></title>
