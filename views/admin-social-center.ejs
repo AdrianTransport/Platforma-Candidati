@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ro">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Rețele sociale — Vocea Locală Lenauheim</title><link rel="stylesheet" href="/style.css"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Rețele sociale — Vocea Locală Lenauheim</title><link rel="stylesheet" href="<%= stylesheetUrl %>"></head>
 <body><div class="app-shell app-shell-wide">
   <div class="topbar admin-topbar"><div><span class="eyebrow">Site-ul principal</span><h1>Rețele sociale</h1></div><div class="topbar-actions"><a class="btn secondary" href="/admin">Înapoi la Super Admin</a><form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Ieșire</button></form></div></div>
   <% if (mesaj) { %><div class="mesaj-succes"><%= mesaj %></div><% } %><% if (eroare) { %><div class="eroare"><strong>Acțiunea nu a fost finalizată.</strong><br><%= eroare %></div><% } %>

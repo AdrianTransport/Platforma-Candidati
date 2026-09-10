@@ -11,7 +11,7 @@
   <% if (articol.imagine_url) { %><meta property="og:image" content="<%= new URL(articol.imagine_url, pageUrl).toString() %>"><% } %>
   <meta name="twitter:card" content="summary_large_image">
   <title><%= articol.titlu %> — <%= user.nume_candidat %></title>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="<%= stylesheetUrl %>">
   <link rel="stylesheet" href="/newspaper.css">
 </head>
 <body class="newspaper-body">

@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { createComments } from '../comments.js';
 import { createLocalCommentStore } from '../comment-store.js';
@@ -26,6 +27,8 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   const password = 'test-only-password-123456789';
   const hash = bcrypt.hashSync(password, 4);
   await fs.mkdir(path.join(dir, 'data'));
+  await fs.mkdir(path.join(dir, 'public'));
+  await fs.copyFile(path.join(root, 'public', 'style.css'), path.join(dir, 'public', 'style.css'));
   const candidate = (id, name) => ({ id, role: 'candidate', activ: true, status_cont: 'activ',
     email: `${name}@example.test`, password_hash: hash, nume_candidat: name, subdomeniu: name,
     functie_candidatura: 'Consilier local', zona: 'Timișoara', judet: 'Timiș', partid: 'Independent',
@@ -122,6 +125,42 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.ok(candidateToken);
     assert.equal((await cand('/dashboard/social')).status, 200);
     assert.equal((await cand('/admin/comentarii')).status, 403);
+  });
+  await t.test('CSS comun: URL versionat, conținut corect și revalidare în locul cache-ului de 24 de ore', async () => {
+    const stylesheet = await fs.readFile(path.join(root, 'public', 'style.css'), 'utf8');
+    const version = createHash('sha256').update(stylesheet).digest('hex').slice(0, 12);
+    const href = `/style.css?v=${version}`;
+    for (const [client, route] of [
+      [guest, '/'], [guest, '/login'], [guest, '/sectiune/stiri'],
+      [guest, '/statistici/apa'], [guest, '/raportare/apa'],
+      [guest, '/legal/confidentialitate'], [guest, '/site/ana'], [cand, '/dashboard'],
+    ]) {
+      const response = await client(route);
+      assert.equal(response.status, 200, route);
+      assert.ok(response.html.includes(`href="${href}"`), route);
+      assert.ok(!response.html.includes('href="/style.css"'), route);
+    }
+    for (const url of ['/style.css', href]) {
+      const response = await guest(url);
+      assert.equal(response.status, 200);
+      assert.match(response.headers.get('content-type'), /text\/css/);
+      assert.equal(response.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
+      assert.equal(response.html, stylesheet);
+      assert.equal(response.headers.get('set-cookie'), null);
+      const revalidated = await fetch(base + url, {
+        cache: 'no-cache',
+        headers: { 'If-None-Match': response.headers.get('etag') },
+      });
+      assert.equal(revalidated.status, 304);
+      assert.equal(revalidated.headers.get('cache-control'), 'public, max-age=0, must-revalidate');
+    }
+    const netlifyConfig = await fs.readFile(path.join(root, 'netlify.toml'), 'utf8');
+    const cssHeaders = netlifyConfig.split('[[headers]]').find(block => block.includes('for = "/*.css"'));
+    assert.match(cssHeaders, /Cache-Control = "public, max-age=0, must-revalidate"/);
+    for (const filename of (await fs.readdir(path.join(root, 'views'))).filter(name => name.endsWith('.ejs'))) {
+      const template = await fs.readFile(path.join(root, 'views', filename), 'utf8');
+      assert.ok(!template.includes('href="/style.css"'), filename);
+    }
   });
   await t.test('SEO public: robots, sitemap, RSS și Open Graph', async () => {
     const robots = await guest('/robots.txt');

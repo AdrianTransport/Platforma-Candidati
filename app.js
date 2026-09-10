@@ -3,6 +3,7 @@ import ejs from 'ejs';
 import cookieSession from 'cookie-session';
 import bcrypt from 'bcryptjs';
 import { createHmac, randomBytes, createHash, timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { requireRole } from './middleware/auth.js';
@@ -180,6 +181,12 @@ export async function createApp({
   app.engine('ejs', ejs.renderFile);
   app.set('view engine', 'ejs');
   app.set('views', path.join(baseDir, 'views'));
+  // O adresă nouă la fiecare modificare CSS evită copiile vechi din cache.
+  // public/** este inclus atât în fișierele statice, cât și în funcția Netlify.
+  const stylesheetVersion = createHash('sha256')
+    .update(await readFile(path.join(baseDir, 'public', 'style.css')))
+    .digest('hex').slice(0, 12);
+  app.locals.stylesheetUrl = `/style.css?v=${stylesheetVersion}`;
   app.locals.isPublished = article => isPublished(article, now());
   app.locals.publicationDate = publicationDate;
   app.locals.portalPublicationDate = portalPublicationDate;
@@ -190,7 +197,13 @@ export async function createApp({
   app.locals.isLenauheimCivicPortal = isLenauheimCivicPortal;
   app.locals.termsVersion = TERMS_VERSION;
   app.locals.electoralMode = electoralMode;
-  app.use(express.static(path.join(baseDir, 'public')));
+  app.use(express.static(path.join(baseDir, 'public'), {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.css')) {
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      }
+    },
+  }));
   app.use(express.urlencoded({ extended: true }));
   app.use('/dashboard/media', express.json({ limit: '4300kb' }));
   app.use('/admin/portal/media', express.json({ limit: '4300kb' }));
