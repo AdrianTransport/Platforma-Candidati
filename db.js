@@ -47,6 +47,15 @@ export async function initDB() {
   db.data.nextPollId ||= 1;
   db.data.nextRaportareId ||= 1;
 
+  // Approved profile-image update. Match the previous image exactly so a later
+  // dashboard edit (including removing the photo) is never overwritten.
+  const updatedProfile = db.data.users.find(user => user.role === 'candidate'
+    && user.subdomeniu === 'daniel-ganea'
+    && user.fotografie_profil_url === '/media/fefd679d-edd5-4b3c-9cd2-20eb1e7613c1');
+  if (updatedProfile) {
+    updatedProfile.fotografie_profil_url = 'https://vocealenauheim.ro/candidate-assets/daniel-ganea-20260911.png';
+  }
+
   for (const user of db.data.users) {
     user.login_attempts ||= 0;
     user.locked_until ||= null;
@@ -160,8 +169,8 @@ export async function initDB() {
       last_login_at: null,
       created_at: new Date().toISOString(),
     });
-    await db.write();
   }
+  if (!areAdmin || updatedProfile) await db.write();
 }
 
 export function nextUserId() {

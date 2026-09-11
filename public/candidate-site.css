@@ -362,3 +362,9 @@
 /* Override the old newspaper font and badge color on candidate subpages. */
 .candidate-design p,.candidate-design .section-page-header p{font-family:CandidateThicccboi,Arial,sans-serif}
 .candidate-design .section-page-header>strong{color:#fff;background:#ffffff1f;border:1px solid #ffffff35}
+
+/* Preserve the complete uploaded portrait/poster, including any text. */
+.candidate-portrait-frame-photo{aspect-ratio:auto;background:transparent}
+.candidate-portrait-frame-photo img{position:static;display:block;height:auto;object-fit:contain}
+.candidate-intro-photo{height:auto;object-fit:contain}
+.candidate-intro-visual .candidate-quote{margin-top:24px}

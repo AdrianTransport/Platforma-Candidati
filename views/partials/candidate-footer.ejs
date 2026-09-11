@@ -1,4 +1,5 @@
 <% const footerTransparency = publicTransparency(user, null); %>
+<script src="/candidate-reveal.js?v=20260911-1" defer></script>
 <footer class="candidate-footer"><div class="candidate-container">
   <div class="candidate-footer-grid">
     <div><a class="candidate-brand" href="/site/<%= user.subdomeniu %>"><span class="candidate-brand-mark" aria-hidden="true"><%= user.nume_candidat.split(' ').map(p=>p[0]).slice(0,2).join('') %></span><span><strong><%= user.nume_candidat %></strong><small>Vocea Candidatului</small></span></a><p><%= [user.functie_candidatura,user.zona,user.judet].filter(Boolean).join(' · ') %></p><% if(user.email_contact){ %><a class="candidate-footer-contact" href="mailto:<%= user.email_contact %>"><%= user.email_contact %></a><% } %><% if(user.telefon_contact){ %><a class="candidate-footer-contact" href="tel:<%= user.telefon_contact.replace(/[^+\d]/g,'') %>"><%= user.telefon_contact %></a><% } %></div>

@@ -14,7 +14,7 @@
   <title><%= user.nume_candidat %> — <%= user.functie_candidatura || user.zona %></title>
   <link rel="stylesheet" href="<%= stylesheetUrl %>">
   <link rel="stylesheet" href="/newspaper.css">
-  <link rel="stylesheet" href="/candidate-site.css?v=20260911-reference3">
+  <link rel="stylesheet" href="/candidate-site.css?v=20260911-reveal1">
 </head>
 <body class="newspaper-body candidate-design">
   <div class="candidate-site-shell">
@@ -40,7 +40,7 @@
             <p class="candidate-hero-message"><%= user.slogan || user.mesaj_scurt || [user.functie_candidatura, user.zona, user.judet].filter(Boolean).join(' · ') %></p>
             <div class="candidate-actions"><a class="candidate-button candidate-button-white" href="<%= profileBase %>/proiecte">Vezi proiectele</a><a class="candidate-button candidate-button-outline" href="<%= profileBase %>/despre">Despre mine</a></div>
           </div>
-          <div class="candidate-hero-visual"><div class="candidate-portrait-frame">
+          <div class="candidate-hero-visual"><div class="candidate-portrait-frame<%= user.fotografie_profil_url ? ' candidate-portrait-frame-photo' : '' %>">
             <% if (user.fotografie_profil_url) { %><img src="<%= user.fotografie_profil_url %>" alt="<%= user.nume_candidat %>" width="640" height="640" fetchpriority="high" decoding="async"><% } else { %><span class="candidate-portrait-initials" aria-label="<%= user.nume_candidat %>"><%= profileInitials %></span><% } %>
           </div></div>
         </div>
