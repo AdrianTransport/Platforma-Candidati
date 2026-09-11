@@ -13,6 +13,11 @@
     Cache-Control = "public, max-age=86400"
 
 [[headers]]
+  for = "/candidate-assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
   for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"

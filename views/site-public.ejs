@@ -41,7 +41,7 @@
             <div class="candidate-actions"><a class="candidate-button candidate-button-white" href="<%= profileBase %>/proiecte">Vezi proiectele</a><a class="candidate-button candidate-button-outline" href="<%= profileBase %>/despre">Despre mine</a></div>
           </div>
           <div class="candidate-hero-visual"><div class="candidate-portrait-frame<%= user.fotografie_profil_url ? ' candidate-portrait-frame-photo' : '' %>">
-            <% if (user.fotografie_profil_url) { %><img src="<%= user.fotografie_profil_url %>" alt="<%= user.nume_candidat %>" width="640" height="640" fetchpriority="high" decoding="async"><% } else { %><span class="candidate-portrait-initials" aria-label="<%= user.nume_candidat %>"><%= profileInitials %></span><% } %>
+            <% if (user.fotografie_profil_url) { %><img src="<%= publicImageUrl(user.fotografie_profil_url) %>" alt="<%= user.nume_candidat %>" width="640" height="640" fetchpriority="high" decoding="async"><% } else { %><span class="candidate-portrait-initials" aria-label="<%= user.nume_candidat %>"><%= profileInitials %></span><% } %>
           </div></div>
         </div>
       </section>
@@ -64,8 +64,8 @@
             <div class="candidate-actions"><a class="candidate-button" href="<%= profileBase %>/despre">Citește prezentarea</a><a class="candidate-button candidate-button-secondary" href="<%= profileBase %>/contact">Contact</a></div>
           </div>
           <div class="candidate-intro-visual">
-            <% if (user.fotografie_profil_url || user.fotografie_coperta_url) { %><img class="candidate-intro-photo" src="<%= user.fotografie_profil_url || user.fotografie_coperta_url %>" alt="<%= user.nume_candidat %>" width="620" height="720" loading="lazy" decoding="async"><% } else { %><span class="candidate-about-monogram"><%= profileInitials %></span><% } %>
-            <div class="candidate-quote"><% if (user.mesaj_scurt || user.slogan) { %><p>„<%= user.mesaj_scurt || user.slogan %>”</p><% } %><div class="candidate-quote-author"><% if (user.fotografie_profil_url) { %><img src="<%= user.fotografie_profil_url %>" alt="" width="64" height="64" loading="lazy"><% } %><div><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura,user.zona].filter(Boolean).join(' · ') %></span></div></div></div>
+            <% if (user.fotografie_profil_url || user.fotografie_coperta_url) { %><img class="candidate-intro-photo" src="<%= publicImageUrl(user.fotografie_profil_url || user.fotografie_coperta_url) %>" alt="<%= user.nume_candidat %>" width="620" height="720" loading="lazy" decoding="async"><% } else { %><span class="candidate-about-monogram"><%= profileInitials %></span><% } %>
+            <div class="candidate-quote"><% if (user.mesaj_scurt || user.slogan) { %><p>„<%= user.mesaj_scurt || user.slogan %>”</p><% } %><div class="candidate-quote-author"><% if (user.fotografie_profil_url) { %><img src="<%= publicImageUrl(user.fotografie_profil_url) %>" alt="" width="64" height="64" loading="lazy"><% } %><div><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura,user.zona].filter(Boolean).join(' · ') %></span></div></div></div>
           </div>
         </div>
       </section>
@@ -77,7 +77,7 @@
         </div>
       </section>
       <% } %>
-      <section class="candidate-contact-feature"><div class="candidate-container candidate-contact-feature-grid"><div><span class="candidate-eyebrow">Contact</span><h2>Datele de contact ale candidatului.</h2><p><%= user.nume_candidat %></p><a class="candidate-button candidate-button-white" href="<%= profileBase %>/contact">Deschide pagina de contact</a></div><div class="candidate-feature-visual"><% if(user.fotografie_coperta_url || user.fotografie_profil_url){ %><img src="<%= user.fotografie_coperta_url || user.fotografie_profil_url %>" alt="" width="620" height="460" loading="lazy" decoding="async"><% } %><div class="candidate-feature-card"><strong><%= user.zona || user.judet || user.nume_candidat %></strong><span><%= user.functie_candidatura || 'Candidat' %></span></div></div></div></section>
+      <section class="candidate-contact-feature"><div class="candidate-container candidate-contact-feature-grid"><div><span class="candidate-eyebrow">Contact</span><h2>Datele de contact ale candidatului.</h2><p><%= user.nume_candidat %></p><a class="candidate-button candidate-button-white" href="<%= profileBase %>/contact">Deschide pagina de contact</a></div><div class="candidate-feature-visual"><% if(user.fotografie_coperta_url || user.fotografie_profil_url){ %><img src="<%= publicImageUrl(user.fotografie_coperta_url || user.fotografie_profil_url) %>" alt="" width="620" height="460" loading="lazy" decoding="async"><% } %><div class="candidate-feature-card"><strong><%= user.zona || user.judet || user.nume_candidat %></strong><span><%= user.functie_candidatura || 'Candidat' %></span></div></div></div></section>
       <section class="candidate-section candidate-explore" id="prioritati"><div class="candidate-container"><div class="candidate-section-heading"><span class="candidate-eyebrow">Explorează publicația</span><h2>Priorități, proiecte și activitate publică</h2><p>Alege rubrica pe care vrei să o urmărești.</p></div>
         <nav class="candidate-topic-grid" aria-label="Explorează publicația">
           <% profileTopics.forEach(([slug,title,description],i)=>{ %>

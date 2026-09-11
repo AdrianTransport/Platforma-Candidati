@@ -186,6 +186,16 @@ export async function createApp({
   app.engine('ejs', ejs.renderFile);
   app.set('view engine', 'ejs');
   app.set('views', path.join(baseDir, 'views'));
+  app.set('view cache', isNetlify || process.env.NODE_ENV === 'production');
+  // Versiune comprimată a aceleiași fotografii; URL-ul salvat în profil rămâne editabil.
+  const originalPortrait = '/candidate-assets/daniel-ganea-20260911.png';
+  const optimizedPortrait = '/candidate-assets/daniel-ganea-20260911-v1.webp';
+  const optimizedImages = new Map([
+    [originalPortrait, optimizedPortrait],
+    [`https://vocealenauheim.ro${originalPortrait}`, optimizedPortrait],
+    [`https://www.vocealenauheim.ro${originalPortrait}`, optimizedPortrait],
+  ]);
+  app.locals.publicImageUrl = url => optimizedImages.get(url) || url;
   // O adresă nouă la fiecare modificare CSS evită copiile vechi din cache.
   // public/** este inclus atât în fișierele statice, cât și în funcția Netlify.
   const stylesheetVersion = createHash('sha256')
@@ -239,6 +249,8 @@ export async function createApp({
       || /^\/raportare\/(?:apa|salubritate)\/?$/i.test(req.path)
       || /^\/site\/[^/]+\/articol\/[^/]+\/raporteaza\/?$/i.test(req.path)) {
       res.set('X-Robots-Tag', 'noindex, nofollow');
+      res.set('Cache-Control', 'private, no-store');
+      res.set('Netlify-CDN-Cache-Control', 'no-store');
     }
     next();
   });
@@ -269,6 +281,12 @@ export async function createApp({
   }
 
   const safely = handler => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+  async function saveVisitStatistics() {
+    // O eroare a contorului nu trebuie să blocheze citirea sau linkul social.
+    // Așteptăm scrierea și în Lambda; salvările de conținut rămân obligatorii.
+    try { await db.write(); }
+    catch (error) { console.error('Salvarea statisticilor a eșuat:', error.name); }
+  }
   function requireActiveAccount(req, res, next) {
     const user = db.data.users.find(u => u.id === req.session.userId);
     if (!user?.activ || user.role !== req.session.rol || (user.role === 'candidate' && user.status_cont !== 'activ')) {
@@ -473,7 +491,7 @@ export async function createApp({
     const post = db.data.portal_posts.find(item => item.slug === req.params.slug && portalPostIsPublic(item));
     if (!post) return res.status(404).send('Materialul nu există.');
     post.vizualizari = (post.vizualizari || 0) + 1;
-    await db.write();
+    await saveVisitStatistics();
     res.render('portal-post', { post, candidat: portalCandidate(post), postUrl: `${publicBaseUrl(req)}/actualitate/${encodeURIComponent(post.slug)}`,
       seo: portalArticleSeo(publicBaseUrl(req), post) });
   }));
@@ -1837,7 +1855,7 @@ export async function createApp({
       user.statistici.vizite_site += 1;
       const sursa = sursaVizitei(req);
       user.statistici.surse[sursa] = (user.statistici.surse[sursa] || 0) + 1;
-      await db.write();
+      await saveVisitStatistics();
     }
     const sondaj = activePoll('candidate', user.id);
     if (sondaj) {
@@ -1920,15 +1938,21 @@ export async function createApp({
     }
     let comentarii = [];
     let commentsAvailable = true;
-    try { comentarii = (await comments.list(user.id, articol.id)).filter(c => c.status === 'aprobat'); }
-    catch (commentError) {
-      commentsAvailable = false;
-      console.error('Citirea comentariilor a eșuat:', commentError.name);
-    }
-    if (count && user.module?.statistici) {
-      articol.vizualizari = (articol.vizualizari || 0) + 1;
-      await db.write();
-    }
+    await Promise.all([
+      (async () => {
+        try { comentarii = (await comments.list(user.id, articol.id)).filter(c => c.status === 'aprobat'); }
+        catch (commentError) {
+          commentsAvailable = false;
+          console.error('Citirea comentariilor a eșuat:', commentError.name);
+        }
+      })(),
+      (async () => {
+        if (count && user.module?.statistici) {
+          articol.vizualizari = (articol.vizualizari || 0) + 1;
+          await saveVisitStatistics();
+        }
+      })(),
+    ]);
     const bazaPublica = process.env.URL || `${req.protocol}://${req.get('host')}`;
     const articolUrl = new URL(`/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}`, bazaPublica).toString();
     res.status(status).render('site-articol', { user, articol, articolUrl, transparenta: publicTransparency(user, articol), comentarii, commentsAvailable, commentError: error,
@@ -1965,7 +1989,7 @@ export async function createApp({
     res.redirect(303, `/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}?comentariu=trimis#comentarii`);
   }));
 
-  app.get('/site/:subdomeniu/social/:platforma', async (req, res) => {
+  app.get('/site/:subdomeniu/social/:platforma', safely(async (req, res) => {
     const user = db.data.users.find((u) => u.subdomeniu === req.params.subdomeniu && poatePublicaSite(u));
     const platforma = String(req.params.platforma || '').toLowerCase();
     if (!user || !user.module?.social || !RETELE_SOCIALE.has(platforma)) {
@@ -1976,10 +2000,10 @@ export async function createApp({
     if (user.module?.statistici) {
       user.statistici.clickuri_sociale[platforma] =
         (user.statistici.clickuri_sociale[platforma] || 0) + 1;
-      await db.write();
+      await saveVisitStatistics();
     }
     res.redirect(destinatie);
-  });
+  }));
 
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);

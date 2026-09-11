@@ -2,8 +2,8 @@ import { connectLambda } from '@netlify/blobs';
 import serverless from 'serverless-http';
 import { createApp } from '../../app.js';
 import { createEditorial, createEditorialStore } from '../../editorial.js';
-
-let handlerPromise;
+import { initDB } from '../../db.js';
+import { configureBlobsCredentials } from '../../store.js';
 
 const EDITORIAL_ENV_KEYS = [
   'PLATFORM_OPENAI_API_KEY',
@@ -36,36 +36,63 @@ export function readBlobsCredentials(event) {
   } catch { return undefined; }
 }
 
-export const handler = async (event, context) => {
+export function syncRuntimeEnv(getValue = runtimeValue, env = process.env) {
+  const secret = getValue('SUPABASE_SECRET_KEY');
+  const backend = getValue('DATA_BACKEND') || (secret ? 'supabase' : undefined);
+  for (const [key, value] of Object.entries({ SUPABASE_SECRET_KEY: secret, DATA_BACKEND: backend })) {
+    if (typeof value === 'string' && value) env[key] = value;
+    else delete env[key];
+  }
+}
+
+function prepareRequest(event) {
   // Functia ruleaza in mod compatibil AWS Lambda (prin serverless-http). In acest
   // mod, Netlify Blobs nu primeste automat contextul cererii - trebuie legat
   // explicit, la FIECARE invocare, inainte de orice citire/scriere in Blobs.
   connectLambda(event);
+  configureBlobsCredentials(readBlobsCredentials(event));
+  syncRuntimeEnv();
+}
 
-  const value = key => typeof Netlify === 'undefined' ? process.env[key] : Netlify.env.get(key);
-
-  const supabaseSecret = value('SUPABASE_SECRET_KEY');
-  Object.assign(process.env, {
-    SUPABASE_SECRET_KEY: supabaseSecret,
-    DATA_BACKEND: value('DATA_BACKEND') || (supabaseSecret ? 'supabase' : undefined),
+async function initializeHandler(event) {
+  // Păstrăm adaptorul existent; imaginile trebuie codate binar, nu ca text UTF-8.
+  // Variabilele cu scope Functions sunt citite prin API-ul runtime Netlify.
+  // Forțăm explicit adaptorul Blobs: process.env nu reflectă întotdeauna toate
+  // valorile runtime expuse prin Netlify.env în această funcție compatibilă Lambda.
+  const store = createEditorialStore({
+    serverless: true,
+    context: runtimeValue('CONTEXT'),
+    region: runtimeValue('AWS_REGION'),
+    credentials: readBlobsCredentials(event),
   });
+  const editorial = createEditorial({ store, env: readEditorialEnv() });
+  return createApp({ editorial }).then((app) => serverless(app, {
+    binary: ['image/png', 'image/jpeg', 'image/webp'],
+  }));
+}
 
-  if (!handlerPromise) {
-    // Păstrăm adaptorul existent; imaginile trebuie codate binar, nu ca text UTF-8.
-    // Variabilele cu scope Functions sunt citite prin API-ul runtime Netlify.
-    // Forțăm explicit adaptorul Blobs: process.env nu reflectă întotdeauna toate
-    // valorile runtime expuse prin Netlify.env în această funcție compatibilă Lambda.
-    const store = createEditorialStore({
-      serverless: true,
-      context: runtimeValue('CONTEXT'),
-      region: runtimeValue('AWS_REGION'),
-      credentials: readBlobsCredentials(event),
+export function createHandler({ prepare = prepareRequest, initialize = initializeHandler, refresh = initDB } = {}) {
+  let handlerPromise;
+  let previousRequest = Promise.resolve();
+  return (event, context) => {
+    // db.data și contextul Blobs sunt comune procesului: nu le înlocuim în
+    // mijlocul altei cereri. Instanțele diferite își recitesc separat datele.
+    const request = previousRequest.then(async () => {
+      await prepare(event);
+      if (!handlerPromise) {
+        handlerPromise = Promise.resolve().then(() => initialize(event)).catch(error => {
+          handlerPromise = undefined;
+          throw error;
+        });
+      } else {
+        await refresh();
+      }
+      const serverlessHandler = await handlerPromise;
+      return serverlessHandler(event, context);
     });
-    const editorial = createEditorial({ store, env: readEditorialEnv() });
-    handlerPromise = createApp({ editorial }).then((app) => serverless(app, {
-      binary: ['image/png', 'image/jpeg', 'image/webp'],
-    }));
-  }
-  const serverlessHandler = await handlerPromise;
-  return serverlessHandler(event, context);
-};
+    previousRequest = request.catch(() => {});
+    return request;
+  };
+}
+
+export const handler = createHandler();

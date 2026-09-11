@@ -29,6 +29,9 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   await fs.mkdir(path.join(dir, 'data'));
   await fs.mkdir(path.join(dir, 'public'));
   await fs.copyFile(path.join(root, 'public', 'style.css'), path.join(dir, 'public', 'style.css'));
+  await fs.mkdir(path.join(dir, 'public', 'candidate-assets'));
+  await fs.copyFile(path.join(root, 'public', 'candidate-assets', 'daniel-ganea-20260911-v1.webp'),
+    path.join(dir, 'public', 'candidate-assets', 'daniel-ganea-20260911-v1.webp'));
   const candidate = (id, name) => ({ id, role: 'candidate', activ: true, status_cont: 'activ',
     email: `${name}@example.test`, password_hash: hash, nume_candidat: name, subdomeniu: name,
     functie_candidatura: 'Consilier local', zona: 'Timișoara', judet: 'Timiș', partid: 'Independent',
@@ -1056,6 +1059,55 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
       assert.equal((await guest(own.imagine_url)).status, 404);
       assert.equal((await guest(foreign.imagine_url)).status, 404);
     } finally { Object.assign(user, original); }
+  });
+  await t.test('Paginile private interzic cache-ul în browser și CDN', async () => {
+    for (const url of ['/login', '/parola-uitata', '/reseteaza-parola', '/admin', '/dashboard']) {
+      const response = await cand(url);
+      assert.equal(response.headers.get('cache-control'), 'private, no-store', url);
+      assert.equal(response.headers.get('netlify-cdn-cache-control'), 'no-store', url);
+    }
+    assert.match((await guest('/site/ana/contact')).headers.get('netlify-cdn-cache-control'), /public/);
+  });
+  await t.test('Fotografia optimizată se servește în ambele pagini, iar profilul poate primi altă fotografie', async () => {
+    const user = db.data.users.find(u => u.id === 2);
+    const original = user.fotografie_profil_url;
+    try {
+      user.fotografie_profil_url = 'https://vocealenauheim.ro/candidate-assets/daniel-ganea-20260911.png';
+      for (const url of ['/site/ana', '/site/ana/despre']) {
+        const page = await guest(url);
+        assert.equal(page.status, 200);
+        assert.match(page.html, /src="\/candidate-assets\/daniel-ganea-20260911-v1.webp"/);
+        assert.doesNotMatch(page.html, /src="[^\"]*daniel-ganea-20260911.png"/);
+      }
+      const asset = await fetch(`${base}/candidate-assets/daniel-ganea-20260911-v1.webp`);
+      assert.equal(asset.status, 200);
+      assert.match(asset.headers.get('content-type'), /image\/webp/);
+      assert.ok((await asset.arrayBuffer()).byteLength < 150000);
+      user.fotografie_profil_url = 'https://example.test/another-photo.jpg';
+      assert.match((await guest('/site/ana')).html, /src="https:\/\/example.test\/another-photo.jpg"/);
+    } finally { user.fotografie_profil_url = original; }
+  });
+  await t.test('O eroare de salvare a statisticilor nu blochează paginile sau redirecționarea socială', async () => {
+    const originalWrite = db.write;
+    const user = db.data.users.find(u => u.id === 2);
+    const originalFacebook = user.facebook_url;
+    const originalStatistics = structuredClone(user.statistici);
+    user.facebook_url = 'https://www.facebook.com/example';
+    db.write = async () => { throw new Error('Test-only storage failure'); };
+    try {
+      assert.equal((await guest('/site/ana')).status, 200);
+      assert.equal((await guest('/site/ana/articol/1')).status, 200);
+      const post = db.data.portal_posts.find(p => p.tip === 'stire' && p.status === 'publicat');
+      assert.ok(post);
+      assert.equal((await guest(`/actualitate/${post.slug}`)).status, 200);
+      const social = await guest('/site/ana/social/facebook');
+      assert.equal(social.status, 302);
+      assert.equal(social.headers.get('location'), user.facebook_url);
+    } finally {
+      db.write = originalWrite;
+      user.facebook_url = originalFacebook;
+      user.statistici = originalStatistics;
+    }
   });
   await t.test('Handlerul Netlify real păstrează octeții imaginii în răspunsul Lambda', async () => {
     const article = db.data.articole.find(a => a.id === 1);

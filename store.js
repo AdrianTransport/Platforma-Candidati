@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
+import { randomUUID } from 'node:crypto';
 import { readSupabaseState, useSupabase, writeSupabaseState } from './supabase-store.js';
 
 const LOCAL_FILE = path.join(process.cwd(), 'data', 'db.json');
@@ -15,33 +16,33 @@ const ESTE_SERVERLESS = Boolean(
   process.env.LAMBDA_TASK_ROOT || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NETLIFY
 );
 
-let blobsStorePromise = null;
-function getBlobsStore() {
-  if (!blobsStorePromise) {
-    blobsStorePromise = import('@netlify/blobs')
-      .then(({ getStore }) => getStore('campanie-db'))
-      .catch((err) => {
-        console.error('Nu am putut initializa Netlify Blobs:', err);
-        return null;
-      });
-  }
-  return blobsStorePromise;
+let blobsCredentials;
+export function configureBlobsCredentials(credentials) {
+  blobsCredentials = credentials;
+}
+
+async function getBlobsStore() {
+  const { getStore } = await import('@netlify/blobs');
+  // Adaptor nou pentru tokenul invocării curente. Credențialele explicite folosesc
+  // API-ul de origine, evitând citirea unei copii vechi a întregii baze din edge.
+  return getStore(blobsCredentials
+    ? { name: 'campanie-db', ...blobsCredentials }
+    : { name: 'campanie-db', consistency: 'strong' });
 }
 
 export async function readData() {
   if (ESTE_SERVERLESS && useSupabase()) return (await readSupabaseState()) || structuredClone(DEFAULT_DATA);
   if (ESTE_SERVERLESS) {
     const store = await getBlobsStore();
-    if (store) {
-      const data = await store.get('db', { type: 'json' });
-      return data || structuredClone(DEFAULT_DATA);
-    }
+    const data = await store.get('db', { type: 'json' });
+    return data || structuredClone(DEFAULT_DATA);
   }
   try {
     const raw = await fs.readFile(LOCAL_FILE, 'utf-8');
     return JSON.parse(raw);
-  } catch {
-    return structuredClone(DEFAULT_DATA);
+  } catch (error) {
+    if (error.code === 'ENOENT') return structuredClone(DEFAULT_DATA);
+    throw error;
   }
 }
 
@@ -49,15 +50,15 @@ export async function writeData(data) {
   if (ESTE_SERVERLESS && useSupabase()) return writeSupabaseState(data);
   if (ESTE_SERVERLESS) {
     const store = await getBlobsStore();
-    if (store) {
-      await store.setJSON('db', data);
-      return;
-    }
-    // Daca Blobs chiar nu e disponibil pe Netlify, nu incercam sa scriem pe disc -
-    // acolo sistemul de fisiere e needitabil si am arunca exact eroarea ENOENT
-    // intalnita. Aruncam o eroare clara in schimb.
-    throw new Error('Netlify Blobs indisponibil si scrierea locala nu e permisa in acest mediu.');
+    await store.setJSON('db', data);
+    return;
   }
   await fs.mkdir(path.dirname(LOCAL_FILE), { recursive: true });
-  await fs.writeFile(LOCAL_FILE, JSON.stringify(data, null, 2));
+  const temporaryFile = `${LOCAL_FILE}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(temporaryFile, JSON.stringify(data, null, 2));
+    await fs.rename(temporaryFile, LOCAL_FILE);
+  } finally {
+    await fs.rm(temporaryFile, { force: true });
+  }
 }
