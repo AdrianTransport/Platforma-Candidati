@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="ro">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta property="og:type" content="website"><meta property="og:title" content="Contact — <%= user.nume_candidat %>"><meta property="og:url" content="<%= pageUrl %>"><meta name="twitter:card" content="summary"><title>Contact — <%= user.nume_candidat %></title><link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="/newspaper.css"></head>
-<body class="newspaper-body"><div class="newspaper-shell article-shell">
-  <div class="newspaper-kicker"><span>VOCEA CANDIDATULUI · <%= electoralMode ? 'PUBLICAȚIE ELECTORALĂ' : 'PUBLICAȚIE CIVICĂ' %></span><span><%= [user.zona, user.judet].filter(Boolean).join(' · ') %></span></div>
-  <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo voice-logo" aria-label="Vocea Candidatului — pagina principală"><span>Vocea</span><strong>Candidatului</strong></a><a class="back-link" href="/site/<%= user.subdomeniu %>">← Prima pagină</a></header>
-  <%- include('partials/candidate-nav', { user, activeSection }) %>
-  <% const transparenta = publicTransparency(user, null); %>
-  <section class="political-ad-banner <%= electoralMode ? '' : 'civic-disclosure' %>" aria-label="Informații despre responsabilitatea editorială"><strong><%= electoralMode ? 'Material electoral · publicitate politică' : 'Publicație civică independentă' %></strong><span><%= electoralMode ? `Finanțat de ${transparenta.finantat_de} · ` : '' %>asumat de <%= transparenta.responsabil_editorial %></span><a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența</a></section>
-  <main class="contact-page"><span class="article-label">Contact public</span><h1><%= user.nume_candidat %></h1>
-    <p><%= [user.functie_candidatura, user.zona, user.judet].filter(Boolean).join(' · ') %></p>
-    <% if (user.email_contact) { %><p><strong>Email:</strong> <a href="mailto:<%= user.email_contact %>"><%= user.email_contact %></a></p><% } %>
-    <% if (user.telefon_contact) { %><p><strong>Telefon:</strong> <a href="tel:<%= user.telefon_contact.replace(/[^+\d]/g, '') %>"><%= user.telefon_contact %></a></p><% } %>
-    <% if (!user.email_contact && !user.telefon_contact) { %><p>Candidatul nu a publicat încă date de contact.</p><% } %>
-    <p class="note">Date publicate voluntar de candidat. Mesajele sunt trimise prin aplicația ta de email sau telefon; această pagină nu colectează mesaje.</p>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta property="og:type" content="website"><meta property="og:title" content="Contact — <%= user.nume_candidat %>"><meta property="og:url" content="<%= pageUrl %>"><meta name="twitter:card" content="summary"><title>Contact — <%= user.nume_candidat %></title><link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="/newspaper.css"><link rel="stylesheet" href="/candidate-site.css?v=20260911-reference3"></head>
+<body class="newspaper-body candidate-design"><div class="candidate-site-shell">
+  <%- include('partials/candidate-header', { user, activeSection }) %>
+  <main id="candidate-main">
+    <section class="candidate-page-heading"><div class="candidate-container"><span class="candidate-eyebrow">Contact public</span><h1>În legătură cu<br><%= user.nume_candidat %></h1><p><%= [user.functie_candidatura,user.zona,user.judet].filter(Boolean).join(' · ') %></p></div></section>
+    <section class="candidate-container candidate-contact-layout"><div><span class="candidate-eyebrow">Date de contact</span><h2>Trimite un mesaj.</h2><p>Date publicate voluntar de candidat. Mesajele sunt trimise prin aplicația ta de email sau telefon; această pagină nu colectează mesaje.</p><a class="candidate-text-link" href="/site/<%= user.subdomeniu %>/despre">Despre candidat →</a></div><div class="candidate-contact-options">
+      <% if(user.email_contact){ %><a href="mailto:<%= user.email_contact %>"><span>Email</span><strong><%= user.email_contact %></strong><small>Deschide aplicația de email →</small></a><% } %>
+      <% if(user.telefon_contact){ %><a href="tel:<%= user.telefon_contact.replace(/[^+\d]/g,'') %>"><span>Telefon</span><strong><%= user.telefon_contact %></strong><small>Apelează →</small></a><% } %>
+      <% if(!user.email_contact && !user.telefon_contact){ %><div class="candidate-contact-empty"><h3>Date de contact</h3><p>Candidatul nu a publicat încă date de contact.</p></div><% } %>
+      <% ['facebook','instagram','tiktok','youtube'].forEach(network=>{ if(user.module?.social && user[`${network}_url`]){ %><a href="/site/<%= user.subdomeniu %>/social/<%= network %>" target="_blank" rel="noopener noreferrer"><span>Rețea socială</span><strong><%= network.charAt(0).toUpperCase()+network.slice(1) %></strong><small>Deschide profilul →</small></a><% } }); %>
+    </div></section>
   </main>
-  <footer class="newspaper-footer"><p><%= electoralMode ? `Material electoral finanțat de ${transparenta.finantat_de}. ` : 'Publicație civică. ' %>Conținut asumat de <%= transparenta.responsabil_editorial %>.</p><nav class="footer-links"><a href="/site/<%= user.subdomeniu %>/transparenta">Transparență</a><a href="/legal/termeni">Termeni</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/">Vocea Locală Lenauheim</a></nav></footer>
+  <% const transparenta = publicTransparency(user,null); %>
+  <section class="political-ad-banner <%= electoralMode ? '' : 'civic-disclosure' %>" aria-label="Informații despre responsabilitatea editorială"><strong><%= electoralMode ? 'Material electoral · publicitate politică' : 'Publicație civică independentă' %></strong><span><%= electoralMode ? `Finanțat de ${transparenta.finantat_de} · ` : '' %>asumat de <%= transparenta.responsabil_editorial %></span><a href="/site/<%= user.subdomeniu %>/transparenta">Vezi transparența</a></section>
+  <%- include('partials/candidate-footer', { user }) %>
 </div><%- include('partials/cristianweb-credit') %></body></html>

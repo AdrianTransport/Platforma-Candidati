@@ -6,13 +6,12 @@
   <title>Transparență — <%= user.nume_candidat %></title>
   <link rel="stylesheet" href="<%= stylesheetUrl %>">
   <link rel="stylesheet" href="/newspaper.css">
+  <link rel="stylesheet" href="/candidate-site.css?v=20260911-reference3">
 </head>
-<body class="newspaper-body">
-  <main class="newspaper-shell transparency-page">
-    <div class="newspaper-kicker"><span>INFORMAȚII DE TRANSPARENȚĂ</span><span><%= electoralMode ? 'PUBLICITATE POLITICĂ' : 'PUBLICAȚIE CIVICĂ' %></span></div>
-    <header class="newspaper-header compact-header"><a href="/site/<%= user.subdomeniu %>" class="newspaper-logo voice-logo" aria-label="Vocea Candidatului — pagina principală"><span>Vocea</span><strong>Candidatului</strong></a><a class="back-link" href="<%= articol ? `/site/${user.subdomeniu}/articol/${articol.id}` : `/site/${user.subdomeniu}` %>">← Înapoi</a></header>
-    <%- include('partials/candidate-nav', { user, activeSection }) %>
-    <section class="transparency-content">
+<body class="newspaper-body candidate-design">
+  <div class="candidate-site-shell">
+    <%- include('partials/candidate-header', { user, activeSection }) %>
+    <main class="transparency-content" id="candidate-main">
       <span class="article-label"><%= articol ? 'Material individual' : 'Publicația candidatului' %></span>
       <h1><%= articol?.titlu || user.nume_candidat %></h1>
       <dl class="legal-data-grid">
@@ -31,9 +30,9 @@
       </dl>
       <p class="legal-warning">Furnizorul tehnic nu redactează și nu aprobă mesajul. Această delimitare nu împiedică platforma să suspende un material reclamat sau aparent ilegal.</p>
       <% if (articol) { %><p><a class="btn secondary" href="/site/<%= user.subdomeniu %>/articol/<%= articol.id %>/raporteaza">Raportează acest material</a></p><% } %>
-    </section>
+    </main>
     <footer class="newspaper-footer"><p><%= articol && !articol.transparenta ? 'Material publicat înaintea funcției de arhivare: sunt afișate datele curente ale candidatului.' : 'Versiunea informațiilor este păstrată la momentul publicării materialului.' %></p><nav class="footer-links"><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/legal/raportare">Raportare</a></nav></footer>
-  </main>
+  </div>
   <%- include('partials/cristianweb-credit') %>
 </body>
 </html>

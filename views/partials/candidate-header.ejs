@@ -1,0 +1,9 @@
+<% const candidateBase = `/site/${user.subdomeniu}`; %>
+<% const candidateMenu = [['acasa','Acasă',candidateBase],['despre','Despre mine',`${candidateBase}/despre`],['program','Priorități',`${candidateBase}/program`],['proiecte','Proiecte',`${candidateBase}/proiecte`],['actualitate','Actualitate',`${candidateBase}/actualitate`],['evenimente','Evenimente',`${candidateBase}/evenimente`]]; %>
+<a class="candidate-skip" href="#candidate-main">Sari la conținut</a>
+<header class="candidate-header <%= ['acasa','despre'].includes(activeSection) ? 'candidate-header-overlay' : '' %>"><div class="candidate-container">
+  <a class="candidate-brand" href="<%= candidateBase %>"><span class="candidate-brand-mark" aria-hidden="true"><%= user.nume_candidat.split(' ').map(p=>p[0]).slice(0,2).join('') %></span><span><strong><%= user.nume_candidat %></strong><small>Vocea Candidatului</small></span></a>
+  <nav class="candidate-desktop-nav" aria-label="Meniul candidatului"><% candidateMenu.forEach(([key,label,href])=>{ %><a href="<%= href %>" <% if(activeSection===key){ %>aria-current="page"<% } %>><%= label %></a><% }) %></nav>
+  <a class="candidate-button candidate-header-contact" href="<%= candidateBase %>/contact" <% if(activeSection==='contact'){ %>aria-current="page"<% } %>>Contact</a>
+  <details class="candidate-mobile-menu"><summary>Meniu <span aria-hidden="true">☰</span></summary><nav aria-label="Meniul candidatului pe telefon"><% candidateMenu.forEach(([key,label,href])=>{ %><a href="<%= href %>" <% if(activeSection===key){ %>aria-current="page"<% } %>><%= label %></a><% }) %><a href="<%= candidateBase %>/contact">Contact</a><a href="<%= candidateBase %>/transparenta">Transparență</a></nav></details>
+</div></header>
