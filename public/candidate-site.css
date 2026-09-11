@@ -366,3 +366,14 @@
 .candidate-portrait-frame-photo img{position:static;display:block;height:auto;object-fit:contain}
 .candidate-intro-photo{height:auto;object-fit:contain}
 .candidate-intro-visual .candidate-quote{margin-top:24px}
+
+/* Keep the candidate name proportional to the portrait, with whole words. */
+.candidate-design .candidate-hero h1{
+  font-size:clamp(2.25rem,5vw,4rem);
+  line-height:1.12;
+  letter-spacing:.01em;
+  word-break:normal;
+  overflow-wrap:normal;
+  hyphens:none;
+}
+.candidate-design .candidate-hero h1.candidate-name-long{font-size:clamp(2rem,4.5vw,3.5rem);overflow-wrap:break-word}
