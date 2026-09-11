@@ -65,13 +65,19 @@ export async function initDB() {
   db.data.nextPollId ||= 1;
   db.data.nextRaportareId ||= 1;
 
-  // Approved profile-image update. Match the previous image exactly so a later
-  // dashboard edit (including removing the photo) is never overwritten.
+  // Match only Daniel's previous approved photos; preserve later dashboard edits.
+  const previousDanielPortraits = new Set([
+    '/media/fefd679d-edd5-4b3c-9cd2-20eb1e7613c1',
+    ...['', 'https://vocealenauheim.ro', 'https://www.vocealenauheim.ro'].flatMap(origin => [
+      `${origin}/candidate-assets/daniel-ganea-20260911.png`,
+      `${origin}/candidate-assets/daniel-ganea-20260911-v1.webp`,
+    ]),
+  ]);
   const updatedProfile = db.data.users.find(user => user.role === 'candidate'
     && user.subdomeniu === 'daniel-ganea'
-    && user.fotografie_profil_url === '/media/fefd679d-edd5-4b3c-9cd2-20eb1e7613c1');
+    && previousDanielPortraits.has(user.fotografie_profil_url));
   if (updatedProfile) {
-    updatedProfile.fotografie_profil_url = 'https://vocealenauheim.ro/candidate-assets/daniel-ganea-20260911.png';
+    updatedProfile.fotografie_profil_url = '/candidate-assets/daniel-ganea-portrait-transparent-v1.webp';
   }
 
   for (const user of db.data.users) {

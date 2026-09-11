@@ -8,7 +8,7 @@ test('Înlocuirea fotografiei vizează doar profilul și imaginea aprobate, pers
   const originalCwd = process.cwd();
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'profile-image-update-'));
   const oldImage = '/media/fefd679d-edd5-4b3c-9cd2-20eb1e7613c1';
-  const newImage = 'https://vocealenauheim.ro/candidate-assets/daniel-ganea-20260911.png';
+  const newImage = '/candidate-assets/daniel-ganea-portrait-transparent-v1.webp';
   try {
     process.chdir(dir);
     const { db, initDB } = await import('../db.js');
@@ -28,6 +28,13 @@ test('Înlocuirea fotografiei vizează doar profilul și imaginea aprobate, pers
     assert.equal(JSON.parse(await fs.readFile('data/db.json', 'utf8')).users[1].fotografie_profil_url, newImage);
     await initDB();
     assert.equal(db.data.users[1].fotografie_profil_url, newImage);
+    for (const priorImage of ['https://vocealenauheim.ro/candidate-assets/daniel-ganea-20260911.png', '/candidate-assets/daniel-ganea-20260911-v1.webp']) {
+      db.data.users[1].fotografie_profil_url = priorImage;
+      await db.write();
+      await initDB();
+      assert.equal(db.data.users[1].fotografie_profil_url, newImage);
+      assert.equal(db.data.users[2].fotografie_profil_url, oldImage);
+    }
     for (const laterImage of ['https://example.test/replacement.png', '']) {
       db.data.users[1].fotografie_profil_url = laterImage;
       await db.write();

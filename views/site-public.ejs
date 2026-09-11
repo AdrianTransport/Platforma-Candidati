@@ -14,7 +14,7 @@
   <title><%= user.nume_candidat %> — <%= user.functie_candidatura || user.zona %></title>
   <link rel="stylesheet" href="<%= stylesheetUrl %>">
   <link rel="stylesheet" href="/newspaper.css">
-  <link rel="stylesheet" href="/candidate-site.css?v=20260911-name1">
+  <link rel="stylesheet" href="/candidate-site.css?v=20260911-cutout1">
 </head>
 <body class="newspaper-body candidate-design">
   <div class="candidate-site-shell">
@@ -23,6 +23,7 @@
     <% const principal = candidatura || fluxIdei[0]; const secundare = fluxIdei.filter(a => a.id !== principal?.id); %>
     <main id="candidate-main">
       <% const profileBase = `/site/${user.subdomeniu}`;
+         const transparentPortrait = isTransparentPortrait(user.fotografie_profil_url);
          const profileInitials = user.nume_candidat.split(' ').map(p => p[0]).slice(0,2).join('');
          const profileTopics = [
            ['program','Priorități','Programul și obiectivele publicate de candidat.'],
@@ -40,8 +41,8 @@
             <p class="candidate-hero-message"><%= user.slogan || user.mesaj_scurt || [user.functie_candidatura, user.zona, user.judet].filter(Boolean).join(' · ') %></p>
             <div class="candidate-actions"><a class="candidate-button candidate-button-white" href="<%= profileBase %>/proiecte">Vezi proiectele</a><a class="candidate-button candidate-button-outline" href="<%= profileBase %>/despre">Despre mine</a></div>
           </div>
-          <div class="candidate-hero-visual"><div class="candidate-portrait-frame<%= user.fotografie_profil_url ? ' candidate-portrait-frame-photo' : '' %>">
-            <% if (user.fotografie_profil_url) { %><img src="<%= publicImageUrl(user.fotografie_profil_url) %>" alt="<%= user.nume_candidat %>" width="640" height="640" fetchpriority="high" decoding="async"><% } else { %><span class="candidate-portrait-initials" aria-label="<%= user.nume_candidat %>"><%= profileInitials %></span><% } %>
+          <div class="candidate-hero-visual"><div class="candidate-portrait-frame<%= user.fotografie_profil_url ? ' candidate-portrait-frame-photo' : '' %><%= transparentPortrait ? ' candidate-portrait-cutout' : '' %>">
+            <% if (user.fotografie_profil_url) { %><img src="<%= publicImageUrl(user.fotografie_profil_url) %>" alt="<%= user.nume_candidat %>" width="<%= transparentPortrait ? 1142 : 640 %>" height="<%= transparentPortrait ? 1377 : 640 %>" fetchpriority="high" decoding="async"><% } else { %><span class="candidate-portrait-initials" aria-label="<%= user.nume_candidat %>"><%= profileInitials %></span><% } %>
           </div></div>
         </div>
       </section>
@@ -64,7 +65,7 @@
             <div class="candidate-actions"><a class="candidate-button" href="<%= profileBase %>/despre">Citește prezentarea</a><a class="candidate-button candidate-button-secondary" href="<%= profileBase %>/contact">Contact</a></div>
           </div>
           <div class="candidate-intro-visual">
-            <% if (user.fotografie_profil_url || user.fotografie_coperta_url) { %><img class="candidate-intro-photo" src="<%= publicImageUrl(user.fotografie_profil_url || user.fotografie_coperta_url) %>" alt="<%= user.nume_candidat %>" width="620" height="720" loading="lazy" decoding="async"><% } else { %><span class="candidate-about-monogram"><%= profileInitials %></span><% } %>
+            <% if (user.fotografie_profil_url || user.fotografie_coperta_url) { %><img class="candidate-intro-photo<%= transparentPortrait ? ' candidate-intro-cutout' : '' %>" src="<%= publicImageUrl(user.fotografie_profil_url || user.fotografie_coperta_url) %>" alt="<%= user.nume_candidat %>" width="<%= transparentPortrait ? 1142 : 620 %>" height="<%= transparentPortrait ? 1377 : 720 %>" loading="lazy" decoding="async"><% } else { %><span class="candidate-about-monogram"><%= profileInitials %></span><% } %>
             <div class="candidate-quote"><% if (user.mesaj_scurt || user.slogan) { %><p>„<%= user.mesaj_scurt || user.slogan %>”</p><% } %><div class="candidate-quote-author"><% if (user.fotografie_profil_url) { %><img src="<%= publicImageUrl(user.fotografie_profil_url) %>" alt="" width="64" height="64" loading="lazy"><% } %><div><strong><%= user.nume_candidat %></strong><span><%= [user.functie_candidatura,user.zona].filter(Boolean).join(' · ') %></span></div></div></div>
           </div>
         </div>

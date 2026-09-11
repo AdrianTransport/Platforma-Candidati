@@ -32,6 +32,8 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   await fs.mkdir(path.join(dir, 'public', 'candidate-assets'));
   await fs.copyFile(path.join(root, 'public', 'candidate-assets', 'daniel-ganea-20260911-v1.webp'),
     path.join(dir, 'public', 'candidate-assets', 'daniel-ganea-20260911-v1.webp'));
+  await fs.copyFile(path.join(root, 'public', 'candidate-assets', 'daniel-ganea-portrait-transparent-v1.webp'),
+    path.join(dir, 'public', 'candidate-assets', 'daniel-ganea-portrait-transparent-v1.webp'));
   const candidate = (id, name) => ({ id, role: 'candidate', activ: true, status_cont: 'activ',
     email: `${name}@example.test`, password_hash: hash, nume_candidat: name, subdomeniu: name,
     functie_candidatura: 'Consilier local', zona: 'Timișoara', judet: 'Timiș', partid: 'Independent',
@@ -1083,8 +1085,24 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
       assert.equal(asset.status, 200);
       assert.match(asset.headers.get('content-type'), /image\/webp/);
       assert.ok((await asset.arrayBuffer()).byteLength < 150000);
+      user.fotografie_profil_url = '/candidate-assets/daniel-ganea-portrait-transparent-v1.webp';
+      for (const url of ['/site/ana', '/site/ana/despre']) {
+        const page = await guest(url);
+        assert.equal(page.status, 200);
+        assert.match(page.html, /src="\/candidate-assets\/daniel-ganea-portrait-transparent-v1.webp"/);
+        assert.match(page.html, /class="candidate-portrait-frame candidate-portrait-frame-photo candidate-portrait-cutout"/);
+        assert.match(page.html, /width="1142" height="1377" fetchpriority="high"/);
+      }
+      const transparentAsset = await fetch(`${base}${user.fotografie_profil_url}`);
+      assert.equal(transparentAsset.status, 200);
+      assert.match(transparentAsset.headers.get('content-type'), /image\/webp/);
+      assert.ok((await transparentAsset.arrayBuffer()).byteLength < 150000);
       user.fotografie_profil_url = 'https://example.test/another-photo.jpg';
-      assert.match((await guest('/site/ana')).html, /src="https:\/\/example.test\/another-photo.jpg"/);
+      for (const url of ['/site/ana', '/site/ana/despre']) {
+        const page = await guest(url);
+        assert.match(page.html, /src="https:\/\/example.test\/another-photo.jpg"/);
+        assert.doesNotMatch(page.html, /candidate-portrait-cutout/);
+      }
     } finally { user.fotografie_profil_url = original; }
   });
   await t.test('O eroare de salvare a statisticilor nu blochează paginile sau redirecționarea socială', async () => {

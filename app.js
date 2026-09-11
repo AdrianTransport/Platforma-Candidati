@@ -197,6 +197,9 @@ export async function createApp({
     [`https://www.vocealenauheim.ro${originalPortrait}`, optimizedPortrait],
   ]);
   app.locals.publicImageUrl = url => optimizedImages.get(url) || url;
+  const transparentPortrait = '/candidate-assets/daniel-ganea-portrait-transparent-v1.webp';
+  app.locals.isTransparentPortrait = url => ['', 'https://vocealenauheim.ro', 'https://www.vocealenauheim.ro']
+    .some(origin => url === `${origin}${transparentPortrait}`);
   // O adresă nouă la fiecare modificare CSS evită copiile vechi din cache.
   // public/** este inclus atât în fișierele statice, cât și în funcția Netlify.
   const stylesheetVersion = createHash('sha256')

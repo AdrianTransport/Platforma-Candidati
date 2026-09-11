@@ -377,3 +377,20 @@
   hyphens:none;
 }
 .candidate-design .candidate-hero h1.candidate-name-long{font-size:clamp(2rem,4.5vw,3.5rem);overflow-wrap:break-word}
+
+/* The supplied cutout sits directly over the hero background, without a frame. */
+.candidate-portrait-frame.candidate-portrait-cutout{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  overflow:visible;
+}
+.candidate-portrait-cutout img,.candidate-intro-photo.candidate-intro-cutout{
+  height:auto;
+  aspect-ratio:1142/1377;
+  object-fit:contain;
+  object-position:center bottom;
+  border-radius:0;
+  background:transparent;
+}
