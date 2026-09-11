@@ -6,6 +6,7 @@ import { createHmac, randomBytes, createHash, timingSafeEqual } from 'node:crypt
 import { readFile } from 'node:fs/promises';
 import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
+import { StateConflictError } from './state-conflict.js';
 import { requireRole } from './middleware/auth.js';
 import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, textField, ValidationError } from './publication.js';
 import { raportareInput, moderareRaportareInput, statisticiPublice, totalPublic, purjeazaRaportariExpirate, limitaRaportariDepasita,
@@ -281,6 +282,12 @@ export async function createApp({
   }
 
   const safely = handler => (req, res, next) => Promise.resolve(handler(req, res, next)).catch(next);
+  app.use(safely(async (req, res, next) => {
+    // După o scriere respinsă recitim datele înaintea verificării drepturilor
+    // sau a unei noi modificări. Netlify recitește și între invocări.
+    if (db.requiresReload) await initDB();
+    next();
+  }));
   async function saveVisitStatistics() {
     // O eroare a contorului nu trebuie să blocheze citirea sau linkul social.
     // Așteptăm scrierea și în Lambda; salvările de conținut rămân obligatorii.
@@ -621,7 +628,6 @@ export async function createApp({
       }
       throw error;
     }
-    req.session.ultimaRaportareCosturi = acumMs;
     fields.created_at = new Date(acumMs).toISOString();
     fields.ip_hash = ipHash;
     if (req.body.acord_dispozitiv === 'on' || req.body.acord_dispozitiv === true) {
@@ -634,6 +640,7 @@ export async function createApp({
     fields.id = db.data.nextRaportareId++;
     db.data.raportari_costuri.push(fields);
     await db.write();
+    req.session.ultimaRaportareCosturi = acumMs;
     res.render('raportare-costuri', { tip: req.params.tip, localitati: LOCALITATI, eroare: null, trimis: true });
   }));
 
@@ -690,7 +697,7 @@ export async function createApp({
     res.redirect(`/admin/raportari-costuri?tip=${raportare.tip}&mesaj=Raportarea%20a%20fost%20stearsa.`);
   }));
 
-  app.post('/login', async (req, res) => {
+  app.post('/login', safely(async (req, res) => {
     const email = String(req.body.email || '').trim().toLowerCase();
     const parola = String(req.body.parola || '');
     const user = db.data.users.find((u) => u.email.toLowerCase() === email);
@@ -734,7 +741,7 @@ export async function createApp({
     if (user.role === 'admin') return res.redirect('/admin');
     if (user.status_cont === 'in_asteptare') return res.redirect('/activare');
     return res.redirect('/dashboard');
-  });
+  }));
 
   app.post('/logout', requireCsrf, (req, res) => {
     req.session = null;
@@ -1044,7 +1051,7 @@ export async function createApp({
     res.status(201).render('candidate-created', { candidate, parola });
   }));
 
-  app.post('/admin/securitate', requireRole('admin'), requireActiveAccount, requireCsrf, async (req, res) => {
+  app.post('/admin/securitate', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const admin = db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin');
     const parolaActuala = String(req.body.parola_actuala || '');
     const parolaNoua = String(req.body.parola_noua || '');
@@ -1072,7 +1079,7 @@ export async function createApp({
     admin.password_changed_at = new Date().toISOString();
     await db.write();
     res.redirect('/admin?mesaj=Parola%20Super%20Adminului%20a%20fost%20schimbata.');
-  });
+  }));
 
   app.post('/admin/email', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const admin = db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin');
@@ -1558,7 +1565,7 @@ export async function createApp({
     }
   });
 
-  app.post('/dashboard/social/meta/pagina', requireRole('candidate'), requireCsrf, async (req, res) => {
+  app.post('/dashboard/social/meta/pagina', requireRole('candidate'), requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     const meta = user?.social_connections?.meta;
     const pageId = String(req.body.page_id || '');
@@ -1571,14 +1578,14 @@ export async function createApp({
       return res.redirect('/dashboard/social?mesaj=Pagina%20Meta%20a%20fost%20selectata.');
     }
     res.redirect('/dashboard/social?eroare=Pagina%20Meta%20selectata%20nu%20este%20valida.');
-  });
+  }));
 
-  app.post('/dashboard/social/meta/deconecteaza', requireRole('candidate'), requireCsrf, async (req, res) => {
+  app.post('/dashboard/social/meta/deconecteaza', requireRole('candidate'), requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (user?.social_connections) user.social_connections.meta = null;
     await db.write();
     res.redirect('/dashboard/social?mesaj=Meta%20a%20fost%20deconectat%20din%20platforma.');
-  });
+  }));
 
   app.get('/dashboard/social/tiktok/conecteaza', requireRole('candidate'), (req, res) => {
     if (!tiktokConfigured()) {
@@ -1624,7 +1631,7 @@ export async function createApp({
     }
   });
 
-  app.post('/dashboard/social/tiktok/deconecteaza', requireRole('candidate'), requireCsrf, async (req, res) => {
+  app.post('/dashboard/social/tiktok/deconecteaza', requireRole('candidate'), requireCsrf, safely(async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     const connection = user?.social_connections?.tiktok;
     if (connection && tiktokConfigured()) {
@@ -1646,7 +1653,7 @@ export async function createApp({
     if (user?.social_connections) user.social_connections.tiktok = null;
     await db.write();
     res.redirect('/dashboard/social?mesaj=TikTok%20a%20fost%20deconectat%20din%20platforma.');
-  });
+  }));
 
   app.post('/dashboard/social/publica/:id', requireRole('candidate'), requireCsrf, async (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
@@ -2007,6 +2014,12 @@ export async function createApp({
 
   app.use((error, req, res, next) => {
     if (res.headersSent) return next(error);
+    if (error instanceof StateConflictError) {
+      res.set('Cache-Control', 'private, no-store');
+      res.set('Netlify-CDN-Cache-Control', 'no-store');
+      if (req.is('application/json')) return res.status(409).json({ eroare: error.message });
+      return res.status(409).send(error.message);
+    }
     if (['/dashboard/media', '/admin/portal/media'].includes(req.path) && error.type === 'entity.too.large') {
       return res.status(413).json({ eroare: 'Imagine prea mare. Încarcă un fișier de maximum 3 MB după redimensionare.' });
     }

@@ -1,13 +1,31 @@
 import bcrypt from 'bcryptjs';
-import { readData, writeData } from './store.js';
+import { readDataSnapshot, writeData } from './store.js';
 
 export const db = {
   data: null,
+  version: undefined,
+  committed: null,
+  requiresReload: false,
   async read() {
-    this.data = await readData();
+    const snapshot = await readDataSnapshot();
+    this.data = snapshot.data;
+    this.version = snapshot.version;
+    this.committed = structuredClone(snapshot.data);
+    this.requiresReload = false;
   },
   async write() {
-    await writeData(this.data);
+    const pending = structuredClone(this.data);
+    try {
+      this.version = await writeData(pending, this.version);
+      this.committed = pending;
+    } catch (error) {
+      // O salvare respinsă nu trebuie să rămână vizibilă numai în memorie și
+      // nici să fie inclusă accidental într-o salvare ulterioară.
+      this.data = structuredClone(this.committed);
+      this.version = undefined;
+      this.requiresReload = true;
+      throw error;
+    }
   },
 };
 

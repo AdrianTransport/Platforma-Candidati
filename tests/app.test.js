@@ -1109,6 +1109,67 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
       user.statistici = originalStatistics;
     }
   });
+  await t.test('Raportarea respinsă la conflict nu apare ca trimisă și poate fi reluată imediat', async () => {
+    const { readDataSnapshot, writeData } = await import('../store.js');
+    await db.write();
+    const reporter = browser();
+    const token = csrf((await reporter('/raportare/apa')).html);
+    const body = { csrf_token: token, confirmare_informare: 'on', mod_raspuns: 'anonim',
+      localitate: 'Lenauheim', perioada: 'test-concurenta', suma: '120' };
+    const external = await readDataSnapshot();
+    const id = external.data.nextRaportareId;
+    external.data.users.find(user => user.id === 1).nume_candidat = 'Modificare din altă instanță';
+    await writeData(external.data, external.version);
+    const conflict = await reporter('/raportare/apa', body);
+    assert.equal(conflict.status, 409);
+    assert.match(conflict.html, /nu a fost salvată/);
+    assert.equal(conflict.headers.get('cache-control'), 'private, no-store');
+    assert.equal(conflict.headers.get('netlify-cdn-cache-control'), 'no-store');
+    assert.equal(db.requiresReload, true);
+    assert.equal(db.data.raportari_costuri.some(row => row.perioada === 'test-concurenta'), false);
+    assert.equal((await readDataSnapshot()).data.raportari_costuri.some(row => row.perioada === 'test-concurenta'), false);
+    const retry = await reporter('/raportare/apa', body);
+    assert.equal(retry.status, 200, retry.html);
+    assert.equal(db.requiresReload, false);
+    const saved = (await readDataSnapshot()).data;
+    assert.equal(saved.users.find(user => user.id === 1).nume_candidat, 'Modificare din altă instanță');
+    const reports = saved.raportari_costuri.filter(row => row.perioada === 'test-concurenta');
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0].id, id);
+    assert.equal((await reporter('/raportare/apa', body)).status, 429);
+  });
+  await t.test('Moderarea concurentă păstrează corectarea mai nouă și permite salvarea după recitire', async () => {
+    const { readDataSnapshot, writeData } = await import('../store.js');
+    const report = db.data.raportari_costuri.find(row => row.perioada === 'test-concurenta');
+    assert.ok(report);
+    const url = `/admin/raportari-costuri/${report.id}/modifica`;
+    const body = { csrf_token: adminToken, localitate: 'Lenauheim', perioada: 'test-concurenta', suma: '180' };
+    assert.equal((await cand(url, body)).status, 403);
+    assert.equal((await admin(url, { ...body, csrf_token: '' })).status, 403);
+    const external = await readDataSnapshot();
+    external.data.raportari_costuri.find(row => row.id === report.id).suma = 150;
+    await writeData(external.data, external.version);
+    const conflict = await admin(url, body, true);
+    assert.equal(conflict.status, 409);
+    assert.match(JSON.parse(conflict.html).eroare, /Reîncarcă pagina/);
+    assert.equal((await readDataSnapshot()).data.raportari_costuri.find(row => row.id === report.id).suma, 150);
+    assert.equal((await admin('/admin/raportari-costuri')).status, 200);
+    assert.equal(db.data.raportari_costuri.find(row => row.id === report.id).suma, 150);
+    assert.equal((await admin(url, body)).status, 302);
+    assert.equal((await readDataSnapshot()).data.raportari_costuri.find(row => row.id === report.id).suma, 180);
+  });
+  await t.test('Conflictul la login răspunde controlat, fără autentificare prematură', async () => {
+    const { readDataSnapshot, writeData } = await import('../store.js');
+    const external = await readDataSnapshot();
+    external.data.users.find(user => user.id === 3).mesaj_scurt = 'Salvat în altă instanță';
+    await writeData(external.data, external.version);
+    const visitor = browser();
+    const body = { email: 'bogdan@example.test', parola: authAccounts.get('bogdan@example.test').password };
+    assert.equal((await visitor('/login', body)).status, 409);
+    assert.equal((await visitor('/dashboard')).status, 403);
+    assert.equal((await visitor('/login', body)).headers.get('location'), '/dashboard');
+    assert.equal((await readDataSnapshot()).data.users.find(user => user.id === 3).mesaj_scurt, 'Salvat în altă instanță');
+  });
   await t.test('Handlerul Netlify real păstrează octeții imaginii în răspunsul Lambda', async () => {
     const article = db.data.articole.find(a => a.id === 1);
     const id = article.imagine_url.split('/').pop();

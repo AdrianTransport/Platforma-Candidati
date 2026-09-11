@@ -117,10 +117,33 @@ header-ul Netlify trebuie verificată pe deploy; local se folosește adresa sock
 
 La afișarea publică se citesc comentariile/auditul articolului; în administrare se citește
 întreaga listă înainte de paginare. Soluția este pentru pilot, nu pentru volume mari.
-Modelul vechi `db.json` pentru conturi, articole și statistici rămâne neschimbat:
-instanțe serverless diferite pot păstra copii vechi și suprascrie actualizări concurente.
-Acest lot **nu rezolvă** acea problemă generală de stocare sau securitatea completă a
-rutelor vechi. Este necesară o intervenție separată, aprobată, înainte de extindere.
+Conturile, articolele și statisticile folosesc în continuare un singur document de stare.
+Salvarea lui este condiționată atomic de versiunea citită:
+
+- Netlify Blobs: ETag cu `onlyIfMatch`; crearea inițială folosește `onlyIfNew`.
+  Biblioteca existentă `@netlify/blobs` este fixată la 10.7.13, care oferă aceste opțiuni.
+- Supabase: `PATCH` filtrat pe `payload->>_stateRevision`, cu o revizie UUID nouă la fiecare
+  scriere. Prima actualizare a unui document vechi verifică absența reviziei. Nu necesită
+  modificarea schemei. Crearea folosește `INSERT`, fără upsert.
+- Local: comparație sub lacăt exclusiv între procese, apoi înlocuire atomică a fișierului.
+  Dacă un proces se oprește în timpul scrierii și lasă `data/db.json.lock`, oprește toate
+  procesele locale înainte de a elimina acel lacăt și de a reporni serverul.
+
+O scriere pornită de la o versiune veche este refuzată cu HTTP 409; utilizatorul trebuie
+să reîncarce și să retrimită modificarea. Nu combinăm automat editări concurente și nu
+repetăm cereri care pot trimite mesaje sau modifica servicii externe. După o eroare,
+copia nesalvată din memorie este eliminată și următoarea cerere recitește datele.
+Contoarele de vizite rămân best-effort: un conflict nu blochează citirea paginii.
+Handlerul Netlify serializează cererile din aceeași instanță; verificarea versiunii
+protejează scrierile dintre instanțe. Serverul local este destinat dezvoltării, fără
+izolare tranzacțională între cereri HTTP care folosesc simultan aceeași memorie.
+
+Protecția cere ca toate instanțele și scripturile care scriu starea să folosească noul
+protocol. La publicare, așteaptă încheierea invocărilor vechi înaintea verificării finale;
+nu folosi în paralel un deploy vechi sau un script care suprascrie documentul necondiționat.
+Operațiile Auth/social și jurnalul separat nu devin parte dintr-o tranzacție comună cu
+starea platformei: dacă serviciul extern a confirmat deja o operație, verifică rezultatul
+acolo înainte de a o repeta după o eroare de salvare locală.
 
 ### Verificarea acestui lot
 

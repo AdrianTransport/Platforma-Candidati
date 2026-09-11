@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import { StateConflictError } from './state-conflict.js';
+
 const PROJECT_URL = 'https://sfxdxatfcllwkihxqhra.supabase.co';
 
 function config() {
@@ -32,15 +35,42 @@ export function useSupabase() {
 }
 
 export async function readSupabaseState() {
-  const rows = await request('platform_state?id=eq.db&select=payload');
-  return rows?.[0]?.payload || null;
+  return (await readSupabaseSnapshot()).data;
 }
 
-export async function writeSupabaseState(payload) {
-  await request('platform_state?on_conflict=id', {
-    method: 'POST', body: { id: 'db', payload, updated_at: new Date().toISOString() },
-    prefer: 'resolution=merge-duplicates,return=minimal',
-  });
+export async function readSupabaseSnapshot() {
+  const rows = await request('platform_state?id=eq.db&select=payload');
+  if (!rows?.length) return { data: null, version: null };
+  const { _stateRevision, ...data } = rows[0].payload || {};
+  return { data, version: _stateRevision || 'legacy' };
+}
+
+export async function writeSupabaseState(payload, expectedVersion) {
+  if (expectedVersion !== null && (typeof expectedVersion !== 'string' || !expectedVersion)) {
+    throw new Error('Citește versiunea datelor înainte de salvare.');
+  }
+  const version = randomUUID();
+  const body = { payload: { ...payload, _stateRevision: version }, updated_at: new Date().toISOString() };
+  let rows;
+  if (expectedVersion === null) {
+    try {
+      rows = await request('platform_state?select=id', {
+        method: 'POST', body: { id: 'db', ...body }, prefer: 'return=representation',
+      });
+    } catch (error) {
+      if (error.status === 409) throw new StateConflictError();
+      throw error;
+    }
+  } else {
+    // Condiția este parte din UPDATE: PostgreSQL o reverifică după așteptarea
+    // unei scrieri concurente. Nu folosim un SELECT urmat de upsert necondiționat.
+    const filter = expectedVersion === 'legacy' ? 'is.null' : `eq.${encodeURIComponent(expectedVersion)}`;
+    rows = await request(`platform_state?id=eq.db&payload->>_stateRevision=${filter}&select=id`, {
+      method: 'PATCH', body, prefer: 'return=representation',
+    });
+  }
+  if (!Array.isArray(rows) || rows.length !== 1 || rows[0].id !== 'db') throw new StateConflictError();
+  return version;
 }
 
 export function createSupabaseKeyStore(namespace) {
