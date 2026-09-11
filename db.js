@@ -91,6 +91,8 @@ export async function initDB() {
       ...(user.social_connections || {}),
     };
     user.module = { site: true, statistici: true, social: true, ...(user.module || {}) };
+    // Păstrează afișarea candidaților deja activi; conturile noi pornesc ascunse.
+    user.vizibil_in_portal ??= Boolean(user.activ && user.status_cont === 'activ' && user.module.site);
     user.statistici = {
       vizite_site: user.statistici?.vizite_site || 0,
       surse: {

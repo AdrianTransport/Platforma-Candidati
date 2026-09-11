@@ -617,6 +617,106 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal((await admin(url, { csrf_token: adminToken, status: 'sters', version: current.version })).status, 303);
     assert.match((await admin('/admin/comentarii?status=sters')).html, /Istoric moderare \(3\)/);
   });
+  await t.test('Afișarea în portal este controlată numai de Super Admin, fără activarea implicită a contului', async () => {
+    const user = db.data.users.find(user => user.id === 2);
+    const original = structuredClone(user);
+    const url = '/admin/candidati/2/vizibilitate';
+    try {
+      assert.equal(user.vizibil_in_portal, true, 'Candidații deja afișați își păstrează vizibilitatea');
+      assert.equal((await guest(url, { vizibil_in_portal: 'nu' })).status, 403);
+      assert.equal((await cand(url, { csrf_token: candidateToken, vizibil_in_portal: 'nu' })).status, 403);
+      assert.equal((await admin(url, { vizibil_in_portal: 'nu' })).status, 403);
+      assert.equal((await admin(url, { csrf_token: adminToken, vizibil_in_portal: 'invalid' })).status, 400);
+      assert.equal((await admin('/admin/candidati/999999/vizibilitate', { csrf_token: adminToken, vizibil_in_portal: 'nu' })).status, 404);
+      assert.equal((await admin('/admin/candidati/1/vizibilitate', { csrf_token: adminToken, vizibil_in_portal: 'nu' })).status, 404);
+      assert.equal(user.vizibil_in_portal, true);
+
+      assert.equal((await admin(url, { csrf_token: adminToken, vizibil_in_portal: 'nu' })).status, 303);
+      assert.equal(user.vizibil_in_portal, false);
+      assert.equal(user.activ, true);
+      assert.equal(user.status_cont, 'activ');
+      assert.deepEqual(user.module, original.module);
+      const saved = JSON.parse(await fs.readFile(path.join(dir, 'data/db.json'), 'utf8'));
+      assert.equal(saved.users.find(user => user.id === 2).vizibil_in_portal, false);
+      assert.match((await admin('/admin')).html, /Afișare în Vocea Locală/);
+
+      user.activ = false;
+      user.status_cont = 'suspendat';
+      assert.equal((await admin(url, { csrf_token: adminToken, vizibil_in_portal: 'da' })).status, 400);
+      assert.equal(user.activ, false);
+      assert.equal(user.vizibil_in_portal, false);
+      assert.equal((await cand('/dashboard')).status, 403);
+      assert.equal((await guest('/site/ana')).status, 404);
+      user.activ = true;
+      user.status_cont = 'activ';
+      user.module.site = false;
+      assert.equal((await admin(url, { csrf_token: adminToken, vizibil_in_portal: 'da' })).status, 400);
+      assert.equal(user.vizibil_in_portal, false);
+    } finally {
+      Object.assign(user, original);
+      await db.write();
+    }
+  });
+  await t.test('Candidatul ascuns editează site-ul prin dashboard, iar afișarea în portal poate fi reluată', async () => {
+    const user = db.data.users.find(user => user.id === 2);
+    const original = structuredClone(user);
+    const originalArticles = structuredClone(db.data.articole);
+    const originalPosts = structuredClone(db.data.portal_posts);
+    const campaign = { id: 970, candidate_id: 2, tip: 'campanie', status: 'publicat',
+      slug: 'material-asociat-test', titlu: 'Material asociat candidatului', categorie: 'Actualitate',
+      continut: 'Informații de test.', rezumat: 'Rezumat de test.', created_at: '2026-01-01T00:00:00Z' };
+    try {
+      db.data.portal_posts.push(campaign);
+      db.data.articole.push({ ...db.data.articole.find(article => article.id === 1), id: 900,
+        status: 'ciorna', titlu: 'Ciorna de pregătire' });
+      assert.equal((await admin('/admin/candidati/2/vizibilitate', { csrf_token: adminToken, vizibil_in_portal: 'nu' })).status, 303);
+      assert.equal((await browser()('/login', { email: 'ana@example.test', parola: password })).headers.get('location'), '/dashboard');
+      const dashboard = await cand('/dashboard');
+      assert.equal(dashboard.status, 200);
+      assert.match(dashboard.html, /Site-ul tău nu este afișat în Vocea Locală/);
+      const profile = { csrf_token: candidateToken, functie_candidatura: user.functie_candidatura,
+        zona: user.zona, judet: user.judet, slogan: user.slogan, mesaj_scurt: user.mesaj_scurt || '',
+        descriere: 'Prezentare actualizată în timpul pregătirii.', email_contact: user.email_contact || '',
+        telefon_contact: user.telefon_contact || '', fotografie_profil_url: user.fotografie_profil_url,
+        fotografie_coperta_url: user.fotografie_coperta_url, vizibil_in_portal: 'da' };
+      assert.equal((await cand('/dashboard/profil', profile)).status, 302);
+      assert.equal(user.descriere, profile.descriere);
+      assert.equal(user.vizibil_in_portal, false, 'Profilul candidatului nu poate modifica opțiunea Super Admin');
+      assert.equal((await cand('/dashboard/articol/900', { csrf_token: candidateToken, titlu: 'Ciornă modificată',
+        continut: 'Material pregătit în dashboard.', tip: 'idee', categorie: 'Proiecte', status: 'ciorna' })).status, 302);
+      assert.equal(db.data.articole.find(article => article.id === 900).titlu, 'Ciornă modificată');
+      assert.equal((await cand('/dashboard/articol/900/preview')).status, 200);
+      assert.equal((await guest('/site/ana/articol/900')).status, 404);
+      assert.equal((await guest('/site/ana')).status, 200, 'Linkul direct rămâne public');
+      assert.equal((await guest('/site/ana/articol/1')).status, 200);
+      for (const route of ['/', '/candidati', '/candidati?cauta=ana', '/sectiune/stiri']) {
+        const page = await guest(route);
+        assert.equal(page.status, 200);
+        assert.doesNotMatch(page.html, /href="\/site\/ana(?:"|\/)|material-asociat-test/, route);
+      }
+      assert.doesNotMatch((await guest('/sitemap.xml')).html, /\/site\/ana(?:<|\/)|material-asociat-test/);
+      assert.equal((await guest('/actualitate/material-asociat-test')).status, 404);
+      const blocked = await admin('/admin/portal', { csrf_token: adminToken, tip: 'campanie', candidate_id: '2',
+        titlu: 'Alt material', rezumat: 'Rezumat de test.', continut: 'Conținut de test.', categorie: 'Actualitate', finantator: 'ana',
+        status: 'publicat', confirmare_responsabilitate: 'on' });
+      assert.equal(blocked.status, 400);
+      assert.match(blocked.html, /Candidatul este ascuns/);
+
+      assert.equal((await admin('/admin/candidati/2/vizibilitate', { csrf_token: adminToken, vizibil_in_portal: 'da' })).status, 303);
+      for (const route of ['/', '/candidati']) assert.match((await guest(route)).html, /href="\/site\/ana"/);
+      assert.match((await guest('/sitemap.xml')).html, /\/site\/ana<\/loc>/);
+      assert.match((await guest('/')).html, /material-asociat-test/);
+      assert.equal((await guest('/actualitate/material-asociat-test')).status, 200);
+      const events = (await compliance.listAudit()).filter(event => event.action === 'candidate_portal_visibility_changed');
+      assert.ok(events.some(event => event.actor_role === 'admin' && event.details.previous === true && event.details.visible === false));
+      assert.ok(events.some(event => event.actor_role === 'admin' && event.details.previous === false && event.details.visible === true));
+    } finally {
+      Object.assign(user, original);
+      db.data.articole = originalArticles;
+      db.data.portal_posts = originalPosts;
+      await db.write();
+    }
+  });
   await t.test('Super Admin corectează și șterge raportări de cost, cu rol și CSRF verificate', async () => {
     db.data.raportari_costuri.push({
       id: 1, tip: 'apa', localitate: 'Bulgăruș', perioada: 'iulie 2026', suma: 99999,
@@ -773,9 +873,13 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.equal(newCandidate.terms_version, TERMS_VERSION);
     assert.equal(newCandidate.status_cont, 'in_asteptare');
     assert.equal(newCandidate.activ, false);
+    assert.equal(newCandidate.vizibil_in_portal, false);
     const activated = await admin(`/admin/candidati/${newCandidate.id}/status`, { csrf_token: adminToken, status_cont: 'activ' });
     assert.equal(activated.status, 302);
     assert.equal(newCandidate.activ, true);
+    assert.equal(newCandidate.vizibil_in_portal, false, 'Activarea permite lucrul, fără listare automată');
+    assert.ok(!(await guest('/')).html.includes(`href="/site/${newCandidate.subdomeniu}"`));
+    assert.ok(!(await guest('/candidati')).html.includes(`href="/site/${newCandidate.subdomeniu}"`));
     let newDashboard = await pending('/dashboard');
     assert.equal(newDashboard.status, 200);
     const changed = await admin(`/admin/candidati/${newCandidate.id}/configurare`, {

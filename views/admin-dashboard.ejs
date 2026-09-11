@@ -82,7 +82,7 @@
     </details>
 
     <section class="candidate-admin-list">
-      <div class="section-row"><div><span class="eyebrow">Control conturi</span><h2>Candidați</h2></div><span class="note">Activezi separat contul și modulele disponibile.</span></div>
+      <div class="section-row"><div><span class="eyebrow">Control conturi</span><h2>Candidați</h2></div><span class="note">Activezi contul pentru lucru și alegi separat când apare în Vocea Locală.</span></div>
       <% if (candidati.length === 0) { %><div class="card"><p class="note">Nu există încă niciun candidat.</p></div><% } %>
       <% candidati.forEach(c => { %>
         <article class="card candidate-admin-card">
@@ -90,6 +90,17 @@
             <div><span class="status-dot status-<%= c.status_cont %>"></span><strong><%= c.nume_candidat %></strong><span class="pill <%= c.status_cont === 'activ' ? 'publicat' : 'ciorna' %>"><%= c.status_cont.replace('_', ' ') %></span><% if (!complianceMissing[c.id].length) { %><span class="pill publicat"><%= electoralMode ? 'juridic complet' : 'profil civic complet' %></span><% } %><p><%= c.email %> · /site/<%= c.subdomeniu %><% if (c.last_login_at) { %> · ultima autentificare <%= new Date(c.last_login_at).toLocaleDateString('ro-RO') %><% } %></p></div>
             <% if (c.module?.site && c.status_cont === 'activ') { %><a class="btn secondary" href="/site/<%= c.subdomeniu %>" target="_blank">Deschide site-ul</a><% } %>
           </div>
+          <form method="POST" action="/admin/candidati/<%= c.id %>/vizibilitate" class="status-form">
+            <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+            <label>Afișare în Vocea Locală
+              <select name="vizibil_in_portal">
+                <option value="nu" <%= c.vizibil_in_portal === false ? 'selected' : '' %>>Ascuns din portal</option>
+                <option value="da" <%= c.vizibil_in_portal !== false ? 'selected' : '' %>>Afișat în portal</option>
+              </select>
+            </label>
+            <button class="secondary" type="submit">Salvează afișarea</button>
+            <p class="note"><strong><%= c.vizibil_in_portal !== false && c.activ && c.status_cont === 'activ' && c.module?.site ? 'Afișat în Vocea Locală.' : 'Ascuns din Vocea Locală.' %></strong> Când este ascuns, nu apare în listele portalului, în sitemap sau în materialele asociate de tip campanie. Cu un cont activ și modulul site pornit, candidatul poate lucra în dashboard, iar site-ul său rămâne public prin linkul direct.</p>
+          </form>
           <div class="admin-card-columns">
             <form method="POST" action="/admin/candidati/<%= c.id %>/configurare" class="form-grid form-grid-2 compact-form">
               <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
@@ -113,7 +124,7 @@
                 <label class="consent-label full-field"><input type="checkbox" name="confirmare_mandatar" <%= c.confirmare_mandatar ? 'checked' : '' %>> Datele au fost confirmate de candidat/mandatar.</label>
               <% } else { %><p class="note full-field">Mod civic: datele electorale și contractuale sunt păstrate, dar nu sunt cerute până în 2028.</p><% } %>
               <div class="module-checks">
-                <label><input type="checkbox" name="modul_site" <%= c.module?.site ? 'checked' : '' %>> Site public</label>
+                <label><input type="checkbox" name="modul_site" <%= c.module?.site ? 'checked' : '' %>> Site candidat (accesibil prin link)</label>
                 <label><input type="checkbox" name="modul_statistici" <%= c.module?.statistici ? 'checked' : '' %>> Statistici</label>
                 <label><input type="checkbox" name="modul_social" <%= c.module?.social ? 'checked' : '' %>> Rețele sociale</label>
               </div>

@@ -33,6 +33,11 @@
     <main class="candidate-main">
       <% if (mesaj) { %><div class="candidate-alert success"><div><strong><%= mesaj %></strong></div></div><% } %>
       <% if (eroare) { %><div class="candidate-alert warning"><div><strong><%= eroare %></strong></div></div><% } %>
+      <% if (user.vizibil_in_portal === false) { %>
+        <section class="candidate-alert warning">
+          <div><strong>Site-ul tău nu este afișat în Vocea Locală</strong><p>Poți edita profilul și materialele. Super Adminul decide când apari în portal. Dacă modulul site este activ, publicația rămâne accesibilă oricui are linkul direct.</p></div>
+        </section>
+      <% } %>
       <section class="candidate-welcome">
         <div>
           <span class="candidate-kicker">Panoul candidatului</span>

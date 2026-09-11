@@ -113,6 +113,10 @@ function poatePublicaSite(user) {
   return user?.role === 'candidate' && user.activ && user.status_cont === 'activ' && user.module?.site;
 }
 
+function vizibilInPortal(user) {
+  return poatePublicaSite(user) && user.vizibil_in_portal !== false;
+}
+
 function pollInput(body) {
   const question = textField(body.intrebare, 'Întrebarea sondajului', 180, true);
   const options = String(body.optiuni || '').split(/\r?\n/).map(value => value.trim()).filter(Boolean);
@@ -301,7 +305,7 @@ export async function createApp({
 
   function portalCandidate(post) {
     return post?.candidate_id
-      ? db.data.users.find(user => user.id === post.candidate_id && poatePublicaSite(user))
+      ? db.data.users.find(user => user.id === post.candidate_id && vizibilInPortal(user))
       : null;
   }
 
@@ -323,7 +327,7 @@ export async function createApp({
 
   app.get('/', (req, res) => {
     const candidatiPublici = db.data.users
-      .filter(poatePublicaSite)
+      .filter(vizibilInPortal)
       .slice(0, 6);
     const portalPosts = db.data.portal_posts
       .filter(portalPostIsPublic)
@@ -364,7 +368,7 @@ export async function createApp({
 
   app.get('/sitemap.xml', (req, res) => {
     const baza = publicBaseUrl(req);
-    const candidati = db.data.users.filter(poatePublicaSite);
+    const candidati = db.data.users.filter(vizibilInPortal);
     const urlIntrari = ['/', '/candidati', ...Object.keys(PORTAL_SECTIONS).map(slug => `/sectiune/${slug}`),
       '/statistici/apa', '/statistici/salubritate'].map(route => ({ url: `${baza}${route}` }));
     for (const post of db.data.portal_posts.filter(portalPostIsPublic)) {
@@ -407,7 +411,7 @@ export async function createApp({
   });
 
   app.get('/candidati', (req, res) => {
-    const all = db.data.users.filter(poatePublicaSite).sort((a, b) => String(a.nume_candidat).localeCompare(String(b.nume_candidat), 'ro'));
+    const all = db.data.users.filter(vizibilInPortal).sort((a, b) => String(a.nume_candidat).localeCompare(String(b.nume_candidat), 'ro'));
     const judet = textField(req.query.judet, 'Județ', 100).toLowerCase();
     const functie = textField(req.query.functie, 'Funcție', 100).toLowerCase();
     const cauta = textField(req.query.cauta, 'Căutare', 120).toLowerCase();
@@ -818,6 +822,7 @@ export async function createApp({
       }
       if (fields.status === 'publicat' && fields.tip === 'campanie') {
         if (!poatePublicaSite(candidate)) throw new ValidationError('Campania poate fi publicată numai pentru un candidat activ cu site public.');
+        if (!vizibilInPortal(candidate)) throw new ValidationError('Candidatul este ascuns din Vocea Locală. Activează afișarea în portal înainte de publicarea unui material asociat.');
         const missing = candidateComplianceMissing(candidate, platform);
         if (missing.length) throw new ValidationError(`Publicarea campaniei este blocată. Lipsesc: ${missing.join(', ')}.`);
       }
@@ -991,6 +996,7 @@ export async function createApp({
       social_connections: { meta: null, tiktok: null },
       status_cont: 'in_asteptare',
       activ: false,
+      vizibil_in_portal: false,
       module: { site: true, statistici: true, social: true },
       statistici: {
         vizite_site: 0,
@@ -1102,6 +1108,23 @@ export async function createApp({
         targetType: 'candidate', targetId: user.id, details: { previous, status } });
     }
     res.redirect('/admin');
+  }));
+
+  app.post('/admin/candidati/:id/vizibilitate', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
+    const candidate = db.data.users.find(user => user.id === Number(req.params.id) && user.role === 'candidate');
+    if (!candidate) throw new ValidationError('Candidatul nu există.', 404);
+    if (!['da', 'nu'].includes(req.body.vizibil_in_portal)) throw new ValidationError('Alege dacă afișezi candidatul în portal.');
+    const visible = req.body.vizibil_in_portal === 'da';
+    if (visible && !poatePublicaSite(candidate)) {
+      throw new ValidationError('Activează contul și modulul site înainte de afișarea în portal.');
+    }
+    const previous = candidate.vizibil_in_portal !== false;
+    candidate.vizibil_in_portal = visible;
+    await db.write();
+    await compliance.audit({ actorId: req.session.userId, actorRole: 'admin', action: 'candidate_portal_visibility_changed',
+      targetType: 'candidate', targetId: candidate.id, details: { previous, visible } });
+    const message = visible ? 'Candidatul este afișat în Vocea Locală.' : 'Candidatul este ascuns din Vocea Locală. Accesul la dashboard rămâne neschimbat.';
+    res.redirect(303, `/admin?mesaj=${encodeURIComponent(message)}`);
   }));
 
   app.post('/admin/candidati/:id/parola', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {

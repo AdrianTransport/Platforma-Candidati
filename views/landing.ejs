@@ -41,7 +41,7 @@
 
     <section class="published-section" id="candidati">
       <div class="portal-section-head"><div><span class="eyebrow">Publicații independente</span><h2>Site-urile candidaților</h2></div><p>Fiecare candidat își administrează și își asumă propria publicație.</p></div>
-      <% if (!candidatiPublici.length) { %><div class="empty-public">Primul site de candidat va apărea aici după activare.</div><% } else { %><div class="candidate-showcase"><% candidatiPublici.forEach(c => { %><a href="/site/<%= c.subdomeniu %>"><span><%= c.functie_candidatura || 'Candidat' %></span><strong><%= c.nume_candidat %></strong><small><%= [c.zona, c.judet].filter(Boolean).join(', ') %></small><em>Deschide publicația →</em></a><% }) %></div><p class="showcase-all"><a class="btn secondary" href="/candidati">Vezi și filtrează toți candidații</a></p><% } %>
+      <% if (!candidatiPublici.length) { %><div class="empty-public">Site-urile candidaților vor apărea aici când Super Adminul activează afișarea în portal.</div><% } else { %><div class="candidate-showcase"><% candidatiPublici.forEach(c => { %><a href="/site/<%= c.subdomeniu %>"><span><%= c.functie_candidatura || 'Candidat' %></span><strong><%= c.nume_candidat %></strong><small><%= [c.zona, c.judet].filter(Boolean).join(', ') %></small><em>Deschide publicația →</em></a><% }) %></div><p class="showcase-all"><a class="btn secondary" href="/candidati">Vezi și filtrează toți candidații</a></p><% } %>
     </section>
 
     <% const portalSocial = [['facebook', portalOwner?.facebook_url], ['instagram', portalOwner?.instagram_url], ['tiktok', portalOwner?.tiktok_url]].filter(([, url]) => url); %>
