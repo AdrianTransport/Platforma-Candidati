@@ -10,6 +10,7 @@ import { createComments } from '../comments.js';
 import { createLocalCommentStore } from '../comment-store.js';
 import { createEditorial } from '../editorial.js';
 import { createCompliance, TERMS_VERSION } from '../compliance.js';
+import { SECURITY_HEADERS } from '../security-headers.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const csrf = html => html.match(/name="csrf_token" value="([^"]+)"/)?.[1];
@@ -29,6 +30,9 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
   await fs.mkdir(path.join(dir, 'data'));
   await fs.mkdir(path.join(dir, 'public'));
   await fs.copyFile(path.join(root, 'public', 'style.css'), path.join(dir, 'public', 'style.css'));
+  for (const script of ['form-confirmations.js', 'portal-cards.js', 'share-actions.js', 'cost-report-form.js']) {
+    await fs.copyFile(path.join(root, 'public', script), path.join(dir, 'public', script));
+  }
   await fs.mkdir(path.join(dir, 'public', 'candidate-assets'));
   await fs.copyFile(path.join(root, 'public', 'candidate-assets', 'daniel-ganea-20260911-v1.webp'),
     path.join(dir, 'public', 'candidate-assets', 'daniel-ganea-20260911-v1.webp'));
@@ -130,6 +134,55 @@ test('Flux HTTP complet într-o instalare izolată, fără API-uri sau date de p
     assert.ok(candidateToken);
     assert.equal((await cand('/dashboard/social')).status, 200);
     assert.equal((await cand('/admin/comentarii')).status, 403);
+  });
+  await t.test('Antetele protejează paginile, resursele, redirecționările și erorile fără să schimbe cache-ul', async () => {
+    const assertHeaders = (response, label, policy = SECURITY_HEADERS['Content-Security-Policy']) => {
+      for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+        assert.equal(response.headers.get(name), name === 'Content-Security-Policy' ? policy : value, `${label}: ${name}`);
+      }
+      assert.equal(response.headers.get('x-powered-by'), null, label);
+    };
+    for (const [url, status] of [
+      ['/', 200], ['/site/ana', 200], ['/site/ana/despre', 200], ['/site/ana/articol/1', 200],
+      ['/login', 200], ['/raportare/apa', 200], ['/admin', 403], ['/nu-exista', 404],
+    ]) {
+      const response = await guest(url);
+      assert.equal(response.status, status, url);
+      // Express's default 404 response deliberately tightens CSP to no resources.
+      assertHeaders(response, url, status === 404 ? "default-src 'none'" : SECURITY_HEADERS['Content-Security-Policy']);
+    }
+    const homepage = await guest('/');
+    assert.match(homepage.headers.get('netlify-cdn-cache-control'), /public, durable/);
+    assert.equal(homepage.headers.get('set-cookie'), null);
+    assert.match(homepage.html, /src="\/portal-cards.js" defer/);
+    const dashboard = await cand('/dashboard');
+    assertHeaders(dashboard, 'dashboard');
+    assert.equal(dashboard.headers.get('cache-control'), 'private, no-store');
+    assert.match(dashboard.html, /data-confirm=/);
+    assert.match(dashboard.html, /src="\/form-confirmations.js" defer/);
+    assert.doesNotMatch(dashboard.html, /\bon(?:submit|click)=/);
+    assertHeaders(await browser()('/login', { email: 'ana@example.test', parola: password }), 'redirect');
+    const denied = await cand('/dashboard/profil', { csrf_token: 'invalid' });
+    assert.equal(denied.status, 403);
+    assertHeaders(denied, 'CSRF');
+    const malformed = await fetch(`${base}/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{invalid',
+    });
+    assert.ok(malformed.status >= 400);
+    assertHeaders(malformed, 'malformed JSON');
+    for (const script of ['form-confirmations.js', 'portal-cards.js', 'share-actions.js', 'cost-report-form.js']) {
+      const asset = await guest(`/${script}`);
+      assert.equal(asset.status, 200, script);
+      assert.match(asset.headers.get('content-type'), /(?:application|text)\/javascript/);
+      assertHeaders(asset, script);
+    }
+    const stylesheet = await guest('/style.css');
+    assertHeaders(stylesheet, 'CSS');
+    const revalidated = await fetch(`${base}/style.css`, {
+      cache: 'no-cache', headers: { 'If-None-Match': stylesheet.headers.get('etag') },
+    });
+    assert.equal(revalidated.status, 304);
+    assertHeaders(revalidated, '304');
   });
   await t.test('CSS comun: URL versionat, conținut corect și revalidare în locul cache-ului de 24 de ore', async () => {
     const stylesheet = await fs.readFile(path.join(root, 'public', 'style.css'), 'utf8');

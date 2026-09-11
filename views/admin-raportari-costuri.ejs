@@ -44,7 +44,7 @@
                     <button type="submit">Salvează corectarea</button>
                   </form>
                 </details>
-                <form method="POST" action="/admin/raportari-costuri/<%= r.id %>/sterge" onsubmit="return confirm('Ștergi definitiv această raportare și o elimini din statistici?')" style="margin-top:8px">
+                <form method="POST" action="/admin/raportari-costuri/<%= r.id %>/sterge" data-confirm="Ștergi definitiv această raportare și o elimini din statistici?" style="margin-top:8px">
                   <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
                   <button class="danger" type="submit">Șterge</button>
                 </form>
@@ -56,5 +56,5 @@
       </div>
     <% } %>
   </div>
-</main></body>
+</main><script src="/form-confirmations.js" defer></script></body>
 </html>

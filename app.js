@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'path';
 import { db, initDB, slugify, generateazaParola, nextUserId, nextArticolId, nextPortalPostId } from './db.js';
 import { StateConflictError } from './state-conflict.js';
+import { securityHeaders } from './security-headers.js';
 import { requireRole } from './middleware/auth.js';
 import { articleInput, profileInput, filterArticles, isPublished, publicationDate, localDateTime, displayDate, textField, ValidationError } from './publication.js';
 import { raportareInput, moderareRaportareInput, statisticiPublice, totalPublic, purjeazaRaportariExpirate, limitaRaportariDepasita,
@@ -181,6 +182,9 @@ export async function createApp({
   const activePoll = (role, ownerId = null) => ownerPolls(role, ownerId).find(poll => poll.active) || null;
 
   const app = express();
+  app.disable('x-powered-by');
+  // Before static files, body parsing, authentication and error responses.
+  app.use(securityHeaders);
   // Inregistram motorul explicit (in loc sa lasam Express sa faca un require
   // dinamic dupa numele "ejs") - altfel esbuild nu detecteaza dependenta la bundling
   // pe Netlify si arunca "Cannot find module 'ejs'" la runtime.

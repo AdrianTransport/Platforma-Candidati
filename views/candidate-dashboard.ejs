@@ -146,7 +146,7 @@
                 <td data-label="Categorie"><%= a.categorie %></td>
                 <td data-label="Status"><% if (a.moderation_status === 'suspendat') { %><span class="candidate-badge danger">Suspendat</span><small><%= a.moderation_reason || 'În analiză' %></small><% } else { %><span class="candidate-badge <%= isPublished(a) ? 'success' : a.status %>"><%= isPublished(a) ? 'Publicat' : (a.status === 'programat' ? 'Programat' : 'Ciornă') %></span><% if (a.status === 'programat') { %><small><%= displayDate(a.data_programata) %> · ora României</small><% } %><% } %></td>
                 <td data-label="Citiri"><%= a.vizualizari || 0 %></td>
-                <td data-label="Acțiuni"><div class="candidate-material-actions"><a href="/dashboard/articol/<%= a.id %>/preview" target="_blank" rel="noopener">Previzualizează</a><% if (isPublished(a) && a.moderation_status !== 'suspendat') { %><a href="<%= publicHref %>" target="_blank" rel="noopener">Vezi public</a><% } %><a href="/dashboard/articol/<%= a.id %>/edit">Editează</a><form method="POST" action="/dashboard/articol/<%= a.id %>/sterge" onsubmit="return confirm('Sigur ștergi acest articol?')"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button type="submit">Șterge</button></form></div></td>
+                <td data-label="Acțiuni"><div class="candidate-material-actions"><a href="/dashboard/articol/<%= a.id %>/preview" target="_blank" rel="noopener">Previzualizează</a><% if (isPublished(a) && a.moderation_status !== 'suspendat') { %><a href="<%= publicHref %>" target="_blank" rel="noopener">Vezi public</a><% } %><a href="/dashboard/articol/<%= a.id %>/edit">Editează</a><form method="POST" action="/dashboard/articol/<%= a.id %>/sterge" data-confirm="Sigur ștergi acest articol?"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button type="submit">Șterge</button></form></div></td>
               </tr><% }) %>
             </tbody></table></div>
           <% } %>
@@ -154,5 +154,5 @@
       </section>
     </main>
   </div>
-</body>
+<script src="/form-confirmations.js" defer></script></body>
 </html>

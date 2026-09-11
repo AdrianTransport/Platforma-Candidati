@@ -151,7 +151,7 @@
                   <label>Confirmă parola<input type="password" name="confirma_parola" minlength="12" required autocomplete="new-password"></label>
                   <button class="secondary" type="submit">Schimbă parola</button>
                 </form>
-                <form method="POST" action="/admin/candidati/<%= c.id %>/recuperare-parola" onsubmit="return confirm('Generezi o parolă temporară nouă? Parola actuală nu va mai funcționa.')">
+                <form method="POST" action="/admin/candidati/<%= c.id %>/recuperare-parola" data-confirm="Generezi o parolă temporară nouă? Parola actuală nu va mai funcționa.">
                   <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
                   <button class="secondary" type="submit">Generează parolă de recuperare</button>
                 </form>
@@ -159,7 +159,7 @@
               <details class="danger-zone">
                 <summary>Ștergere definitivă</summary>
                 <p class="note">Șterge contul Supabase, profilul, materialele și datele operaționale. Acțiunea nu poate fi anulată.</p>
-                <form method="POST" action="/admin/candidati/<%= c.id %>/sterge" onsubmit="return confirm('Ștergi definitiv acest candidat și toate materialele sale?')">
+                <form method="POST" action="/admin/candidati/<%= c.id %>/sterge" data-confirm="Ștergi definitiv acest candidat și toate materialele sale?">
                   <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
                   <label>Scrie emailul pentru confirmare<input type="email" name="confirma_email" required placeholder="<%= c.email %>" autocomplete="off"></label>
                   <button class="danger" type="submit">Șterge definitiv candidatul</button>
@@ -171,5 +171,5 @@
       <% }) %>
     </section>
   </div>
-</body>
+<script src="/form-confirmations.js" defer></script></body>
 </html>

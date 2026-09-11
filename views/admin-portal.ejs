@@ -46,7 +46,7 @@
             <div class="portal-admin-actions">
               <a class="btn secondary" href="/admin/portal/<%= post.id %>/edit">Editează</a>
               <% if (post.status === 'publicat') { %><a class="btn secondary" href="/actualitate/<%= post.slug %>" target="_blank">Deschide</a><% } %>
-              <form method="POST" action="/admin/portal/<%= post.id %>/sterge" onsubmit="return confirm('Ștergi definitiv acest material?')" style="display:inline">
+              <form method="POST" action="/admin/portal/<%= post.id %>/sterge" data-confirm="Ștergi definitiv acest material?" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
                 <button class="danger" type="submit">Șterge</button>
               </form>
@@ -56,5 +56,5 @@
       </div>
     <% } %>
   </div>
-</body>
+<script src="/form-confirmations.js" defer></script></body>
 </html>

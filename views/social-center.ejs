@@ -35,7 +35,7 @@
             </select>
             <button type="submit">Salvează pagina</button>
           </form>
-          <form method="POST" action="/dashboard/social/meta/deconecteaza" class="disconnect-form" onsubmit="return confirm('Deconectezi Facebook și Instagram?')"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Deconectează Meta</button></form>
+          <form method="POST" action="/dashboard/social/meta/deconecteaza" class="disconnect-form" data-confirm="Deconectezi Facebook și Instagram?"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Deconectează Meta</button></form>
         <% } else { %>
           <div class="connection-state <%= metaEsteConfigurat ? 'waiting' : 'off' %>"><strong><%= metaEsteConfigurat ? 'Pregătit pentru conectare' : 'Neconfigurat de administrator' %></strong><span>Necesită aplicație Meta aprobată și permisiuni pentru Pagini.</span></div>
           <% if (metaEsteConfigurat) { %><a class="btn network-connect" href="/dashboard/social/meta/conecteaza">Conectează cu Facebook</a><% } else { %><button type="button" disabled>Conectarea va fi activă după configurare</button><% } %>
@@ -48,7 +48,7 @@
         <% if (tiktok) { %>
           <div class="connection-state ok"><strong>Conectat</strong><span>Permisiuni: <%= tiktok.scope || 'video.publish' %></span></div>
           <p class="provider-note">Conturile conectate la o aplicație TikTok neauditată pot publica numai privat. Pentru vizibilitate publică este necesar auditul TikTok.</p>
-          <form method="POST" action="/dashboard/social/tiktok/deconecteaza" class="disconnect-form" onsubmit="return confirm('Deconectezi TikTok?')"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Deconectează TikTok</button></form>
+          <form method="POST" action="/dashboard/social/tiktok/deconecteaza" class="disconnect-form" data-confirm="Deconectezi TikTok?"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Deconectează TikTok</button></form>
         <% } else { %>
           <div class="connection-state <%= tiktokEsteConfigurat ? 'waiting' : 'off' %>"><strong><%= tiktokEsteConfigurat ? 'Pregătit pentru conectare' : 'Neconfigurat de administrator' %></strong><span>Necesită aplicație TikTok, Login Kit și aprobarea video.publish.</span></div>
           <% if (tiktokEsteConfigurat) { %><a class="btn network-connect tiktok-button" href="/dashboard/social/tiktok/conecteaza">Conectează cu TikTok</a><% } else { %><button type="button" disabled>Conectarea va fi activă după configurare</button><% } %>
@@ -63,7 +63,7 @@
         <% articole.forEach(articol => { const ultima = articol.distribuiri_sociale?.at(-1); %>
           <article>
             <div class="social-article-copy"><span class="article-label"><%= articol.categorie %></span><h3><%= articol.titlu %></h3><p><%= articol.imagine_url ? 'Imagine pregătită pentru Instagram și TikTok.' : 'Fără imagine — poate fi trimis doar pe Facebook.' %></p><% if (ultima) { %><small>Ultima trimitere: <%= ultima.platforma %>, <%= new Date(ultima.data).toLocaleString('ro-RO') %></small><% } %></div>
-            <form method="POST" action="/dashboard/social/publica/<%= articol.id %>" class="publish-actions" onsubmit="return confirm('Confirmi publicarea acestui articol pe rețeaua aleasă?')">
+            <form method="POST" action="/dashboard/social/publica/<%= articol.id %>" class="publish-actions" data-confirm="Confirmi publicarea acestui articol pe rețeaua aleasă?">
               <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
               <select name="platforma" aria-label="Rețeaua socială">
                 <option value="facebook">Facebook</option>
@@ -79,5 +79,5 @@
 
     <section class="card compliance-card"><strong>Control și conformitate</strong><p>Fiecare publicare este declanșată explicit și apare în istoricul articolului. Platforma nu cumpără reclame, nu selectează audiențe și nu creează profiluri politice ale vizitatorilor. Regulile electorale, etichetarea materialelor și politicile fiecărei rețele rămân obligatorii pentru candidat.</p></section>
   </div>
-</body>
+<script src="/form-confirmations.js" defer></script></body>
 </html>

@@ -14,8 +14,8 @@
     <blockquote class="comment-text"><%= c.text %></blockquote>
     <% if (c.status !== 'sters') { %><form method="POST" action="/dashboard/comentarii/<%= c.articol_id %>/<%= c.id %>" class="publication-actions">
       <input type="hidden" name="csrf_token" value="<%= csrfToken %>"><input type="hidden" name="version" value="<%= c.version %>">
-      <button name="status" value="aprobat" type="submit">Aprobă</button><button name="status" value="respins" class="secondary" type="submit">Respinge</button><button name="status" value="sters" class="danger" type="submit" onclick="return confirm('Ascunzi definitiv comentariul?')">Șterge logic</button>
+      <button name="status" value="aprobat" type="submit">Aprobă</button><button name="status" value="respins" class="secondary" type="submit">Respinge</button><button name="status" value="sters" class="danger" type="submit" data-confirm="Ascunzi definitiv comentariul?">Șterge logic</button>
     </form><% } %>
   </article><% }) %>
   <nav class="moderation-tabs" aria-label="Paginare"><% if (page > 1) { %><a class="btn secondary" href="/dashboard/comentarii?status=<%= status %>&pagina=<%= page - 1 %>">← Pagina anterioară</a><% } %><% if (page < pages) { %><a class="btn secondary" href="/dashboard/comentarii?status=<%= status %>&pagina=<%= page + 1 %>">Pagina următoare →</a><% } %></nav>
-</main></body></html>
+</main><script src="/form-confirmations.js" defer></script></body></html>

@@ -8,6 +8,15 @@
   included_files = ["views/**", "public/**"]
 
 [[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; script-src-attr 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: http: data: blob:; connect-src 'self'; frame-src 'self'; media-src 'self'; manifest-src 'self'"
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), clipboard-write=(self), web-share=(self)"
+
+[[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=86400"
