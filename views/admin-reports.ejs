@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sesizări — Super Admin</title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>">
+  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"><link rel="stylesheet" href="<%= asset('platforma.css') %>">
 </head>
-<body>
+<body class="pf"><%- include('partials/pf-admin-top', { active: 'sesizari' }) %>
   <main class="app-shell app-shell-wide">
     <div class="topbar"><div><span class="eyebrow">Conținut raportat</span><h1>Sesizări juridice</h1></div><a class="btn secondary" href="/admin">Înapoi la administrare</a></div>
     <% const labels = { noua:'Noi', in_analiza:'În analiză', continut_suspendat:'Conținut suspendat', respinsa:'Respinse', inchisa:'Închise' }; %>
@@ -30,5 +30,5 @@
     </article><% }) %>
     <nav class="moderation-tabs" aria-label="Paginare sesizări"><% if (page > 1) { %><a class="btn secondary" href="/admin/sesizari?status=<%= status %>&pagina=<%= page - 1 %>">← Pagina anterioară</a><% } %><% if (page < pages) { %><a class="btn secondary" href="/admin/sesizari?status=<%= status %>&pagina=<%= page + 1 %>">Pagina următoare →</a><% } %></nav>
   </main>
-</body>
+<%- include('partials/pf-admin-bottom') %></body>
 </html>

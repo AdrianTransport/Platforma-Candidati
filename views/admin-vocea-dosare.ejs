@@ -1,0 +1,69 @@
+<%- include('partials/pf-admin-head', { pageTitle: 'Procese cu Primăria', active: 'dosare' }) %>
+<div class="pf-head">
+<div><h1>Procese cu Primăria</h1><p>Ce configurezi aici apare pe prima pagină în cel mult un minut; fluxul live, în 30–40 de secunde.</p></div>
+<div class="pf-actions"><a class="btn secondary" href="/dosare" target="_blank" rel="noopener">Pagina dosarelor ↗</a><a class="btn" href="/admin/dosare/nou">+ Dosar nou</a></div>
+</div>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>Dosarul evidențiat pe prima pagină</h2>
+<% if (featured) { const st = liveState(featured); %><span class="pf-badge <%= st === 'live' ? 'pf-badge--live' : st === 'upcoming' ? 'pf-badge--red' : 'pf-badge--off' %>"><%= st === 'upcoming' ? 'Numărătoare inversă activă' : STATE_LABELS[st] %></span><% } %>
+</div>
+<div class="pf-section__body">
+<% if (featured) { %>
+<form class="pf-form" method="POST" action="/admin/dosare/<%= encodeURIComponent(featured.id) %>">
+<input type="hidden" name="inapoi" value="lista">
+<%- include('partials/pf-dosar-fields', { values }) %>
+<div class="pf-form-end pf-full"><a class="btn secondary" href="/dosare/<%= encodeURIComponent(featured.id) %>" target="_blank" rel="noopener">Previzualizează</a><a class="btn secondary" href="/admin/dosare/<%= encodeURIComponent(featured.id) %>">Termene și detalii</a><button class="pf-btn--blue" type="submit">Salvează și publică</button></div>
+</form>
+<% } else { %><p class="pf-hint">Niciun dosar nu este evidențiat. Adaugă un dosar și bifează „Afișează pe prima pagină”.</p><% } %>
+</div>
+</section>
+
+<div class="pf-row">
+<% if (featured) { %>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Publică o actualizare live</h2></div>
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="/admin/live">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<input type="hidden" name="dosar" value="<%= featured.id %>">
+<input type="hidden" name="inapoi" value="dosare">
+<label class="pf-field pf-full">Titlu<input type="text" name="titlu" placeholder="ex. A început ședința" required maxlength="160"></label>
+<label class="pf-field pf-full">Ce s-a întâmplat (doar fapte)<textarea name="text" rows="3" maxlength="2000"></textarea></label>
+<button class="pf-btn--red pf-full" type="submit">Publică acum</button>
+</form>
+<form class="pf-mode" method="POST" action="/admin/dosare/<%= encodeURIComponent(featured.id) %>/live" aria-label="LIVE pe prima pagină">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<% for (const [k, label] of Object.entries(LIVE_MODES)) { %><button name="liveMode" value="<%= k %>" type="submit" aria-pressed="<%= (featured.liveMode || 'auto') === k %>"><%= label %></button><% } %>
+</form>
+</div>
+</section>
+<% } %>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Toate dosarele</h2><a href="/admin/live">Actualizări live →</a></div>
+<div class="pf-section__body pf-list">
+<% for (const d of dosare) { const n = nextTermen(d); %>
+<div class="pf-item">
+<span class="pf-item__main"><span class="pf-item__meta<%= d.featured ? ' pf-item__meta--violet' : '' %>"><%= d.numar || 'fără număr' %> · <%= n ? 'termen ' + t.formatDate(n.at) + ' ' + t.formatTime(n.at) : 'fără termen' %></span><a href="/admin/dosare/<%= encodeURIComponent(d.id) %>"><b><%= d.titlu %></b></a></span>
+<% if (d.featured) { %><span class="pf-badge pf-badge--violet">Evidențiat</span>
+<% } else { %><form method="POST" action="/admin/dosare/<%= encodeURIComponent(d.id) %>/evidentiaza"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Evidențiază</button></form><% } %>
+</div>
+<% } %>
+<% if (!dosare.length) { %><p class="pf-hint">Niciun dosar încă.</p><% } %>
+</div>
+</section>
+</div>
+
+<section class="pf-section" id="setari">
+<div class="pf-section__head"><h2>Alertă pe WhatsApp</h2><% if (pending) { %><a href="/admin/anunturi"><%= pending %> anunțuri de verificat →</a><% } %></div>
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="/admin/dosare/setari">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field pf-full">Link canal sau grup WhatsApp <small>gol = butonul din antet devine „Urmărește live”</small><input type="url" name="whatsappUrl" value="<%= whatsappUrl %>" placeholder="https://whatsapp.com/channel/..."></label>
+<div class="pf-form-end pf-full"><button class="secondary" type="submit">Salvează linkul</button></div>
+</form>
+</div>
+</section>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

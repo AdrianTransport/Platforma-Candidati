@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><%= post?.id ? 'Editează materialul' : 'Material nou' %> — Super Admin</title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>">
+  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"><link rel="stylesheet" href="<%= asset('platforma.css') %>">
   <link rel="stylesheet" href="/editorial-editor.css">
 </head>
-<body>
+<body class="pf"><%- include('partials/pf-admin-top', { active: 'portal' }) %>
   <div class="app-shell app-shell-wide">
     <div class="topbar">
       <div><span class="eyebrow">Centrul editorial</span><h1><%= post?.id ? 'Editează materialul' : 'Material nou' %></h1></div>
@@ -89,5 +89,5 @@
   </div>
   <script src="/editorial-editor.js" defer></script>
   <script src="/portal-form.js" defer></script>
-</body>
+<%- include('partials/pf-admin-bottom') %></body>
 </html>

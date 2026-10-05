@@ -1,0 +1,17 @@
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field">Nr. dosar<input type="text" name="numar" value="<%= values.numar || '' %>" placeholder="ex. 1234/30/2026" maxlength="60"></label>
+<label class="pf-field">Instanța<input type="text" name="instanta" value="<%= values.instanta || '' %>" placeholder="ex. Tribunalul Timiș" maxlength="120"></label>
+<label class="pf-field">Stadiu<select name="stadiu"><% for (const s of STADII) { %><option<% if (values.stadiu === s) { %> selected<% } %>><%= s %></option><% } %></select></label>
+<label class="pf-field">Termen — data<input type="date" name="termenData" value="<%= values.termenData || '' %>"></label>
+<label class="pf-field">Termen — ora <small>ora României</small><input type="time" name="termenOra" value="<%= values.termenOra || '' %>"></label>
+<label class="pf-field">Sala<input type="text" name="sala" value="<%= values.sala || '' %>" placeholder="ex. Sala 12" maxlength="60"></label>
+<label class="pf-field">Complet<input type="text" name="complet" value="<%= values.complet || '' %>" placeholder="ex. C4 contencios" maxlength="60"></label>
+<label class="pf-field">Data înregistrării<input type="date" name="dataInregistrare" value="<%= values.dataInregistrare || '' %>"></label>
+<label class="pf-field pf-full">Titlu pe prima pagină<input type="text" name="titlu" value="<%= values.titlu || '' %>" placeholder="Primul proces cu Primăria" required maxlength="140"></label>
+<label class="pf-field pf-full">Obiectul dosarului (factual) <small>cine contra cine și ce se cere, fără date personale ale persoanelor fizice</small><textarea name="obiect" rows="2" maxlength="600"><%= values.obiect || '' %></textarea></label>
+<label class="pf-field pf-full">Link portal.just.ro<input type="url" name="portalUrl" value="<%= values.portalUrl || '' %>" placeholder="https://portal.just.ro/..."></label>
+<div class="pf-full pf-checks">
+<label class="pf-check"><input type="checkbox" name="featured" value="da"<% if (values.featured) { %> checked<% } %>> Afișează pe prima pagină</label>
+<label class="pf-check">LIVE <select name="liveMode"><% for (const [k, label] of Object.entries(LIVE_MODES)) { %><option value="<%= k %>"<% if ((values.liveMode || 'auto') === k) { %> selected<% } %>><%= label %></option><% } %></select></label>
+</div>
+<p class="pf-hint pf-full">Eticheta de pe prima pagină trece singură pe „LIVE” la ora termenului și rămâne așa 6 ore. O poți porni sau opri manual oricând.</p>

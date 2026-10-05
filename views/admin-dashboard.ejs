@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Super Admin — Vocea Locală Lenauheim</title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>">
+  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"><link rel="stylesheet" href="<%= asset('platforma.css') %>">
 </head>
-<body>
+<body class="pf"><%- include('partials/pf-admin-top', { active: 'candidati' }) %>
   <div class="app-shell app-shell-wide">
     <div class="topbar admin-topbar">
       <div><span class="eyebrow">Administrare platformă</span><h1>Super Admin</h1></div>
@@ -171,5 +171,5 @@
       <% }) %>
     </section>
   </div>
-<script src="/form-confirmations.js" defer></script></body>
+<script src="/form-confirmations.js" defer></script><%- include('partials/pf-admin-bottom') %></body>
 </html>

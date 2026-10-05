@@ -1,0 +1,59 @@
+<%- include('partials/pf-admin-head', { pageTitle: dosar ? dosar.titlu : 'Dosar nou', active: 'dosare' }) %>
+<div class="pf-head">
+<div><h1><%= dosar ? 'Editează dosarul' : 'Dosar nou' %></h1><p><a href="/admin/dosare">← Procese cu Primăria</a><% if (dosar) { %> · <a href="/dosare/<%= encodeURIComponent(dosar.id) %>" target="_blank" rel="noopener">pagina publică ↗</a><% } %></p></div>
+<% if (dosar) { %><div class="pf-actions"><a class="btn pf-btn--red" href="/admin/live?dosar=<%= encodeURIComponent(dosar.id) %>">Actualizări live</a></div><% } %>
+</div>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>Date despre dosar</h2></div>
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="<%= dosar ? '/admin/dosare/' + encodeURIComponent(dosar.id) : '/admin/dosare' %>">
+<%- include('partials/pf-dosar-fields', { values }) %>
+<div class="pf-form-end pf-full"><button class="pf-btn--blue" type="submit"><%= dosar ? 'Salvează și publică' : 'Adaugă dosarul' %></button></div>
+</form>
+</div>
+</section>
+
+<% if (dosar) { %>
+<section class="pf-section" id="termene">
+<div class="pf-section__head"><h2>Toate termenele</h2></div>
+<div class="pf-section__body">
+<p class="pf-hint">Aici treci și soluția sau ce s-a decis la fiecare termen. Termenul următor se poate modifica și din formularul de mai sus. Orele sunt ora României.</p>
+<% for (const term of terms) { const v = inputs(term.at); %>
+<form class="pf-term" method="POST" action="/admin/dosare/<%= encodeURIComponent(dosar.id) %>/termene/<%= term.id %>">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field">Data<input type="date" name="data" value="<%= v.date %>" required></label>
+<label class="pf-field">Ora<input type="time" name="ora" value="<%= v.time %>" required></label>
+<label class="pf-field">Sala<input type="text" name="sala" value="<%= term.sala || '' %>" maxlength="60"></label>
+<label class="pf-field">Complet<input type="text" name="complet" value="<%= term.complet || '' %>" maxlength="60"></label>
+<label class="pf-field pf-full">Rezultat / soluție<textarea name="rezultat" rows="2" maxlength="1000"><%= term.rezultat || '' %></textarea></label>
+<div class="pf-form-end pf-full"><button class="secondary" type="submit" formaction="/admin/dosare/<%= encodeURIComponent(dosar.id) %>/termene/<%= term.id %>/sterge" data-confirm="Ștergi acest termen?">Șterge termenul</button><button type="submit">Salvează termenul</button></div>
+</form>
+<% } %>
+<% if (!terms.length) { %><p class="pf-hint">Niciun termen încă.</p><% } %>
+<form class="pf-term" method="POST" action="/admin/dosare/<%= encodeURIComponent(dosar.id) %>/termene">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field">Termen nou — data<input type="date" name="data" required></label>
+<label class="pf-field">Ora<input type="time" name="ora" value="09:00" required></label>
+<label class="pf-field">Sala<input type="text" name="sala" maxlength="60"></label>
+<label class="pf-field">Complet<input type="text" name="complet" maxlength="60"></label>
+<div class="pf-form-end pf-full"><button class="secondary" type="submit">+ Adaugă termen</button></div>
+</form>
+</div>
+</section>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>Șterge dosarul</h2></div>
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="/admin/dosare/<%= encodeURIComponent(dosar.id) %>/sterge" data-confirm="Ștergi definitiv dosarul și toate actualizările lui?">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field">Scrie STERGE pentru confirmare<input type="text" name="confirmare" autocomplete="off"></label>
+<div class="pf-form-end pf-full"><button class="danger" type="submit">Șterge definitiv dosarul și actualizările lui</button></div>
+</form>
+</div>
+</section>
+<% } %>
+<script src="/form-confirmations.js" defer></script>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

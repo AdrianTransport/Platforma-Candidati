@@ -1,0 +1,54 @@
+<%- include('partials/pf-admin-head', { pageTitle: 'Actualizări live', active: 'live' }) %>
+<div class="pf-head">
+<div><h1>Actualizări live</h1><p>Ce publici aici apare în fluxul „Actualizări live” în cel mult 30–40 de secunde, fără ca cititorii să reîncarce pagina.</p></div>
+</div>
+<% if (!selected) { %>
+<section class="pf-section"><div class="pf-section__body"><p class="pf-hint">Adaugă mai întâi un dosar în <a href="/admin/dosare">Procese cu Primăria</a>.</p></div></section>
+<% } else { const st = liveState(selected); %>
+<nav class="pf-filter" aria-label="Alege dosarul">
+<% for (const d of dosare) { %><a href="/admin/live?dosar=<%= encodeURIComponent(d.id) %>"<% if (d.id === selected.id) { %> aria-current="page"<% } %>><%= d.numar || d.titlu %></a><% } %>
+</nav>
+<div class="pf-row">
+<section class="pf-section">
+<div class="pf-section__head"><h2><%= selected.titlu %></h2><span class="pf-badge <%= st === 'live' ? 'pf-badge--live' : st === 'upcoming' ? 'pf-badge--red' : 'pf-badge--off' %>"><%= STATE_LABELS[st] %></span></div>
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="/admin/live">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<input type="hidden" name="dosar" value="<%= selected.id %>">
+<label class="pf-field pf-full">Titlu<input type="text" name="titlu" placeholder="ex. A început ședința" required maxlength="160"></label>
+<label class="pf-field pf-full">Ce s-a întâmplat (doar fapte)<textarea name="text" rows="4" maxlength="2000"></textarea></label>
+<label class="pf-field">Ora <small>goală = acum</small><input type="time" name="ora"></label>
+<label class="pf-field">Data <small>goală = azi</small><input type="date" name="data"></label>
+<button class="pf-btn--red pf-full" type="submit">Publică acum</button>
+</form>
+</div>
+</section>
+<section class="pf-section">
+<div class="pf-section__head"><h2>LIVE pe prima pagină</h2></div>
+<div class="pf-section__body">
+<p class="pf-hint">Automat, eticheta trece pe LIVE la ora termenului. Pornește LIVE manual dacă ședința începe mai devreme. Oprește-l când ședința s-a încheiat.</p>
+<form class="pf-mode" method="POST" action="/admin/dosare/<%= encodeURIComponent(selected.id) %>/live">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<input type="hidden" name="inapoi" value="live">
+<% for (const [k, label] of Object.entries(LIVE_MODES)) { %><button name="liveMode" value="<%= k %>" type="submit" aria-pressed="<%= (selected.liveMode || 'auto') === k %>"><%= label %></button><% } %>
+</form>
+</div>
+</section>
+</div>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Publicate (<%= updates.length %>)</h2><a href="/dosare/<%= encodeURIComponent(selected.id) %>" target="_blank" rel="noopener">Vezi pe site ↗</a></div>
+<div class="pf-section__body pf-list">
+<% for (const u of updates) { %>
+<div class="pf-item">
+<span class="pf-item__main"><span class="pf-item__meta"><%= t.formatDate(u.at) %> · <%= t.formatTime(u.at) %></span><b><%= u.titlu %></b><% if (u.text) { %><span class="pf-item__text"><%= u.text %></span><% } %></span>
+<form method="POST" action="/admin/live/<%= encodeURIComponent(selected.id) %>/<%= u.id %>/sterge" data-confirm="Ștergi această actualizare de pe site?"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Șterge</button></form>
+</div>
+<% } %>
+<% if (!updates.length) { %><p class="pf-hint">Nicio actualizare încă.</p><% } %>
+</div>
+</section>
+<% } %>
+<script src="/form-confirmations.js" defer></script>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

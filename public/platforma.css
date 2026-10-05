@@ -1,0 +1,151 @@
+/* Super Admin și paginile de lucru ale candidaților — design-platforma/ (Admin.dc.html, Dashboard.dc.html).
+   Se încarcă după legacy.css și îi aliniază componentele la noul aspect, fără să schimbe formularele. */
+:root{
+  --pf-bg:#f5f7fb;--pf-surface:#fff;--pf-ink:#0f1b2d;--pf-blue:#1d4ed8;--pf-blue-d:#1e40af;--pf-blue-soft:#eef2fb;
+  --pf-line:#e3e7ee;--pf-line2:#d8dee8;--pf-row:#eef1f6;--pf-muted:#556072;--pf-copy:#3a4558;
+  --pf-ok:#166534;--pf-ok-bg:#dcfce7;--pf-warn:#b45309;--pf-warn-bg:#fff7df;--pf-danger:#b42318;--pf-danger-bg:#fdecec;
+  --pf-red:#e11d48;--pf-serif:'Source Serif 4',Georgia,serif;--pf-sans:'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+body.pf{margin:0;background:var(--pf-bg);color:var(--pf-ink);font-family:var(--pf-sans);font-size:15px;line-height:1.5}
+body.pf a{color:var(--pf-blue)}
+body.pf a:hover{color:var(--pf-ink)}
+body.pf :focus-visible{outline:3px solid var(--pf-blue);outline-offset:2px}
+body.pf h1,body.pf h2,body.pf h3{color:var(--pf-ink);text-wrap:balance}
+body.pf h1{font-family:var(--pf-serif);font-weight:700;font-size:32px;line-height:1.15;margin:0}
+body.pf h2{font-size:18px;line-height:1.3}
+
+/* --------------------------------- cadru --------------------------------- */
+.pf-shell{display:flex;flex-wrap:wrap;min-height:100vh}
+.pf-side{flex:1 1 240px;max-width:100%;background:var(--pf-surface);border-right:1px solid var(--pf-line);padding:22px 16px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;align-self:flex-start;min-height:100vh}
+.pf-brand{display:flex;align-items:center;gap:10px;padding:0 8px;color:var(--pf-ink);text-decoration:none}
+.pf-brand__mark{width:36px;height:36px;border-radius:9px;background:var(--pf-ink);color:#fff;display:grid;place-items:center;flex:none}
+.pf-brand__mark svg{width:18px;height:18px}
+.pf-brand span{display:flex;flex-direction:column;line-height:1.25}
+.pf-brand small{font-size:12px;color:var(--pf-muted)}
+.pf-nav{display:flex;flex-direction:column;gap:2px;font-weight:500}
+.pf-nav__group{margin:10px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a94a6}
+body.pf .pf-nav a{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 12px;border-radius:10px;color:var(--pf-copy);text-decoration:none}
+body.pf .pf-nav a:hover{background:var(--pf-row);color:var(--pf-ink)}
+body.pf .pf-nav a[aria-current="page"]{background:var(--pf-blue-soft);color:var(--pf-ink);font-weight:600}
+.pf-tag{padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;background:var(--pf-red);color:#fff}
+.pf-tag--count{background:#f59e0b;color:#1a1300}
+.pf-side__foot{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+body.pf .pf-side__foot a,body.pf .pf-side__foot button{min-height:44px;display:flex;align-items:center;justify-content:flex-start;width:100%;padding:0 12px;border-radius:10px;border:1px solid var(--pf-line);background:#fff;color:var(--pf-copy);font:inherit;font-weight:500;text-decoration:none;cursor:pointer;margin:0}
+body.pf .pf-side__foot form{margin:0}
+.pf-main{flex:999 1 640px;min-width:0;padding:28px 32px;display:flex;flex-direction:column;gap:20px}
+.pf-main > .app-shell{max-width:none;margin:0;padding:0;width:100%}
+body.pf .pf-menu{display:none}
+
+/* ----------------------- componente vechi, aspect nou ----------------------- */
+body.pf .topbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+body.pf .topbar h1{font-size:32px}
+body.pf .topbar-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+body.pf .eyebrow{display:block;font-family:var(--pf-sans);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pf-muted)}
+body.pf .card,body.pf .pf-card{background:var(--pf-surface);border:1px solid var(--pf-line);border-radius:14px;padding:20px;box-shadow:none;margin-bottom:18px}
+body.pf .note{color:var(--pf-muted);font-size:14px}
+body.pf label{font-size:13px;font-weight:600;color:var(--pf-ink)}
+body.pf input:not([type=checkbox]):not([type=radio]),body.pf select,body.pf textarea{min-height:44px;padding:10px 12px;border:1px solid var(--pf-line2);border-radius:10px;font:inherit;font-weight:400;font-size:15px;background:#fff;color:var(--pf-ink)}
+body.pf textarea{min-height:88px}
+body.pf input:focus,body.pf select:focus,body.pf textarea:focus{border-color:var(--pf-blue);outline:2px solid rgba(29,78,216,.2)}
+body.pf input[type=checkbox],body.pf input[type=radio]{accent-color:var(--pf-blue);width:18px;height:18px}
+body.pf button,body.pf .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 18px;border-radius:10px;border:1px solid var(--pf-ink);background:var(--pf-ink);color:#fff;font:inherit;font-weight:600;font-size:14px;text-decoration:none;cursor:pointer;width:auto}
+body.pf button:hover,body.pf .btn:hover{background:#1b2a42;color:#fff}
+body.pf button.secondary,body.pf .btn.secondary{background:#fff;color:var(--pf-ink);border:1px solid #c9d1de}
+body.pf button.secondary:hover,body.pf .btn.secondary:hover{background:var(--pf-row);color:var(--pf-ink)}
+body.pf button.danger,body.pf .btn.danger{background:#fff;color:var(--pf-danger);border:1px solid #f1b8b4}
+body.pf .btn-primary,body.pf .pf-btn--blue{background:var(--pf-blue);border-color:var(--pf-blue);color:#fff}
+body.pf .btn-primary:hover,body.pf .pf-btn--blue:hover{background:var(--pf-blue-d)}
+body.pf .pf-btn--red{background:var(--pf-red);border-color:var(--pf-red);color:#fff}
+body.pf .pf-btn--red:hover{background:#be123c}
+body.pf table{width:100%;border-collapse:collapse;font-size:14px}
+body.pf th{text-align:left;padding:10px 14px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--pf-muted);border-bottom:1px solid var(--pf-line)}
+body.pf td{padding:12px 14px;border-bottom:1px solid var(--pf-row);vertical-align:top}
+body.pf .pill{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;text-transform:none;letter-spacing:0}
+body.pf .pill.publicat{background:var(--pf-ok-bg);color:var(--pf-ok)}
+body.pf .pill.ciorna{background:#f1f5f9;color:#334155}
+body.pf .pill.ai{background:#dbeafe;color:var(--pf-blue-d)}
+body.pf .eroare{background:var(--pf-danger-bg);color:var(--pf-danger);border-radius:12px;padding:12px 16px;border:0}
+body.pf .mesaj-succes,body.pf .parola-noua{background:var(--pf-ok-bg);color:var(--pf-ok);border-radius:12px;padding:12px 16px;border:0}
+body.pf .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:14px;margin-bottom:20px}
+body.pf .stats-grid > div{background:#fff;border:1px solid var(--pf-line);border-radius:14px;padding:18px;display:flex;flex-direction:column}
+body.pf .stats-grid span{font-size:13px;color:var(--pf-muted)}
+body.pf .stats-grid strong{font-family:var(--pf-serif);font-size:34px;font-weight:700;line-height:1.2}
+body.pf details > summary{cursor:pointer;font-weight:600}
+body.pf .moderation-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+body.pf .moderation-tabs .btn{border-radius:999px;min-height:40px}
+
+/* ------------------------------- Super Admin ------------------------------- */
+.pf-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px}
+.pf-head p{margin:4px 0 0;color:var(--pf-muted)}
+.pf-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pf-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:14px}
+.pf-stat{background:#fff;border:1px solid var(--pf-line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:2px}
+.pf-stat span{font-size:13px;color:var(--pf-muted)}
+.pf-stat strong{font-family:var(--pf-serif);font-size:34px;font-weight:700;line-height:1.15}
+.pf-stat--warn strong{color:var(--pf-warn)}
+.pf-stat--blue strong{color:var(--pf-blue)}
+.pf-stat a{font-size:13px;font-weight:600}
+.pf-section{background:#fff;border:1px solid var(--pf-line);border-radius:14px;overflow:hidden}
+.pf-section__head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--pf-line)}
+.pf-section__head h2{margin:0;font-size:17px}
+.pf-section__body{padding:18px;display:flex;flex-direction:column;gap:12px}
+.pf-table-wrap{overflow-x:auto}
+.pf-table{min-width:760px}
+.pf-table td:first-child{font-weight:600}
+.pf-badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.pf-badge--ok{background:var(--pf-ok-bg);color:var(--pf-ok)}
+.pf-badge--wait{background:#dbeafe;color:var(--pf-blue-d)}
+.pf-badge--off{background:#f1f5f9;color:#334155}
+.pf-badge--warn{background:var(--pf-warn-bg);color:var(--pf-warn)}
+.pf-badge--live{background:var(--pf-red);color:#fff}
+.pf-badge--red{background:#ffe4ea;color:#be123c}
+.pf-badge--violet{background:#ece7ff;color:#4b2bd6}
+.pf-ok{color:var(--pf-ok);font-weight:600}
+.pf-warn{color:var(--pf-warn);font-weight:600}
+.pf-log{display:flex;flex-direction:column}
+.pf-log__row{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;padding:9px 0;border-bottom:1px solid var(--pf-row)}
+.pf-log__row:last-child{border-bottom:0}
+.pf-log__row time{color:var(--pf-muted);min-width:130px}
+.pf-filter{display:flex;flex-wrap:wrap;gap:6px}
+body.pf .pf-filter a{min-height:40px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;border:1px solid var(--pf-line2);background:#fff;color:var(--pf-ink);text-decoration:none}
+body.pf .pf-filter a[aria-current="page"]{background:var(--pf-ink);border-color:var(--pf-ink);color:#fff;font-weight:600}
+.pf-search{flex:1 1 260px;max-width:360px}
+.pf-hidden{display:none!important}
+
+/* formulare noi (dosare, live, anunțuri) */
+.pf-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px}
+.pf-field{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;min-width:0}
+.pf-field small{font-weight:400;color:var(--pf-muted)}
+.pf-full{grid-column:1/-1}
+.pf-checks{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pf-check{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--pf-line2);border-radius:12px;background:#fff;font-weight:500}
+.pf-form-end{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+.pf-hint{margin:0;color:var(--pf-muted);font-size:14px}
+.pf-row{display:flex;flex-wrap:wrap;gap:20px}
+.pf-row > *{flex:1 1 380px;min-width:0}
+.pf-list{display:flex;flex-direction:column}
+.pf-item{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--pf-row)}
+.pf-item:last-child{border-bottom:0}
+.pf-item__main{display:flex;flex-direction:column;min-width:0;flex:1 1 240px}
+.pf-item__meta{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12px;color:var(--pf-muted)}
+.pf-item__meta--violet{color:#4b2bd6}
+.pf-item__text{color:var(--pf-copy);white-space:pre-line;overflow-wrap:anywhere}
+.pf-item form{margin:0}
+.pf-mode{display:flex;flex-wrap:wrap;gap:8px}
+body.pf .pf-mode button{background:#fff;color:var(--pf-ink);border:1px solid #c9d1de}
+body.pf .pf-mode button[aria-pressed="true"]{background:var(--pf-ink);color:#fff;border-color:var(--pf-ink)}
+.pf-alert{border-radius:12px;padding:12px 16px}
+.pf-alert--ok{background:var(--pf-ok-bg);color:var(--pf-ok)}
+.pf-alert--error{background:var(--pf-danger-bg);color:var(--pf-danger)}
+.pf-term{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:10px;padding:14px;border:1px solid var(--pf-line);border-radius:12px;background:#fbfcfe}
+
+@media (max-width:900px){
+  .pf-shell{display:block}
+  .pf-side{position:sticky;top:0;z-index:40;min-height:0;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-right:0;border-bottom:1px solid var(--pf-line)}
+  body.pf .pf-menu{display:inline-flex}
+  body.pf .pf-menu{min-height:44px;background:#fff;color:var(--pf-ink);border:1px solid var(--pf-line2)}
+  .pf-nav,.pf-side__foot{display:none;width:100%}
+  .pf-side.is-open .pf-nav,.pf-side.is-open .pf-side__foot{display:flex}
+  .pf-main{padding:18px 14px 40px}
+  body.pf h1,body.pf .topbar h1{font-size:26px}
+}
