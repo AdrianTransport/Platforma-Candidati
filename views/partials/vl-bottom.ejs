@@ -1,0 +1,33 @@
+</main>
+<footer class="site-footer">
+<div class="site-footer__about">
+<span><b>vocea lenauheim</b> · Bulgăruș · Lenauheim · Grabaț</span>
+<span><% if (isLenauheimCivicPortal) { %>Inițiativă civică independentă a persoanei fizice <%= portalEditorialResponsible %>. Publicația nu este afiliată Primăriei Comunei Lenauheim.<% } else if (portalEditorialResponsible) { %>Responsabil editorial: <%= portalEditorialResponsible %><% } %><% if (platform.legalEmail) { %> · <a href="mailto:<%= platform.legalEmail %>"><%= platform.legalEmail %></a><% } %></span>
+</div>
+<nav class="legal-links" aria-label="Pagini legale"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><button class="cookie-notice-reopen" type="button" data-cookie-reopen aria-controls="cookie-notice" aria-expanded="false" hidden>Informații despre cookies</button><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav>
+<%- include('cristianweb-credit') %>
+</footer>
+</div>
+</div>
+<% const tab = typeof section === 'undefined' ? '' : section; %>
+<nav class="tabbar" aria-label="Navigare rapidă">
+<a href="/"<% if (tab === 'procese') { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7h6zM17 7l-3 7h6z"/></svg>Procese</a>
+<a href="/sectiune/stiri"<% if (['stiri', 'administratie', 'comunitate', 'educatie', 'economie', 'evenimente'].includes(tab)) { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6"/></svg>Știri</a>
+<a href="/anunturi"<% if (tab === 'anunturi') { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h6"/></svg>Anunțuri</a>
+<a href="/alerte"<% if (tab === 'alerte') { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/></svg>Alerte</a>
+</nav>
+<section class="cookie-notice" id="cookie-notice" aria-labelledby="cookie-notice-title" hidden>
+<div class="cookie-notice-copy">
+<h2 id="cookie-notice-title" tabindex="-1">Cookie-uri pe acest site</h2>
+<p>Folosim cookie-uri strict necesare pentru autentificare, securitate și funcționarea formularelor. Nu folosim cookie-uri de publicitate sau analiză a comportamentului.</p>
+<div class="cookie-notice-links"><a href="/legal/cookies">Citește politica de cookies</a><a href="/legal/confidentialitate">Confidențialitate</a></div>
+</div>
+<button type="button" class="cookie-notice-acknowledge" data-cookie-acknowledge>Am înțeles</button>
+</section>
+<script src="/vocea.js" defer></script>
+<script src="/cookie-notice.js" defer></script>
+<% if (typeof live !== 'undefined' && live) { %><script src="/live.js" defer></script>
+<% } %><% if (typeof portalCards !== 'undefined' && portalCards) { %><script src="/portal-cards.js" defer></script>
+<% } %><% if (typeof share !== 'undefined' && share) { %><script src="/share-actions.js" defer></script>
+<% } %></body>
+</html>

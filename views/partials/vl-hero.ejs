@@ -1,0 +1,31 @@
+<% const d = view.dosar; %>
+<section class="hero" data-live-root data-live-url="/api/dosare/<%= encodeURIComponent(d.id) %>/live" data-state="<%= view.state %>" data-target="<%= view.termenAt || '' %>" data-live-mode="<%= d.liveMode || 'auto' %>" aria-labelledby="titlu-dosar">
+<div class="hero__scan" aria-hidden="true"><span></span></div>
+<div class="hero__main">
+<div class="hero__meta">
+<span class="badge badge--<%= view.state === 'none' ? 'ended' : view.state %>" data-live-badge><span class="badge__dot" aria-hidden="true"></span><span data-live-badge-text><%= view.stateLabel %></span></span>
+<span class="hero__case">DOSAR <%= d.numar || '—' %><% if (d.instanta) { %> · <%= d.instanta.toUpperCase() %><% } %></span>
+</div>
+<h1 id="titlu-dosar"><%= d.titlu %></h1>
+<% if (d.obiect) { %><p class="hero__lead"><%= d.obiect %> Urmărim fiecare termen, live, cu actualizări din sala de judecată.</p><% } %>
+<div class="hero__actions">
+<% if (typeof onDosarPage === 'undefined' || !onDosarPage) { %><a class="btn btn--dark" href="#live">Urmărește live</a><a class="btn btn--light" href="/dosare/<%= encodeURIComponent(d.id) %>">Toate termenele</a><% } %>
+<% if (d.portalUrl) { %><a class="btn btn--light" href="<%= d.portalUrl %>" rel="noopener" target="_blank"><span class="hide-m">Dosarul pe</span> portal.just.ro ↗</a><% } %>
+</div>
+</div>
+<div class="hero__side">
+<div class="hero__date" data-live-date><%= view.termenLabel %></div>
+<div class="countdown" data-countdown role="timer" aria-label="Timp rămas până la termen"<% if (view.state !== 'upcoming') { %> hidden<% } %>>
+<div class="countdown__cell"><span class="countdown__num" data-cd="d"><%= view.countdown.d %></span><span class="countdown__unit">zile</span></div>
+<div class="countdown__cell"><span class="countdown__num" data-cd="h"><%= view.countdown.h %></span><span class="countdown__unit">ore</span></div>
+<div class="countdown__cell"><span class="countdown__num" data-cd="m"><%= view.countdown.m %></span><span class="countdown__unit">minute</span></div>
+<div class="countdown__cell countdown__cell--sec"><span class="countdown__num" data-cd="s"><%= view.countdown.s %></span><span class="countdown__unit">secunde</span></div>
+</div>
+<div class="hero__status<%= view.state === 'live' ? ' hero__status--live' : '' %>" data-live-status role="status"<% if (view.state === 'upcoming') { %> hidden<% } %>><%= view.stateMessage %></div>
+<div class="facts">
+<div class="fact"><span>Sala / complet</span><b data-live-sala><%= view.salaComplet || '—' %></b></div>
+<div class="fact"><span>Stadiu</span><b data-live-stadiu><%= d.stadiu || '—' %></b></div>
+</div>
+<% if (view.termenAt && view.state !== 'ended') { %><a class="btn btn--calendar" href="/dosare/<%= encodeURIComponent(d.id) %>/termen.ics" download>Adaugă în calendar</a><% } %>
+</div>
+</section>

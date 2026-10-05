@@ -1,0 +1,9 @@
+<div class="live-feed panel glass">
+<div class="live-feed__head"><h2>Actualizări live</h2><span class="live-feed__auto">SE ACTUALIZEAZĂ AUTOMAT</span></div>
+<ol class="feed" data-live-feed aria-live="polite">
+<% for (const u of view.feed) { %>
+<li class="feed__item" data-id="<%= u.id %>"><time class="feed__time<%= u.recent ? '' : ' feed__time--old' %>" title="<%= u.full %>"><%= u.time %></time><div class="feed__body"><b><%= u.titlu %></b><% if (u.text) { %><span><%= u.text %></span><% } %></div></li>
+<% } %>
+</ol>
+<% if (!view.feed.length) { %><p class="feed-empty" data-live-empty>Actualizările din sala de judecată apar aici în timpul ședinței.</p><% } %>
+</div>

@@ -1,0 +1,40 @@
+<%
+  const navItems = [
+    { key: 'procese', href: '/', label: 'Procese' },
+    { key: 'stiri', href: '/sectiune/stiri', label: 'Știri' },
+    { key: 'administratie', href: '/sectiune/administratie', label: 'Primărie' },
+    { key: 'comunitate', href: '/sectiune/comunitate', label: 'Comunitate' },
+    { key: 'anunturi', href: '/anunturi', label: 'Anunțuri' },
+  ];
+  const moreItems = [
+    { key: 'alerte', href: '/alerte', label: 'Alerte' },
+    { key: 'educatie', href: '/sectiune/educatie', label: 'Educație' },
+    { key: 'economie', href: '/sectiune/economie', label: 'Economie' },
+    { key: 'evenimente', href: '/sectiune/evenimente', label: 'Evenimente' },
+    { key: 'candidati', href: '/candidati', label: 'Candidați' },
+    { key: 'costuri', href: '/statistici/apa', label: 'Costuri apă și salubritate' },
+  ];
+  const current = typeof section === 'undefined' ? '' : section;
+  const wa = typeof whatsappUrl === 'undefined' ? '' : whatsappUrl;
+  let cta;
+  if (current === 'anunturi') cta = { href: '/anunturi/publica', label: 'Publică un anunț' };
+  else if (['stiri', 'administratie', 'comunitate', 'educatie', 'economie', 'evenimente'].includes(current) && platform.legalEmail) cta = { href: 'mailto:' + platform.legalEmail + '?subject=' + encodeURIComponent('Știre pentru Vocea Lenauheim'), label: 'Trimite o știre' };
+  else if (wa) cta = { href: wa, label: 'Alertă pe WhatsApp', external: true };
+  else cta = { href: '/#live', label: 'Urmărește live' };
+%>
+<header class="site-header">
+<a class="brand" href="/" aria-label="Vocea Lenauheim — prima pagină"><span class="brand__dot" aria-hidden="true"></span><span class="brand__name">vocea lenauheim</span></a>
+<nav class="nav" aria-label="Secțiuni">
+<% for (const item of navItems) { %><a href="<%= item.href %>"<% if (item.key === current) { %> aria-current="page"<% } %>><%= item.label %></a>
+<% } %></nav>
+<a class="cta" href="<%= cta.href %>"<% if (cta.external) { %> rel="noopener" target="_blank"<% } %>><%= cta.label %></a>
+<button type="button" class="menu-btn" aria-label="Deschide meniul" aria-expanded="false" aria-controls="meniu-mobil" data-menu-toggle><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h16M4 16h16"/></svg></button>
+<nav class="menu-panel" id="meniu-mobil" aria-label="Meniu">
+<% for (const item of [...navItems, ...moreItems]) { %><a href="<%= item.href %>"<% if (item.key === current) { %> aria-current="page"<% } %>><%= item.label %></a>
+<% } %><hr>
+<a class="menu-panel__small" href="/legal/statut">Statut editorial</a>
+<a class="menu-panel__small" href="/legal/confidentialitate">Confidențialitate</a>
+<a class="menu-panel__small" href="/legal/cookies">Cookies</a>
+<a class="menu-panel__small" href="/login">Administrare</a>
+</nav>
+</header>
