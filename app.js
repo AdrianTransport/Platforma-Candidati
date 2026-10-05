@@ -210,6 +210,22 @@ export async function createApp({
     .update(await readFile(path.join(baseDir, 'public', 'style.css')))
     .digest('hex').slice(0, 12);
   app.locals.stylesheetUrl = `/style.css?v=${stylesheetVersion}`;
+  // Celelalte foi de stil și scripturi primesc aceeași versiune după conținut.
+  // Un fișier lipsă (ex. o instalare de test parțială) păstrează adresa simplă.
+  const versionedAsset = async (file) => {
+    try {
+      return `/${file}?v=${createHash('sha256').update(await readFile(path.join(baseDir, 'public', file))).digest('hex').slice(0, 12)}`;
+    } catch (error) {
+      if (error.code === 'ENOENT') return `/${file}`;
+      throw error;
+    }
+  };
+  const assetUrls = Object.fromEntries(await Promise.all(
+    ['legacy.css', 'vocea.css', 'platforma.css', 'candidate-ui.css', 'vocea.js', 'live.js']
+      .map(async file => [file, await versionedAsset(file)])
+  ));
+  app.locals.asset = file => assetUrls[file] || `/${file}`;
+  app.locals.legacyStylesheetUrl = assetUrls['legacy.css'];
   app.locals.isPublished = article => isPublished(article, now());
   app.locals.publicationDate = publicationDate;
   app.locals.portalPublicationDate = portalPublicationDate;
