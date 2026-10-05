@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Activarea contului — <%= platform.name %></title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>">
+  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"><link rel="stylesheet" href="<%= asset('platforma.css') %>">
 </head>
-<body>
+<body class="pf pf-solo">
   <main class="app-shell">
     <div class="topbar">
       <div><span class="eyebrow"><%= electoralMode ? 'Verificare electorală și contractuală' : 'Activare profil civic' %></span><h1>Activarea contului</h1></div>

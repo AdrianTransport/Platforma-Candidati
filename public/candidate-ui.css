@@ -1,18 +1,18 @@
 :root {
-  --candidate-navy: #12324a;
-  --candidate-navy-strong: #0b2436;
-  --candidate-teal: #087f78;
-  --candidate-teal-dark: #056860;
-  --candidate-teal-soft: #e6f4f2;
-  --candidate-blue-soft: #eef5f8;
-  --candidate-bg: #f5f8fa;
+  --candidate-navy: #0f1b2d;
+  --candidate-navy-strong: #0f1b2d;
+  --candidate-teal: #1d4ed8;
+  --candidate-teal-dark: #1e40af;
+  --candidate-teal-soft: #eef2fb;
+  --candidate-blue-soft: #eef2fb;
+  --candidate-bg: #f5f7fb;
   --candidate-surface: #ffffff;
-  --candidate-border: #dce6eb;
-  --candidate-copy: #334b5c;
-  --candidate-muted: #6a7d8a;
+  --candidate-border: #e3e7ee;
+  --candidate-copy: #3a4558;
+  --candidate-muted: #556072;
   --candidate-success: #16734b;
   --candidate-success-bg: #eaf7f0;
-  --candidate-warning: #8a5a00;
+  --candidate-warning: #b45309;
   --candidate-warning-bg: #fff7df;
   --candidate-danger: #a13535;
   --candidate-shadow: 0 10px 30px rgba(22, 54, 72, .07);
@@ -26,7 +26,7 @@ body.candidate-app-body {
   margin: 0;
   background: var(--candidate-bg);
   color: var(--candidate-navy-strong);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: 'Public Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .candidate-app-body a { color: inherit; }
@@ -401,3 +401,26 @@ body.candidate-app-body {
   .candidate-fields-grid,
   .candidate-fields-grid-three { grid-template-columns: 1fr; }
 }
+
+/* Aspectul din design-platforma/Dashboard.dc.html: meniu lateral bleumarin, titluri Source Serif 4. */
+.candidate-welcome h1, .candidate-stat-card strong, .candidate-panel-heading h2, .candidate-section-heading h2 { font-family: 'Source Serif 4', Georgia, serif; letter-spacing: 0; }
+.candidate-stat-card strong { font-size: 34px; font-weight: 700; }
+.candidate-brand strong { color: var(--candidate-teal); }
+.candidate-brand-mark { background: var(--candidate-teal); }
+.candidate-sidebar { background: #0f1b2d; border-right: 0; color: #c3ccda; }
+.candidate-nav-link { color: #c3ccda !important; font-weight: 500; }
+.candidate-nav-link:hover { background: #1d2b44; color: #fff !important; }
+.candidate-nav-link.active { background: #1d2b44; color: #fff !important; }
+.candidate-nav-icon { border-color: rgba(195, 204, 218, .5); }
+.candidate-sidebar-status { background: #16233a; border-color: #2a3a57; color: #e6ebf3; }
+.candidate-sidebar-status p { color: #c3ccda; }
+.candidate-sidebar-status.ready strong { color: #86efac; }
+.candidate-sidebar-status.blocked strong { color: #fcd34d; }
+.candidate-btn { border-radius: 10px; }
+.candidate-panel, .candidate-stat-card, .candidate-section-card { border-radius: 14px; box-shadow: none; }
+:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+@media (max-width: 840px) {
+  .candidate-sidebar { background: #0f1b2d; border-bottom: 0; }
+}
+.candidate-sidebar-status.ready, .candidate-sidebar-status.blocked { background: #16233a; border-color: #2a3a57; }
+.candidate-app-body button, .candidate-app-body input, .candidate-app-body select, .candidate-app-body textarea { font-family: inherit; }
