@@ -452,3 +452,6 @@ p a:not(.btn),li a:not(.btn),dd a,.byline a{text-decoration:underline;text-under
   .vl .cookie-notice{bottom:calc(84px + env(safe-area-inset-bottom))}
 }
 .card--grid .card__img.ph{aspect-ratio:16/7}
+.prose--plain p{white-space:pre-line}
+.small{font-size:13px}
+.ad-form{flex:2 1 480px;min-width:0}

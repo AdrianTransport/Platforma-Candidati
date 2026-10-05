@@ -1,0 +1,44 @@
+<%- include('partials/vl-top', { seo, section: 'anunturi', blobs: 'anunturi' }) %>
+<div class="page-head">
+<div><span class="eyebrow">AVIZIERUL COMUNEI</span><h1>Anunțuri</h1></div>
+<nav class="filters" aria-label="Tip anunț">
+<a class="filter" href="/anunturi"<% if (!tip) { %> aria-current="page"<% } %>>Toate</a>
+<% for (const ty of types) { %><a class="filter" href="/anunturi?tip=<%= ty.slug %>"<% if (tip === ty.slug) { %> aria-current="page"<% } %>><%= ty.name %></a>
+<% } %></nav>
+</div>
+<% if (important) { %>
+<section class="important" aria-label="Anunț important">
+<span class="important__tag">IMPORTANT</span>
+<b><a href="<%= important.url %>"><%= important.titlu %></a></b>
+<time datetime="<%= important.publicatLa %>"><%= t.formatDate(important.publicatLa) %></time>
+</section>
+<% } %>
+<% if (ads.length) { %>
+<section class="ads" aria-label="Anunțuri">
+<% for (const ad of ads) { %>
+<article class="ad<%= ad.tip === 'decese' ? ' ad--deces' : '' %>">
+<div class="ad__top"><span class="chip cat-<%= ad.tip %>"><%= ad.typeName %></span><time datetime="<%= ad.publicatLa %>"><%= t.formatDate(ad.publicatLa) %></time></div>
+<h2><a href="<%= ad.url %>"><%= ad.titlu %></a></h2>
+<% if (ad.summary) { %><p><%= ad.summary %><% if (ad.pret) { %> · <b><%= ad.pret %></b><% } %></p><% } else if (ad.pret) { %><p><b><%= ad.pret %></b></p><% } %>
+<% if (ad.hasPhone && (ad.tip === 'mica-publicitate' || ad.tip === 'locuri-de-munca')) { %><a class="ad__call" href="<%= ad.url %>" data-phone="<%= ad.id %>" rel="nofollow">Sună</a>
+<% } else if (ad.long || ad.tip !== 'decese') { %><a class="ad__more" href="<%= ad.url %>">Citește tot →</a><% } %>
+</article>
+<% } %>
+</section>
+<% } else { %><p class="empty glass">Niciun anunț<%= tip ? ' în această categorie' : '' %> momentan.</p><% } %>
+<% if (pages > 1) { %>
+<nav class="pager" aria-label="Pagini">
+<% if (page > 1) { %><a class="pager__wide" href="<%= query(page - 1) %>" rel="prev">← Mai noi</a><% } %>
+<% for (let n = 1; n <= pages; n++) { %><% if (n === page) { %><span aria-current="page"><%= n %></span><% } else { %><a href="<%= query(n) %>"><%= n %></a><% } %><% } %>
+<% if (page < pages) { %><a class="pager__wide" href="<%= query(page + 1) %>" rel="next">Mai vechi →</a><% } %>
+</nav>
+<% } %>
+<section id="publica" class="publish glass">
+<div class="publish__text">
+<h2>Publică un anunț</h2>
+<p>Gratuit. Anunțurile de mica publicitate, locurile de muncă și decesele sunt verificate de redacție înainte de publicare, de obicei în aceeași zi. Anunțul stă pe site 30 de zile.</p>
+<% if (platform.legalEmail) { %><p>Pentru anunțuri ale Primăriei sau ale Bisericii, scrie-ne: <a href="mailto:<%= platform.legalEmail %>"><%= platform.legalEmail %></a>.</p><% } %>
+</div>
+<div class="publish__actions"><a class="btn btn--violet" href="/anunturi/publica">Trimite un anunț spre verificare</a></div>
+</section>
+<%- include('partials/vl-bottom', { section: 'anunturi' }) %>

@@ -1,0 +1,26 @@
+<%- include('partials/vl-top', { seo, section: 'anunturi', blobs: 'anunturi' }) %>
+<nav class="crumbs" aria-label="Cale"><a href="/anunturi">Anunțuri</a> / Publică un anunț</nav>
+<section class="publish glass">
+<div class="publish__text">
+<h1 class="publish__title">Publică un anunț</h1>
+<p>Gratuit. Redacția verifică fiecare anunț înainte de publicare, de obicei în aceeași zi. Anunțul stă pe site 30 de zile.</p>
+<p>Telefonul nu apare în pagină: cititorii îl văd doar când apasă „Sună”. Nu trimite date personale ale altor persoane fără acordul lor.</p>
+</div>
+<% if (sent) { %>
+<div class="ad-form"><p class="notice notice--ok" role="status"><b>Mulțumim!</b> Anunțul a ajuns la redacție și apare pe site după verificare.</p><p><a class="btn btn--light" href="/anunturi">Înapoi la anunțuri</a></p></div>
+<% } else { %>
+<form class="ad-form form-grid" method="POST" action="/anunturi/publica">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<div class="hp" aria-hidden="true"><label>Nu completa acest câmp<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+<% if (error) { %><p class="notice notice--error fld--full" role="alert"><%= error %></p><% } %>
+<label class="fld">Tip<select name="tip" required><% for (const ty of types) { %><option value="<%= ty.slug %>"<% if (values.tip === ty.slug) { %> selected<% } %>><%= ty.name %></option><% } %></select></label>
+<label class="fld">Telefon <small>obligatoriu la mica publicitate</small><input type="tel" name="telefon" value="<%= values.telefon || '' %>" maxlength="30" autocomplete="tel"></label>
+<label class="fld fld--full">Titlu<input type="text" name="titlu" value="<%= values.titlu || '' %>" required maxlength="140"></label>
+<label class="fld fld--full">Textul anunțului<textarea name="text" rows="4" required maxlength="1500"><%= values.text || '' %></textarea></label>
+<label class="fld">Preț <small>opțional</small><input type="text" name="pret" value="<%= values.pret || '' %>" maxlength="40"></label>
+<label class="fld fld--full fld--check"><input type="checkbox" name="acord" value="da" required> <span>Anunțul este corect, iar datele din el pot fi publicate. Am citit <a href="/legal/confidentialitate">politica de confidențialitate</a>.</span></label>
+<button class="btn btn--violet fld--full" type="submit">Trimite spre verificare</button>
+</form>
+<% } %>
+</section>
+<%- include('partials/vl-bottom', { section: 'anunturi' }) %>

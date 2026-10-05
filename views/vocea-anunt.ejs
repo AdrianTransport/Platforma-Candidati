@@ -1,0 +1,11 @@
+<%- include('partials/vl-top', { seo, section: 'anunturi', blobs: 'anunturi' }) %>
+<nav class="crumbs" aria-label="Cale"><a href="/anunturi">Anunțuri</a> / <a href="/anunturi?tip=<%= ad.tip %>"><%= ad.typeName %></a></nav>
+<article class="doc <%= ad.tip === 'decese' ? 'ad--deces' : 'glass' %>">
+<div class="ad__top"><span class="chip cat-<%= ad.tip %>"><%= ad.typeName %></span><time datetime="<%= ad.publicatLa %>"><%= t.formatLongDate(ad.publicatLa) %></time></div>
+<h1><%= ad.titlu %></h1>
+<div class="prose prose--plain"><% String(ad.text || '').split(/\n{2,}/).filter(Boolean).forEach(paragraph => { %><p><%= paragraph %></p><% }) %></div>
+<% if (ad.pret) { %><dl><dt>Preț</dt><dd><%= ad.pret %></dd></dl><% } %>
+<% if (ad.hasPhone) { %><p><a class="btn btn--dark" href="<%= ad.url %>" data-phone="<%= ad.id %>" rel="nofollow">Arată telefonul</a></p><% } %>
+<% if (ad.expiraLa) { %><p class="byline">Anunț valabil până la <%= t.formatDate(ad.expiraLa) %>.</p><% } %>
+</article>
+<%- include('partials/vl-bottom', { section: 'anunturi' }) %>
