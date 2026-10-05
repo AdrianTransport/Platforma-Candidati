@@ -1,77 +1,39 @@
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <%- include('partials/seo-head', { seo }) %>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>">
-</head>
-<body class="public-body cost-body">
-  <main class="cost-shell">
-    <a class="back-home" href="/">← Înapoi la Vocea Locală</a>
-    <header class="cost-page-header">
-      <span class="cost-kicker">Informații trimise de comunitate</span>
-      <h1>Cât plătim pentru <%= tip === 'apa' ? 'apă' : 'salubritate' %>?</h1>
-      <p>Compară simplu sumele declarate de locuitorii din Bulgăruș, Lenauheim și Grabaț.</p>
-    </header>
-
-    <nav class="cost-tabs" aria-label="Alege serviciul">
-      <a class="<%= tip === 'apa' ? 'active' : '' %>" href="/statistici/apa">💧 Apă</a>
-      <a class="<%= tip === 'salubritate' ? 'active' : '' %>" href="/statistici/salubritate">♻ Salubritate</a>
-    </nav>
-
-    <section class="cost-explainer">
-      <div><strong>Vizibil de la primul răspuns</strong><span>Fiecare raportare apare imediat în statistici.</span></div>
-      <div><strong>Suma exactă rămâne privată</strong><span>Publicăm doar un interval de 50 lei.</span></div>
-      <div><strong>Numele nu apare niciodată</strong><span>Poți completa formularul și anonim.</span></div>
-    </section>
-
-    <div class="cost-primary-action">
-      <div><strong>Ai plătit recent?</strong><span>Ajută comunitatea cu o raportare care durează mai puțin de un minut.</span></div>
-      <a class="btn" href="/raportare/<%= tip %>">Adaugă suma plătită →</a>
-    </div>
-
-    <% if (total) { %>
-      <div class="cost-total-card">
-        <span>Totalul sumelor declarate</span>
-        <strong><%= total.suma.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> lei</strong>
-        <small>Calculat din <%= total.numarRaspunsuri %> raportări</small>
-      </div>
-    <% } else { %>
-      <p class="cost-total-note">Raportările sunt vizibile de la primul răspuns. Totalul exact al tuturor sumelor va apărea numai după minimum 5 raportări, pentru protejarea participanților.</p>
-    <% } %>
-
-    <% if (!grupuri.length) { %>
-      <div class="cost-empty">
-        <span>📋</span>
-        <h2>Nu există încă nicio raportare</h2>
-        <p>Fii prima persoană care declară cât a plătit. Rezultatul va apărea imediat, ca interval anonim.</p>
-        <a class="btn" href="/raportare/<%= tip %>">Trimite prima raportare</a>
-      </div>
-    <% } %>
-
-    <% if (grupuri.length) { %>
-      <section class="cost-results">
-        <h2>Raportări publicate</h2>
-        <div class="cost-results-grid">
-          <% grupuri.forEach(g => { %>
-            <article class="cost-result-card">
-              <div class="cost-result-head">
-                <div><strong><%= g.localitate %></strong><span><%= g.perioada %></span></div>
-                <small><%= g.numarRaspunsuri %> <%= g.numarRaspunsuri === 1 ? 'raportare' : 'raportări' %></small>
-              </div>
-              <p><%= g.numarRaspunsuri === 1 ? 'Suma declarată se află în intervalul:' : 'Valoarea de mijloc se află în intervalul:' %></p>
-              <strong class="cost-main-value"><%= g.sumaMedianaInterval %></strong>
-              <% if (g.numarRaspunsuri > 1) { %>
-                <div class="cost-range"><span>Cea mai mică: <b><%= g.sumaMinInterval %></b></span><span>Cea mai mare: <b><%= g.sumaMaxInterval %></b></span></div>
-              <% } %>
-            </article>
-          <% }) %>
-        </div>
-      </section>
-    <% } %>
-    <aside class="cost-public-disclaimer"><strong>Despre aceste informații</strong><p>Sumele sunt declarații voluntare ale utilizatorilor, nu copii ale facturilor verificate. Rezultatele au caracter informativ și nu reprezintă tarife oficiale, constatări ale unei autorități sau dovada unei datorii.</p></aside>
-    <nav class="cost-legal-links" aria-label="Informații legale"><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/">Vocea Locală Lenauheim</a></nav>
-  </main>
-</body>
-</html>
+<% const serviciu = tip === 'apa' ? 'apă' : 'salubritate'; %>
+<%- include('partials/vl-top', { seo, section: 'costuri' }) %>
+<div class="page-head">
+<div><span class="eyebrow">INFORMAȚII TRIMISE DE COMUNITATE</span><h1>Cât plătim pentru <%= serviciu %>?</h1><p class="muted page-head__lead">Compară simplu sumele declarate de locuitorii din Bulgăruș, Lenauheim și Grabaț.</p></div>
+<nav class="filters" aria-label="Alege serviciul"><a class="filter" href="/statistici/apa"<% if (tip === 'apa') { %> aria-current="page"<% } %>>Apă</a><a class="filter" href="/statistici/salubritate"<% if (tip === 'salubritate') { %> aria-current="page"<% } %>>Salubritate</a></nav>
+</div>
+<section class="facts-row" aria-label="Cum publicăm">
+<div class="fact"><b>Vizibil de la primul răspuns</b><span>Fiecare raportare apare imediat în statistici.</span></div>
+<div class="fact"><b>Suma exactă rămâne privată</b><span>Publicăm doar un interval de 50 lei.</span></div>
+<div class="fact"><b>Numele nu apare niciodată</b><span>Poți completa formularul și anonim.</span></div>
+</section>
+<section class="costs glass">
+<div><h2>Ai plătit recent?</h2><p class="muted">Ajută comunitatea cu o raportare care durează mai puțin de un minut.</p></div>
+<div class="costs__actions"><a class="btn btn--violet" href="/raportare/<%= tip %>">Adaugă suma plătită →</a></div>
+</section>
+<% if (total) { %>
+<section class="stat-total"><span>Totalul sumelor declarate</span><strong><%= total.suma.toLocaleString('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> lei</strong><small>Calculat din <%= total.numarRaspunsuri %> raportări</small></section>
+<% } else { %>
+<p class="notice">Raportările sunt vizibile de la primul răspuns. Totalul exact al tuturor sumelor va apărea numai după minimum 5 raportări, pentru protejarea participanților.</p>
+<% } %>
+<% if (!grupuri.length) { %>
+<section class="empty glass"><h2 class="section-title">Nu există încă nicio raportare</h2><p>Fii prima persoană care declară cât a plătit. Rezultatul va apărea imediat, ca interval anonim.</p><p><a class="btn btn--dark" href="/raportare/<%= tip %>">Trimite prima raportare</a></p></section>
+<% } else { %>
+<section class="stack" aria-labelledby="raportari-titlu">
+<h2 class="section-title" id="raportari-titlu">Raportări publicate</h2>
+<div class="ads">
+<% grupuri.forEach(g => { %>
+<article class="ad">
+<div class="ad__top"><span><b><%= g.localitate %></b> · <%= g.perioada %></span><span class="small"><%= g.numarRaspunsuri %> <%= g.numarRaspunsuri === 1 ? 'raportare' : 'raportări' %></span></div>
+<p><%= g.numarRaspunsuri === 1 ? 'Suma declarată se află în intervalul:' : 'Valoarea de mijloc se află în intervalul:' %></p>
+<strong class="stat-value"><%= g.sumaMedianaInterval %></strong>
+<% if (g.numarRaspunsuri > 1) { %><p class="small">Cea mai mică: <b><%= g.sumaMinInterval %></b> · Cea mai mare: <b><%= g.sumaMaxInterval %></b></p><% } %>
+</article>
+<% }) %>
+</div>
+</section>
+<% } %>
+<aside class="box glass"><b>Despre aceste informații</b><p class="muted">Sumele sunt declarații voluntare ale utilizatorilor, nu copii ale facturilor verificate. Rezultatele au caracter informativ și nu reprezintă tarife oficiale, constatări ale unei autorități sau dovada unei datorii.</p></aside>
+<%- include('partials/vl-bottom', { section: 'costuri' }) %>
