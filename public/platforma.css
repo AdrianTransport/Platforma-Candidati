@@ -149,3 +149,8 @@ body.pf .pf-mode button[aria-pressed="true"]{background:var(--pf-ink);color:#fff
   .pf-main{padding:18px 14px 40px}
   body.pf h1,body.pf .topbar h1{font-size:26px}
 }
+body.pf .app-shell{display:flex;flex-direction:column;gap:20px}
+body.pf .app-shell > .card,body.pf .app-shell > section,body.pf .app-shell > details,body.pf .app-shell > .topbar{margin:0}
+body.pf a{text-decoration:none}
+body.pf a:hover{text-decoration:underline;text-underline-offset:3px}
+body.pf .pf-nav a:hover,body.pf .pf-side__foot a:hover,body.pf a.btn:hover,body.pf .pf-filter a:hover,body.pf .pf-brand:hover{text-decoration:none}

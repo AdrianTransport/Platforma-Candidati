@@ -851,7 +851,7 @@ export async function createApp({
 
   /* -------------------------------- ADMIN -------------------------------- */
 
-  app.get('/admin', requireRole('admin'), requireActiveAccount, (req, res) => {
+  app.get('/admin', requireRole('admin'), requireActiveAccount, safely(async (req, res) => {
     const candidati = db.data.users
       .filter((u) => u.role === 'candidate')
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -875,8 +875,14 @@ export async function createApp({
         [candidate.id, candidateComplianceMissing(candidate, platform)])),
       sondaje: ownerPolls('admin'),
       user: db.data.users.find((u) => u.id === req.session.userId && u.role === 'admin'),
+      // Rezumatul de sus: jurnalul recent nu trebuie să blocheze pagina dacă stocarea e indisponibilă.
+      jurnal: await compliance.listAudit(5).catch(() => []),
+      articoleCandidat: Object.fromEntries(candidati.map(candidate => [candidate.id,
+        db.data.articole.filter(article => article.user_id === candidate.id).length])),
+      articoleAzi: db.data.articole.filter(article => isPublished(article, now())
+        && voceaTime.bucharestDayKey(publicationDate(article)) === voceaTime.bucharestDayKey(now())).length,
     });
-  });
+  }));
 
   app.post('/admin/sondaje', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
     const fields = pollInput(req.body);

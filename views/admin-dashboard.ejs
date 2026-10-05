@@ -8,17 +8,7 @@
 </head>
 <body class="pf"><%- include('partials/pf-admin-top', { active: 'candidati' }) %>
   <div class="app-shell app-shell-wide">
-    <div class="topbar admin-topbar">
-      <div><span class="eyebrow">Administrare platformă</span><h1>Super Admin</h1></div>
-      <div class="topbar-actions"><a class="btn secondary" href="/admin/raportari-costuri">Raportări costuri</a><a class="btn secondary" href="/" target="_blank">Vezi site-ul public</a><form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Ieșire</button></form></div>
-    </div>
-
-    <div class="stats-grid admin-stats">
-      <div><span>Total candidați</span><strong><%= sumar.total %></strong></div>
-      <div><span>Activi</span><strong><%= sumar.activi %></strong></div>
-      <div><span>În așteptare</span><strong><%= sumar.asteptare %></strong></div>
-      <div><span>Suspendați</span><strong><%= sumar.suspendati %></strong></div>
-    </div>
+    <%- include('partials/pf-admin-overview') %>
 
     <% if (mesaj) { %><div class="mesaj-succes"><%= mesaj %></div><% } %>
     <% if (eroare) { %><div class="eroare"><%= eroare %></div><% } %>
@@ -50,7 +40,7 @@
       </form>
     </details>
 
-    <details class="card admin-create" open>
+    <details class="card admin-create" id="adauga-candidat">
       <summary>Adaugă un candidat nou</summary>
       <form method="POST" action="/admin/candidati" class="form-grid form-grid-3">
         <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
@@ -85,7 +75,7 @@
       <div class="section-row"><div><span class="eyebrow">Control conturi</span><h2>Candidați</h2></div><span class="note">Activezi contul pentru lucru și alegi separat când apare în Vocea Locală.</span></div>
       <% if (candidati.length === 0) { %><div class="card"><p class="note">Nu există încă niciun candidat.</p></div><% } %>
       <% candidati.forEach(c => { %>
-        <article class="card candidate-admin-card">
+        <article class="card candidate-admin-card" id="candidat-<%= c.id %>">
           <div class="candidate-admin-head">
             <div><span class="status-dot status-<%= c.status_cont %>"></span><strong><%= c.nume_candidat %></strong><span class="pill <%= c.status_cont === 'activ' ? 'publicat' : 'ciorna' %>"><%= c.status_cont.replace('_', ' ') %></span><% if (!complianceMissing[c.id].length) { %><span class="pill publicat"><%= electoralMode ? 'juridic complet' : 'profil civic complet' %></span><% } %><p><%= c.email %> · /site/<%= c.subdomeniu %><% if (c.last_login_at) { %> · ultima autentificare <%= new Date(c.last_login_at).toLocaleDateString('ro-RO') %><% } %></p></div>
             <% if (c.module?.site && c.status_cont === 'activ') { %><a class="btn secondary" href="/site/<%= c.subdomeniu %>" target="_blank">Deschide site-ul</a><% } %>
