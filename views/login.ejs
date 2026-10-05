@@ -1,35 +1,16 @@
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Autentificare - Platforma campanie</title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>">
-</head>
-<body>
-  <div class="login-wrap">
-    <a class="back-home" href="/">← Înapoi la prezentarea platformei</a>
-    <h1>Platforma de campanie</h1>
-    <div class="card">
-      <% if (mesaj) { %>
-        <div class="parola-noua"><%= mesaj %></div>
-      <% } %>
-      <% if (eroare) { %>
-        <div class="eroare"><%= eroare %></div>
-      <% } %>
-      <form method="POST" action="/login">
-        <label>Email</label>
-        <input type="email" name="email" required autofocus>
-        <label>Parola</label>
-        <input type="password" name="parola" required>
-        <button type="submit" style="width:100%">Intra in cont</button>
-      </form>
-      <p style="text-align:center; margin-top:10px"><a href="/parola-uitata">Am uitat parola</a></p>
-    </div>
-    <p class="note" style="text-align:center">
-      Accesul este permis numai conturilor activate de administrator.<br>
-      După 5 încercări greșite, contul este blocat temporar.
-    </p>
-  </div>
-</body>
-</html>
+<%- include('partials/vl-top', { seo: { private: true, title: 'Autentificare — Vocea Locală Lenauheim' }, section: '' }) %>
+<section class="auth glass">
+<span class="eyebrow">ADMINISTRARE</span>
+<h1>Intră în cont</h1>
+<p class="muted">Pentru redacție (Super Admin) și pentru candidații care își administrează site-ul.</p>
+<% if (mesaj) { %><p class="notice notice--ok" role="status"><%= mesaj %></p><% } %>
+<% if (eroare) { %><p class="notice notice--error" role="alert"><%= eroare %></p><% } %>
+<form method="POST" action="/login">
+<label class="fld">Email<input type="email" name="email" required autofocus autocomplete="username"></label>
+<label class="fld">Parola<input type="password" name="parola" required autocomplete="current-password"></label>
+<button class="btn btn--dark btn--block" type="submit">Intră în cont</button>
+</form>
+<p class="muted"><a href="/parola-uitata">Am uitat parola</a></p>
+<p class="muted">Accesul este permis numai conturilor activate de administrator. După 5 încercări greșite, contul este blocat temporar.</p>
+</section>
+<%- include('partials/vl-bottom', { section: '' }) %>

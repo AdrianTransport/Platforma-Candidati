@@ -1,4 +1,37 @@
-<!DOCTYPE html><html lang="ro"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><%- include('partials/seo-head', { seo }) %><link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"></head>
-<body class="public-body portal-public-body"><header class="portal-news-header"><a class="platform-brand local-brand" href="/"><span>Vocea Locală</span><strong>Lenauheim</strong></a><nav><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/sectiune/evenimente">Evenimente</a><a href="/candidati">Candidați</a><a class="btn secondary" href="/login">Autentificare</a></nav></header>
-<main><section class="portal-section-hero"><a href="/">← Prima pagină</a><span class="eyebrow">Vocea Locală Lenauheim</span><h1><%= section.titlu %></h1><p><%= section.descriere %></p></section><section class="portal-news-section"><% if (!posts.length) { %><div class="empty-public">Nu există încă materiale publicate în această secțiune.</div><% } else { %><div class="portal-card-grid"><% posts.forEach(post => { %><a class="portal-news-card portal-clickable-card" href="/actualitate/<%= post.slug %>"><span class="portal-card-image"><% if (post.imagine_url) { %><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>" loading="lazy" decoding="async"><% } else { %><b><%= post.categorie %></b><% } %></span><span class="portal-card-copy"><small class="portal-section-label"><%= post.categorie %></small><strong><%= post.titlu %></strong><span><%= post.rezumat %></span><small><%= displayDate(portalPublicationDate(post)) %> · <%= post.vizualizari || 0 %> citiri · 👍 <%= post.reactii?.like || 0 %></small></span></a><% }) %></div><% } %></section></main>
-<footer class="marketing-footer"><strong>Vocea Locală Lenauheim</strong><span>Bulgăruș · Lenauheim · Grabaț</span><nav class="legal-links"><a href="/legal/termeni">Termeni</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a></nav></footer><%- include('partials/cristianweb-credit') %></body></html>
+<%- include('partials/vl-top', { seo, section: slug, blobs: 'stiri' }) %>
+<div class="page-head">
+<div><span class="eyebrow">BULGĂRUȘ · LENAUHEIM · GRABAȚ</span><h1><%= slug === 'stiri' ? 'Știri' : section.titlu %></h1><p class="muted page-head__lead"><%= section.descriere %></p></div>
+<nav class="filters" aria-label="Rubrici">
+<% for (const [key, item] of Object.entries(sections)) { %><a class="filter" href="/sectiune/<%= key %>"<% if (key === slug) { %> aria-current="page"<% } %>><%= key === 'stiri' ? 'Toate' : item.titlu %></a>
+<% } %></nav>
+</div>
+<% if (!posts.length) { %><p class="empty glass">Nu există încă materiale publicate în această rubrică.</p>
+<% } else { const lead = page === 1 ? posts[0] : null; const side = lead ? posts.slice(1, 3) : []; const grid = posts.slice(lead ? 3 : 0); %>
+<% if (lead) { %>
+<section class="lead-row" aria-label="Știrea principală">
+<article class="lead<%= lead.imagine_url ? '' : ' lead--plain' %>">
+<% if (lead.imagine_url) { %><img class="lead__img" src="<%= lead.imagine_url %>" alt="<%= lead.imagine_alt || '' %>" width="1200" height="800" decoding="async" fetchpriority="high"><% } %>
+<div class="lead__box">
+<span class="chip <%= lead.tip === 'campanie' ? 'cat-campanie' : 'cat-' + toneOf(lead.categorie) %>"><%= lead.tip === 'campanie' ? 'Campanie candidat' : (lead.categorie || 'Actualitate') %></span>
+<h2 class="lead__title"><a href="/actualitate/<%= encodeURIComponent(lead.slug) %>"><%= lead.titlu %></a></h2>
+<% if (lead.rezumat) { %><p class="lead__summary"><%= lead.rezumat %></p><% } %>
+<span class="byline"><time datetime="<%= seoDateOf(lead) %>"><%= displayDate(portalPublicationDate(lead)) %></time> · <%= lead.vizualizari || 0 %> citiri</span>
+</div>
+</article>
+<% if (side.length) { %><div class="side-list">
+<% for (const post of side) { %><article class="side-card glass"><span class="chip <%= post.tip === 'campanie' ? 'cat-campanie' : 'cat-' + toneOf(post.categorie) %>"><%= post.tip === 'campanie' ? 'Campanie candidat' : (post.categorie || 'Actualitate') %></span><h3><a href="/actualitate/<%= encodeURIComponent(post.slug) %>"><%= post.titlu %></a></h3><time datetime="<%= seoDateOf(post) %>"><%= displayDate(portalPublicationDate(post)) %></time></article>
+<% } %></div><% } %>
+</section>
+<% } %>
+<% if (grid.length) { %><section class="cards" aria-label="Alte știri">
+<% for (const post of grid) { %><%- include('partials/vl-card', { post, withSummary: true }) %><% } %>
+</section><% } %>
+<% } %>
+<% if (pages > 1) { %>
+<nav class="pager" aria-label="Pagini">
+<% if (page > 1) { %><a class="pager__wide" href="<%= pageUrl(page - 1) %>" rel="prev">← Mai noi</a><% } %>
+<% for (let n = 1; n <= pages; n++) { %><% if (n === page) { %><span aria-current="page"><%= n %></span><% } else { %><a href="<%= pageUrl(n) %>"><%= n %></a><% } %><% } %>
+<% if (page < pages) { %><a class="pager__wide" href="<%= pageUrl(page + 1) %>" rel="next">Mai vechi →</a><% } %>
+</nav>
+<% } %>
+<%- include('partials/vl-bottom', { section: slug, portalCards: true }) %>

@@ -1,31 +1,18 @@
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Resetează parola - Platforma campanie</title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>">
-</head>
-<body>
-  <div class="login-wrap">
-    <a class="back-home" href="/login">← Înapoi la autentificare</a>
-    <h1>Resetează parola</h1>
-    <div class="card">
-      <% if (!valid) { %>
-        <div class="eroare">Linkul de resetare este invalid sau a expirat. Cere unul nou din pagina <a href="/parola-uitata">Am uitat parola</a>.</div>
-      <% } else { %>
-        <form method="POST" action="/reseteaza-parola">
-          <input type="hidden" name="csrf_token" value="<%= csrfToken %>">
-          <input type="hidden" name="email" value="<%= email %>">
-          <input type="hidden" name="token" value="<%= token %>">
-          <label>Parola nouă</label>
-          <input type="password" name="parola_noua" minlength="12" required autocomplete="new-password">
-          <label>Confirmă parola nouă</label>
-          <input type="password" name="confirma_parola" minlength="12" required autocomplete="new-password">
-          <button type="submit" style="width:100%">Setează parola nouă</button>
-        </form>
-      <% } %>
-    </div>
-  </div>
-</body>
-</html>
+<%- include('partials/vl-top', { seo: { private: true, title: 'Resetează parola — Vocea Locală Lenauheim' }, section: '' }) %>
+<section class="auth glass">
+<a class="small" href="/login">← Înapoi la autentificare</a>
+<h1>Resetează parola</h1>
+<% if (!valid) { %>
+<p class="notice notice--error" role="alert">Linkul de resetare este invalid sau a expirat. Cere unul nou din pagina <a href="/parola-uitata">Am uitat parola</a>.</p>
+<% } else { %>
+<form method="POST" action="/reseteaza-parola">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<input type="hidden" name="email" value="<%= email %>">
+<input type="hidden" name="token" value="<%= token %>">
+<label class="fld">Parola nouă <small>minimum 12 caractere</small><input type="password" name="parola_noua" minlength="12" required autocomplete="new-password"></label>
+<label class="fld">Confirmă parola nouă<input type="password" name="confirma_parola" minlength="12" required autocomplete="new-password"></label>
+<button class="btn btn--dark btn--block" type="submit">Setează parola nouă</button>
+</form>
+<% } %>
+</section>
+<%- include('partials/vl-bottom', { section: '' }) %>

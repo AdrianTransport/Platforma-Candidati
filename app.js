@@ -527,10 +527,15 @@ export async function createApp({
     const posts = db.data.portal_posts.filter(post => portalPostIsPublic(post)
       && (req.params.slug === 'stiri' ? post.tip === 'stire' : section.categorii.includes(post.categorie)))
       .sort((a, b) => new Date(portalPublicationDate(b)) - new Date(portalPublicationDate(a)));
+    const perPage = 13;
+    const pages = Math.max(1, Math.ceil(posts.length / perPage));
+    const page = Math.min(pages, Math.max(1, Number.parseInt(req.query.pagina, 10) || 1));
+    const pageUrl = n => `/sectiune/${req.params.slug}${n > 1 ? `?pagina=${n}` : ''}`;
     setPublicCdnCache(res);
-    res.render('portal-section-public', { section, posts,
-      seo: portalPageSeo(publicBaseUrl(req), { path: `/sectiune/${req.params.slug}`,
-        title: `${section.titlu} — ${PORTAL_SITE_NAME}`,
+    res.render('portal-section-public', { section, slug: req.params.slug, sections: PORTAL_SECTIONS,
+      posts: posts.slice((page - 1) * perPage, page * perPage), page, pages, pageUrl,
+      seo: portalPageSeo(publicBaseUrl(req), { path: pageUrl(page),
+        title: `${section.titlu}${page > 1 ? ` — pagina ${page}` : ''} — ${PORTAL_SITE_NAME}`,
         description: `${section.descriere} Bulgăruș, Lenauheim și Grabaț, județul Timiș.` }) });
   });
 

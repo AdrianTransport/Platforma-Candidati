@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<%- include('seo-head', { seo }) %>
-<% if (!seo.image) { %><meta property="og:image" content="<%= new URL('/img/og-default.jpg', seo.canonical).href %>">
+<% if (seo.private) { %><title><%= seo.title %></title>
+<meta name="robots" content="noindex, nofollow">
+<% } else { %><%- include('seo-head', { seo }) %><% } %>
+<% if (!seo.private && !seo.image) { %><meta property="og:image" content="<%= new URL('/img/og-default.jpg', seo.canonical).href %>">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="vocea lenauheim — știri și procese din comuna Lenauheim">

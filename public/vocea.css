@@ -455,3 +455,29 @@ p a:not(.btn),li a:not(.btn),dd a,.byline a{text-decoration:underline;text-under
 .prose--plain p{white-space:pre-line}
 .small{font-size:13px}
 .ad-form{flex:2 1 480px;min-width:0}
+
+/* știri: antet de rubrică, articol, reacții */
+.page-head__lead{max-width:36em;margin-top:8px}
+.article__meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:14px;color:var(--muted)}
+.article__meta .chip{align-self:center}
+.article__figure img{aspect-ratio:auto;object-fit:cover}
+.transparency{display:flex;flex-direction:column;gap:8px}
+.transparency h2{margin:0;font-family:var(--display);font-size:22px}
+.transparency dl{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:4px 14px;margin:4px 0;font-size:14px}
+.transparency dt{color:var(--muted)}
+.transparency dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.transparency .btn{align-self:flex-start}
+.article-engagement{display:flex;flex-wrap:wrap;gap:14px}
+.reaction-panel,.share-panel{flex:1 1 300px;min-width:0;border-radius:22px;padding:18px;background:rgba(255,255,255,.75);border:1px solid var(--glass-b);display:flex;flex-direction:column;gap:10px}
+.reaction-panel .eyebrow{display:block}
+.reaction-actions,.share-panel div{display:flex;flex-wrap:wrap;gap:8px}
+.reaction-actions button,.share-panel a,.share-panel button{min-height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:#fff;color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.reaction-actions button:hover,.share-panel a:hover,.share-panel button:hover{border-color:var(--violet);color:var(--violet-d)}
+@media (max-width:760px){.transparency dl{grid-template-columns:1fr}.page-head__lead{font-size:15px}}
+.filters-form{border-radius:24px;padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%%,200px),1fr));gap:12px;align-items:end}
+.filters-form__actions{display:flex;flex-wrap:wrap;gap:8px}
+.table-wrap{overflow-x:auto;margin:6px 0}
+.table{width:100%%;border-collapse:collapse;font-size:14px;min-width:560px}
+.table th,.table td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.table th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.doc .legal-links{margin-top:18px}
