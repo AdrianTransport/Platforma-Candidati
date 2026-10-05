@@ -3,3 +3,6 @@ data/db.json
 data/comments/
 .env
 .netlify/
+data/vocea.json
+data/compliance/
+data/editorial/

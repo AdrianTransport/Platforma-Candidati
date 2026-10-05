@@ -22,6 +22,10 @@ export function configureBlobsCredentials(credentials) {
   blobsCredentials = credentials;
 }
 
+export function getBlobsCredentials() {
+  return blobsCredentials;
+}
+
 async function getBlobsStore() {
   const { getStore } = await import('@netlify/blobs');
   // Adaptor nou pentru tokenul invocării curente. Credențialele explicite folosesc

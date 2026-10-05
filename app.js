@@ -19,6 +19,10 @@ import { createAuthUserWithPassword, deleteAuthUser, signInWithPassword, updateA
 import { LEGAL_PAGES } from './legal-pages.js';
 import { isPortalPublished, portalPostInput, portalPublicationDate } from './portal.js';
 import { mailConfigured, sendMail } from './mail.js';
+import { createVoceaStore } from './vocea/store.js';
+import { registerVoceaPublic, homeProcese } from './vocea/public-routes.js';
+import { registerVoceaAdmin } from './vocea/admin-routes.js';
+import * as voceaTime from './vocea/time.js';
 import { PORTAL_SITE_NAME, portalPageSeo, portalArticleSeo, seoDate, jsonLd } from './seo.js';
 import {
   TERMS_VERSION,
@@ -161,6 +165,7 @@ export async function createApp({
   editorial = createEditorial({ now }),
   compliance = createCompliance({ now }),
   auth = productionAuth(),
+  voceaStore = createVoceaStore(),
 } = {}) {
   const sessionSecret = String(process.env.SESSION_SECRET || '').trim();
   const isNetlify = Boolean(
@@ -371,9 +376,35 @@ export async function createApp({
     return value;
   }
 
+  app.locals.t = voceaTime;
+  // Culoarea etichetei de categorie din designul public.
+  const CATEGORY_TONES = { administratie: 'primarie', primarie: 'primarie', comunitate: 'comunitate', educatie: 'scoala',
+    scoala: 'scoala', evenimente: 'evenimente', economie: 'economie', agricultura: 'economie' };
+  app.locals.toneOf = category => CATEGORY_TONES[slugify(String(category || ''))] || 'general';
+  app.locals.seoDateOf = post => seoDate(portalPublicationDate(post)) || '';
+  const voceaContext = {
+    voceaStore, now, safely, setPublicCdnCache, ensureCsrfToken, requireCsrf,
+    adminGuard: [requireRole('admin'), requireActiveAccount],
+    baseUrl: publicBaseUrl,
+    clientIp: requestIp,
+    pageSeo: (req, options) => portalPageSeo(publicBaseUrl(req), options),
+  };
+  registerVoceaPublic(app, voceaContext);
+  registerVoceaAdmin(app, voceaContext);
+
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
 
-  app.get('/', (req, res) => {
+  app.get('/', safely(async (req, res) => {
+    // Procesele vin din depozitul separat; dacă e indisponibil, restul primei pagini rămâne funcțional.
+    let procese = { hero: null, cases: [] };
+    let whatsappUrl = '';
+    try {
+      const vocea = await voceaStore.read();
+      procese = homeProcese(vocea, now());
+      whatsappUrl = vocea.settings.whatsappUrl || '';
+    } catch (error) {
+      console.error('Dosarele nu au putut fi citite:', error.name);
+    }
     const candidatiPublici = db.data.users
       .filter(vizibilInPortal)
       .slice(0, 6);
@@ -389,10 +420,16 @@ export async function createApp({
       ensureCsrfToken(req, res);
       res.set('Cache-Control', 'private, no-store');
     } else {
-      setPublicCdnCache(res);
+      // Scurt, ca starea LIVE și termenul să fie mereu aproape de cele din admin.
+      setPublicCdnCache(res, { maxAge: 20, stale: 60 });
     }
     res.render('landing', {
-      seo: portalPageSeo(publicBaseUrl(req)),
+      ...procese,
+      whatsappUrl,
+      section: 'procese',
+      seo: portalPageSeo(publicBaseUrl(req), procese.hero ? {
+        description: `${procese.hero.dosar.titlu}: ${procese.hero.termenLabel.toLowerCase()}. ${procese.hero.dosar.obiect || ''} Urmărim live fiecare termen, plus știri și anunțuri din Bulgăruș, Lenauheim și Grabaț.`,
+      } : {}),
       candidatiPublici,
       principal: mainPost ? withCandidate(mainPost) : null,
       stiri: portalPosts.filter(post => post.tip === 'stire' && post.id !== mainPost?.id).slice(0, 6).map(withCandidate),
@@ -400,7 +437,7 @@ export async function createApp({
       sondaj,
       portalOwner,
     });
-  });
+  }));
 
   function escapeXml(text) {
     return String(text ?? '').replace(/[<>&'"]/g, (c) => ({
