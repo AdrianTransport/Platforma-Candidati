@@ -142,6 +142,15 @@ test('Rute publice și Super Admin pentru dosare, LIVE și anunțuri', async (t)
   assert.match(home.text, /href="\/dosare\/1234-30-2026\/termen.ics"/);
   assert.match(home.text, /Toate dosarele cu Primăria/);
   assert.match(home.text, /src="\/live.js" defer/);
+
+  // Subsolul public: nume, o frază despre independență, linkuri, apoi creditul; fără „Administrare”.
+  const footer = home.text.slice(home.text.indexOf('<footer class="site-footer">'), home.text.indexOf('</footer>'));
+  const order = ['site-footer__brand', 'site-footer__about', 'site-footer__links', 'site-footer__credit'].map(name => footer.indexOf(name));
+  assert.ok(order.every((position, index) => position > 0 && (index === 0 || position > order[index - 1])), 'ordinea din subsol');
+  assert.deepEqual([...footer.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)].map(match => match[2]),
+    ['Statut editorial', 'Contact redacție', 'Drept la replică', 'Raportare conținut', 'Termeni', 'Confidențialitate', 'Cookies']);
+  assert.doesNotMatch(footer, /\/login|Administrare|Informații despre cookies/);
+  assert.match(footer, /Site realizat de <a href="https:\/\/cristianweb.ro" rel="noopener"><img [^>]*width="20" height="20"[^>]*>CristianWeb<\/a>/);
   assert.match(home.headers.get('netlify-cdn-cache-control'), /max-age=20/);
 
   const ics = await guest('/dosare/1234-30-2026/termen.ics');
