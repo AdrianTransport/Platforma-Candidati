@@ -22,6 +22,8 @@ import { mailConfigured, sendMail } from './mail.js';
 import { createVoceaStore } from './vocea/store.js';
 import { registerVoceaPublic, homeProcese } from './vocea/public-routes.js';
 import { registerVoceaAdmin } from './vocea/admin-routes.js';
+import { registerPoze } from './vocea/poze-routes.js';
+import { defaultPhotoStore } from './vocea/poze.js';
 import { registerSedinte } from './vocea/sedinte-routes.js';
 import { defaultPdfStore } from './vocea/pdf-store.js';
 import { meetingUrl } from './vocea/sedinte.js';
@@ -170,6 +172,7 @@ export async function createApp({
   auth = productionAuth(),
   voceaStore = createVoceaStore(),
   pdfStore = defaultPdfStore(),
+  photoStore = defaultPhotoStore(),
 } = {}) {
   const sessionSecret = String(process.env.SESSION_SECRET || '').trim();
   const isNetlify = Boolean(
@@ -403,6 +406,10 @@ export async function createApp({
     isActiveAdmin: req => Boolean(db.data.users.find(user => user.id === req.session.userId && user.role === 'admin' && user.activ)),
     defaultAuthor: portalEditorialResponsible,
   };
+  voceaContext.photoStore = photoStore;
+  // Pozele din anunțuri: încărcare, afișare, moderare și ștergere automată.
+  const poze = registerPoze(app, voceaContext);
+  voceaContext.cleanupPhotos = poze.cleanup;
   registerVoceaPublic(app, voceaContext);
   registerVoceaAdmin(app, voceaContext);
   registerSedinte(app, voceaContext);
@@ -2120,6 +2127,9 @@ export async function createApp({
     }
     if (['/dashboard/media', '/admin/portal/media'].includes(req.path) && error.type === 'entity.too.large') {
       return res.status(413).json({ eroare: 'Imagine prea mare. Încarcă un fișier de maximum 3 MB după redimensionare.' });
+    }
+    if (/^\/anunturi\/poze(?:\/[^/]+\/mic)?$/.test(req.path) && error.type === 'entity.too.large') {
+      return res.status(413).json({ eroare: 'Poza este prea mare.' });
     }
     if (/^\/admin\/sedinte\/[^/]+\/documente$/.test(req.path) && error.type === 'entity.too.large') {
       return res.status(413).json({ eroare: 'PDF-ul depășește 4 MB. Comprimă-l și încearcă din nou.' });
