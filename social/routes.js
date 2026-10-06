@@ -43,8 +43,17 @@ export function registerSocial(app, ctx) {
     const preview = isAdmin(req);
     const publication = await publications.find(req.params.type, req.params.id, { includeDrafts: preview });
     if (!publication) return next();
-    const photo = await photoDataUri(await publications.photoBuffer(publication.photoUrl), { baseDir });
-    const bytes = await renderShareImage({ ...publication, photo }, req.params.format, { baseDir });
+    let bytes;
+    try {
+      const photo = await photoDataUri(await publications.photoBuffer(publication.photoUrl), { baseDir });
+      bytes = await renderShareImage({ ...publication, photo }, req.params.format, { baseDir });
+    } catch (error) {
+      // O imagine lipsă nu trebuie să strice distribuirea: trimitem imaginea implicită a site-ului.
+      console.error('Imaginea de distribuire nu a putut fi generată:', error.name, error.code || '');
+      res.set('Cache-Control', 'no-store');
+      res.set('X-Share-Image', `fallback ${error.name}${error.code ? ` ${error.code}` : ''}`);
+      return res.redirect(302, '/img/og-default.jpg');
+    }
     const isPublic = Boolean(await publications.find(req.params.type, req.params.id));
     if (isPublic) {
       // Adresa conține versiunea conținutului: imaginea poate sta mult în CDN.

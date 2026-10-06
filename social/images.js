@@ -14,15 +14,17 @@ export const FORMATS = {
 
 const COLORS = { bg: '#f3f6fb', ink: '#0b1220', muted: '#4a5568', violet: '#5b34ff', violetSoft: '#ece7ff', red: '#e11d48', white: '#ffffff' };
 
+// Fișierele .wasm se caută pornind de la directorul proiectului: după împachetarea funcției
+// Netlify, import.meta.url nu mai este definit.
+function resolveModuleFile(baseDir, specifier) {
+  try { return createRequire(path.join(baseDir, 'package.json')).resolve(specifier); } catch { return path.join(baseDir, 'node_modules', ...specifier.split('/')); }
+}
+
 let ready;
 // Fonturile și motorul WASM se încarcă o singură dată pe instanța funcției.
 function prepare(baseDir) {
   ready ||= (async () => {
-    const require = createRequire(import.meta.url);
-    const wasmPath = (() => {
-      try { return require.resolve('@resvg/resvg-wasm/index_bg.wasm'); } catch { return path.join(baseDir, 'node_modules', '@resvg', 'resvg-wasm', 'index_bg.wasm'); }
-    })();
-    await initWasm(await fs.readFile(wasmPath));
+    await initWasm(await fs.readFile(resolveModuleFile(baseDir, '@resvg/resvg-wasm/index_bg.wasm')));
     const font = file => fs.readFile(path.join(baseDir, 'assets-social', file));
     const [display, text, bold] = await Promise.all([font('bricolage-800.ttf'), font('instrument-500.ttf'), font('instrument-700.ttf')]);
     return [
@@ -117,12 +119,8 @@ async function decodeWebp(buffer, baseDir) {
     globalThis.ImageData ||= class ImageData {
       constructor(data, width, height) { Object.assign(this, { data, width, height }); }
     };
-    const require = createRequire(import.meta.url);
     const { default: decode, init } = await import('@jsquash/webp/decode.js');
-    const wasmPath = (() => {
-      try { return require.resolve('@jsquash/webp/codec/dec/webp_dec.wasm'); } catch { return path.join(baseDir, 'node_modules', '@jsquash', 'webp', 'codec', 'dec', 'webp_dec.wasm'); }
-    })();
-    await init(await WebAssembly.compile(await fs.readFile(wasmPath)));
+    await init(await WebAssembly.compile(await fs.readFile(resolveModuleFile(baseDir, '@jsquash/webp/codec/dec/webp_dec.wasm'))));
     return decode;
   })().catch((error) => { webpDecoder = undefined; throw error; });
   const decode = await webpDecoder;
