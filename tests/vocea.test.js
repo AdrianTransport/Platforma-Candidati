@@ -150,6 +150,7 @@ test('Rute publice și Super Admin pentru dosare, LIVE și anunțuri', async (t)
   assert.deepEqual([...footer.matchAll(/<a href="([^"]+)">([^<]+)<\/a>/g)].map(match => match[2]),
     ['Statut editorial', 'Contact redacție', 'Drept la replică', 'Raportare conținut', 'Termeni', 'Confidențialitate', 'Cookies']);
   assert.doesNotMatch(footer, /\/login|Administrare|Informații despre cookies/);
+  assert.doesNotMatch(home.text, /href="\/login"|>Administrare</, 'adminul intră doar direct pe /login');
   assert.match(footer, /Site realizat de <a href="https:\/\/cristianweb.ro" rel="noopener"><img [^>]*width="20" height="20"[^>]*>CristianWeb<\/a>/);
   assert.match(home.headers.get('netlify-cdn-cache-control'), /max-age=20/);
 
