@@ -2,6 +2,7 @@
   const notice = document.getElementById('cookie-notice');
   if (!notice) return;
   const acknowledge = notice.querySelector('[data-cookie-acknowledge]');
+  // Butonul de redeschidere există doar pe pagina politicii de cookies.
   const reopen = document.querySelector('[data-cookie-reopen]');
   const title = document.getElementById('cookie-notice-title');
   const storageKey = 'vocea-cookie-notice-v1';
@@ -10,7 +11,7 @@
 
   function show() {
     notice.hidden = false;
-    reopen.setAttribute('aria-expanded', 'true');
+    reopen?.setAttribute('aria-expanded', 'true');
   }
 
   acknowledge.addEventListener('click', () => {
@@ -19,16 +20,18 @@
       localStorage.setItem(storageKey, String(Date.now() + lifetime));
     } catch { /* Mesajul poate fi închis și când stocarea este blocată. */ }
     notice.hidden = true;
-    reopen.setAttribute('aria-expanded', 'false');
+    reopen?.setAttribute('aria-expanded', 'false');
     if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
   });
 
-  reopen.addEventListener('click', () => {
-    returnFocus = reopen;
-    show();
-    title.focus({ preventScroll: true });
-  });
-  reopen.hidden = false;
+  if (reopen) {
+    reopen.addEventListener('click', () => {
+      returnFocus = reopen;
+      show();
+      title.focus({ preventScroll: true });
+    });
+    reopen.hidden = false;
+  }
 
   let dismissed = false;
   try {

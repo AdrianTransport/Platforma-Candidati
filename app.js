@@ -389,6 +389,8 @@ export async function createApp({
   const CATEGORY_TONES = { administratie: 'primarie', primarie: 'primarie', comunitate: 'comunitate', educatie: 'scoala',
     scoala: 'scoala', evenimente: 'evenimente', economie: 'economie', agricultura: 'economie' };
   app.locals.toneOf = category => CATEGORY_TONES[slugify(String(category || ''))] || 'general';
+  // Ancore stabile pentru secțiunile paginilor legale (ex. /legal/statut#contact).
+  app.locals.anchorOf = title => slugify(String(title || ''));
   app.locals.seoDateOf = post => seoDate(portalPublicationDate(post)) || '';
   const voceaContext = {
     voceaStore, now, safely, setPublicCdnCache, ensureCsrfToken, requireCsrf,
