@@ -1,0 +1,73 @@
+<%- include('partials/vl-top', { seo, section: 'primarie', blobs: 'sedinta' }) %>
+<% const c = meeting.comentariu || {}; const stateClass = { programata: 'tag-plain', live: 'badge badge--live', incheiata: 'vote vote--adoptat' }; %>
+<% if (draft) { %><p class="notice notice--error" role="status"><b>Previzualizare:</b> această ședință este ciornă și nu apare pe site. Doar Super Admin vede pagina. <a href="/admin/sedinte/<%= meeting.id %>">Înapoi la editare</a></p><% } %>
+<div class="page-head page-head--stack">
+<nav class="crumbs" aria-label="Cale"><a href="/sectiune/administratie">Primărie</a> / <a href="/sedinte">Ședințele Consiliului Local</a> / <%= t.formatDate(meeting.at) %></nav>
+<div class="meeting-tags"><span class="tag-plain"><%= MEETING_TYPES[meeting.tip] %></span><span class="<%= stateClass[state] %>"><%= state === 'live' ? 'LIVE · ÎN DESFĂȘURARE' : MEETING_STATES[state] %></span><span class="mono small muted"><%= t.formatDate(meeting.at) %> · ORA <%= t.formatTime(meeting.at) %><% if (meeting.loc) { %> · <%= meeting.loc.toUpperCase() %><% } %></span></div>
+<h1 class="meeting-title"><%= meetingFullTitle(meeting) %></h1>
+</div>
+
+<section class="meeting-layout">
+<div class="meeting-layout__main">
+<% if (c.text) { %>
+<article class="opinion" aria-labelledby="comentariu-titlu">
+<div class="opinion__head">
+<span class="opinion__avatar" aria-hidden="true">VL</span>
+<span class="opinion__who"><b>Comentariul redacției</b><span><%= c.autor || 'Redacția' %><% if (c.updatedAt) { %> · <%= t.formatDate(c.updatedAt) %>, <%= t.formatTime(c.updatedAt) %><% } %></span></span>
+<span class="opinion__tag">OPINIE</span>
+</div>
+<h2 id="comentariu-titlu"><%= c.titlu %></h2>
+<div class="opinion__text"><%- formatComment(c.text) %></div>
+<% if (c.notaReplica !== false) { %><p class="opinion__note">Acesta este un comentariu de opinie al redacției. Faptele sunt documentate în actele oficiale atașate. Persoanele menționate au <a href="/legal/continut">drept la replică</a>.</p><% } %>
+</article>
+<% } %>
+
+<div class="panel glass">
+<h2>Ordinea de zi și voturile</h2>
+<% if (!meeting.puncte.length) { %><p class="muted">Ordinea de zi va fi publicată aici.</p><% } %>
+<ol class="agenda-votes">
+<% meeting.puncte.forEach((point, index) => { const doc = point.docId && meeting.documente.find(d => d.id === point.docId); %>
+<li>
+<div class="agenda-votes__row"><span><b class="agenda__nr"><%= String(index + 1).padStart(2, '0') %></b> · <%= point.titlu %><% if (doc) { %> · <a href="<%= docUrl(doc) %>" data-pdf-open="<%= doc.id %>">PDF</a><% } %></span><% if (point.rezultat !== 'nevotat') { %><span class="vote vote--<%= point.rezultat %>"><%= resultLabel(point) %></span><% } %></div>
+<% if (point.pentru != null || point.contra != null || point.abtineri != null) { %><span class="agenda-votes__count"><%= [point.pentru != null && `${point.pentru} pentru`, point.contra != null && `${point.contra} contra`, point.abtineri != null && `${point.abtineri} abțineri`].filter(Boolean).join(' · ') %></span><% } %>
+<% if (point.nota) { %><p class="agenda-votes__note"><span aria-hidden="true">💬</span> <i>Nota redacției:</i> <%= point.nota %></p><% } %>
+</li>
+<% }) %>
+</ol>
+</div>
+
+<% if (featured) { %>
+<section class="pdf-viewer" id="document" aria-label="Document PDF" data-pdf-viewer data-src="<%= docUrl(featured) %>">
+<div class="pdf-viewer__bar">
+<b data-pdf-name><%= featured.nume %></b>
+<span class="pdf-viewer__actions"><button type="button" class="btn btn--light btn--sm" data-pdf-fullscreen>Ecran întreg</button><a class="btn btn--dark btn--sm" data-pdf-download href="<%= docUrl(featured) %>?descarca=1" download>Descarcă</a></span>
+</div>
+<div class="pdf-viewer__stage" data-pdf-stage>
+<canvas data-pdf-canvas aria-label="Pagina documentului" hidden></canvas>
+<a class="pdf-viewer__placeholder" data-pdf-placeholder href="<%= docUrl(featured) %>"><span class="pdf-file" aria-hidden="true">PDF</span><span>Deschide documentul<br><small class="muted"><%= formatSize(featured.marime) %></small></span></a>
+</div>
+<div class="pdf-viewer__nav"><button type="button" class="btn btn--light btn--sm" data-pdf-prev disabled>← Pagina anterioară</button><span class="mono small" data-pdf-status aria-live="polite">PREVIZUALIZARE PDF</span><button type="button" class="btn btn--light btn--sm" data-pdf-next disabled>Pagina următoare →</button></div>
+</section>
+<% } %>
+</div>
+
+<aside class="meeting-layout__side">
+<div class="panel glass">
+<h2>Documente (PDF)</h2>
+<% if (!meeting.documente.length) { %><p class="muted">Documentele vor fi publicate aici după ce le primim de la Primărie.</p><% } %>
+<% for (const doc of meeting.documente) { %>
+<a class="doc-link<%= featured && doc.id === featured.id ? ' is-active' : '' %>" href="<%= docUrl(doc) %>" data-pdf-open="<%= doc.id %>" data-pdf-src="<%= docUrl(doc) %>" data-pdf-title="<%= doc.nume %>"<% if (featured && doc.id === featured.id) { %> aria-current="true"<% } %>><span class="pdf-file" aria-hidden="true">PDF</span><span class="doc-link__text"><b><%= DOC_GROUP_TITLES[doc.tip] && meeting.documente.filter(d => d.tip === doc.tip).length === 1 ? DOC_GROUP_TITLES[doc.tip] : DOC_TYPES[doc.tip] %></b><span><%= featured && doc.id === featured.id ? 'Deschis în pagină' : `${formatSize(doc.marime)} · ${t.formatDate(doc.createdAt)}` %></span></span></a>
+<% } %>
+<% if (meeting.at && state !== 'incheiata') { %><a class="btn btn--calendar" href="<%= meetingUrl(meeting) %>/calendar.ics" download>Adaugă în calendar</a><% } %>
+</div>
+<div class="panel glass">
+<h2 class="panel__small-title">Distribuie</h2>
+<div class="share-grid">
+<a href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(shareUrl) %>" target="_blank" rel="noopener noreferrer">Facebook</a>
+<a href="https://wa.me/?text=<%= encodeURIComponent(`${meetingTitle(meeting)} ${shareUrl}`) %>" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+<button type="button" class="copy-share" data-share-url="<%= shareUrl %>">Link</button>
+</div>
+</div>
+</aside>
+</section>
+<%- include('partials/vl-bottom', { section: 'primarie', share: true, pdfViewer: Boolean(featured) }) %>

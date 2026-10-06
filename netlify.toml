@@ -5,7 +5,8 @@
 
 [functions]
   node_bundler = "esbuild"
-  included_files = ["views/**", "public/**"]
+  # pdf.js e servit doar static de CDN: nu îngreunează funcția.
+  included_files = ["views/**", "public/**", "!public/pdfjs-*/**"]
 
 [[headers]]
   for = "/*"
@@ -20,6 +21,16 @@
   for = "/fonts/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/pdfjs-6.4.299/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/pdfjs-6.4.299/*.mjs"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
 
 [[headers]]
   for = "/img/*"

@@ -1,0 +1,66 @@
+<%- include('partials/vl-top', { seo, section: 'primarie', blobs: 'sedinte' }) %>
+<div class="page-head page-head--stack">
+<nav class="crumbs" aria-label="Cale"><a href="/sectiune/administratie">Primărie</a> / Ședințele Consiliului Local</nav>
+<div class="page-head__row">
+<h1>Ședințele<br>Consiliului Local</h1>
+<nav class="filters" aria-label="Filtru">
+<a class="filter" href="/sedinte"<% if (!tip && !an) { %> aria-current="page"<% } %>>Toate</a>
+<a class="filter" href="/sedinte?tip=ordinara"<% if (tip === 'ordinara') { %> aria-current="page"<% } %>>Ordinare</a>
+<a class="filter" href="/sedinte?tip=extraordinara"<% if (tip === 'extraordinara') { %> aria-current="page"<% } %>>Extraordinare</a>
+<% for (const year of years) { %><a class="filter" href="/sedinte?an=<%= year %>"<% if (an === year) { %> aria-current="page"<% } %>><%= year %></a><% } %>
+</nav>
+</div>
+</div>
+
+<% if (next) { const st = meetingState(next, nowMs); const conv = next.documente.find(d => d.tip === 'convocator'); %>
+<section class="meeting-next glass" aria-labelledby="urmatoarea">
+<div class="meeting-next__info">
+<div class="meeting-tags"><span class="badge <%= st === 'live' ? 'badge--live' : 'badge--violet' %>"><% if (st === 'live') { %><span class="badge__dot" aria-hidden="true"></span>LIVE · ȘEDINȚA E ÎN DESFĂȘURARE<% } else { %>URMĂTOAREA ȘEDINȚĂ<% } %></span><span class="tag-plain"><%= MEETING_TYPES[next.tip] %></span></div>
+<h2 id="urmatoarea" class="meeting-next__title"><a href="<%= meetingUrl(next) %>"><%= meetingTitle(next) %></a></h2>
+<div class="meeting-when">
+<div><span>Data</span><b><%= t.formatShortDate(next.at) %></b></div>
+<div><span>Ora</span><b><%= t.formatTime(next.at) %></b></div>
+</div>
+<% if (next.loc) { %><div class="fact"><span>Locul</span><b><%= next.loc %></b></div><% } %>
+<div class="meeting-actions"><a class="btn btn--dark" href="<%= meetingUrl(next) %>/calendar.ics" download>Adaugă în calendar</a><% if (conv) { %><a class="btn btn--light" href="<%= docUrl(conv) %>">Convocatorul (PDF)</a><% } %></div>
+</div>
+<div class="meeting-next__agenda">
+<h3>Ordinea de zi</h3>
+<% if (next.puncte.length) { %>
+<ol class="agenda">
+<% next.puncte.forEach((point, index) => { const doc = point.docId && next.documente.find(d => d.id === point.docId); %>
+<li class="agenda__item<%= index >= 2 ? ' agenda__item--more' : '' %>"><span class="agenda__nr"><%= String(index + 1).padStart(2, '0') %></span><span class="agenda__title"><%= point.titlu %></span><% if (doc) { %><a href="<%= docUrl(doc) %>" aria-label="PDF: <%= point.titlu %>">PDF</a><% } %></li>
+<% }) %>
+</ol>
+<a class="agenda__all" href="<%= meetingUrl(next) %>">Toate punctele și documentele →</a>
+<% } else { %><p class="muted">Ordinea de zi va fi publicată aici imediat ce e anunțată.</p><% } %>
+</div>
+</section>
+<% } %>
+
+<section class="stack" aria-labelledby="incheiate">
+<div class="section-head"><h2 class="section-title" id="incheiate">Ședințe încheiate</h2><span class="muted small">Cu rezultatul votului la fiecare punct</span></div>
+<% if (!done.length) { %><p class="empty glass">Nu am publicat încă nicio ședință încheiată<%= tip || an ? ' pentru acest filtru' : '' %>.</p><% } %>
+<% done.forEach((meeting, index) => { const counts = resultCounts(meeting); const hot = meeting.documente.find(d => d.tip === 'hotarare'); const pv = meeting.documente.find(d => d.tip === 'proces-verbal'); %>
+<% if (index === 0) { %>
+<article class="meeting-card meeting-card--open glass">
+<div class="meeting-card__main">
+<span class="mono small muted"><%= t.formatDate(meeting.at) %> · ORA <%= t.formatTime(meeting.at) %></span>
+<h3><a href="<%= meetingUrl(meeting) %>"><%= meetingTitle(meeting) %></a></h3>
+<% if (meeting.rezumat) { %><p class="muted"><%= meeting.rezumat %></p><% } %>
+<% if (hot || pv) { %><div class="meeting-links"><% if (hot) { %><a href="<%= docUrl(hot) %>">Hotărâri (PDF)</a><% } %><% if (hot && pv) { %><span aria-hidden="true">·</span><% } %><% if (pv) { %><a href="<%= docUrl(pv) %>">Proces-verbal (PDF)</a><% } %></div><% } %>
+</div>
+<ol class="votes">
+<% meeting.puncte.forEach((point, i) => { %><li><span><%= String(i + 1).padStart(2, '0') %> · <%= point.titlu %></span><% if (point.rezultat !== 'nevotat') { %><span class="vote vote--<%= point.rezultat %>"><%= RESULTS[point.rezultat] %></span><% } %></li><% }) %>
+</ol>
+</article>
+<% } else { %>
+<article class="meeting-card glass">
+<div class="meeting-card__main"><span class="mono small muted"><%= t.formatDate(meeting.at) %> · <%= MEETING_TYPES[meeting.tip].toUpperCase() %></span><h3><a href="<%= meetingUrl(meeting) %>"><%= meetingTitle(meeting) %></a></h3></div>
+<div class="meeting-counts"><% for (const [key, label] of [['adoptat', 'adoptate'], ['respins', 'respinse'], ['amanat', 'amânate']]) { if (counts[key]) { %><span class="vote vote--<%= key %>"><%= counts[key] %> <%= label %></span><% } } %></div>
+</article>
+<% } %>
+<% }) %>
+</section>
+<p class="muted small">Documentele sunt preluate din sursele oficiale ale Primăriei Lenauheim.</p>
+<%- include('partials/vl-bottom', { section: 'primarie' }) %>
