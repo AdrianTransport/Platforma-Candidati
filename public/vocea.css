@@ -623,3 +623,50 @@ p a:not(.btn),li a:not(.btn),dd a,.byline a{text-decoration:underline;text-under
   .site-footer__links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:2px 0 0}
   .site-footer__links a{padding:0 12px;background:rgba(255,255,255,.7);border:1px solid var(--line);line-height:1.25}
 }
+
+/* ------------------------------ poze în anunțuri ------------------------------ */
+.photos{border:0;margin:0;padding:14px;border-radius:16px;background:#f5f2ff;border:1px dashed #c9bdff;display:flex;flex-direction:column;gap:10px}
+.photos[hidden]{display:none}
+.photos legend{float:left;width:100%;padding:0;margin:0 0 4px;font-size:13px;font-weight:600}
+.photos.is-over{background:#ece7ff;border-color:var(--violet)}
+.photos__add{position:relative;overflow:hidden;min-height:56px;font-size:17px;align-self:stretch;cursor:pointer}
+.photos__add svg{width:22px;height:22px}
+.photos__add input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.photos.is-full .photos__add{opacity:.5;pointer-events:none}
+.photos__drop,.photos__note,.photos__status{margin:0;font-size:13px;font-weight:400;color:var(--muted)}
+.photos__drop[hidden]{display:none}
+.photos__note{color:#7a4a00}
+.photos__list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.photo{position:relative;border-radius:14px;overflow:hidden;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column}
+.photo img{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--ph);display:block}
+.photo.is-main{border-color:var(--violet);box-shadow:0 0 0 2px rgba(91,52,255,.25)}
+.photo__main{display:none;position:absolute;top:6px;left:6px;padding:2px 8px;border-radius:999px;background:var(--violet);color:#fff;font-size:11px;font-weight:700}
+.photo.is-main .photo__main{display:block}
+.photo progress{width:100%;height:6px;appearance:none;border:0;background:#ece7ff;accent-color:var(--violet)}
+.photo__tools{display:grid;grid-template-columns:repeat(4,1fr)}
+.photo__btn{min-height:44px;border:0;border-top:1px solid var(--line);background:#fff;font:inherit;font-size:16px;cursor:pointer;color:var(--ink)}
+.photo__btn + .photo__btn{border-left:1px solid var(--line)}
+.photo__btn:disabled{color:#b9c3d6;cursor:default}
+.photo__btn[data-action="remove"]{color:var(--red-d)}
+.photo.is-error img{opacity:.4}
+.photo__error{padding:6px 8px;font-size:12px;font-weight:600;color:var(--red-d)}
+.ad--photo{padding-top:0;overflow:hidden}
+.ad__photo{position:relative;display:block;margin:0 -20px 4px;aspect-ratio:16/10;background:var(--ph)}
+.ad__photo img{width:100%;height:100%;object-fit:cover}
+.ad__count{position:absolute;right:10px;bottom:10px;padding:3px 10px;border-radius:999px;background:rgba(11,18,32,.75);color:#fff;font-size:12px;font-weight:600}
+.gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:6px 0}
+.gallery__item{display:block;border-radius:14px;overflow:hidden;background:var(--ph);aspect-ratio:1/1}
+.gallery__item--main{grid-column:1/-1;aspect-ratio:4/3}
+.gallery__item img{width:100%;height:100%;object-fit:cover}
+.lightbox{width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:rgba(11,18,32,.96);color:#fff}
+.lightbox::backdrop{background:rgba(11,18,32,.9)}
+.lightbox[open]{display:flex;flex-direction:column}
+.lightbox__track{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.lightbox__track::-webkit-scrollbar{display:none}
+.lightbox__slide{flex:0 0 100%;margin:0;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;padding:12px}
+.lightbox__slide img{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.lightbox__bar{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.lightbox__btn{min-width:48px;min-height:48px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;font:inherit;font-size:18px;cursor:pointer}
+.lightbox__close{margin-left:auto}
+.lightbox__count{font-family:var(--mono);font-size:13px}
+@media (max-width:760px){.photos__list{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}

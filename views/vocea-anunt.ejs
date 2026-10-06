@@ -3,9 +3,19 @@
 <article class="doc <%= ad.tip === 'decese' ? 'ad--deces' : 'glass' %>">
 <div class="ad__top"><span class="chip cat-<%= ad.tip %>"><%= ad.typeName %></span><time datetime="<%= ad.publicatLa %>"><%= t.formatLongDate(ad.publicatLa) %></time></div>
 <h1><%= ad.titlu %></h1>
+<% if (ad.poze?.length) { %>
+<div class="gallery" data-gallery>
+<% ad.poze.forEach((p, i) => { %><a class="gallery__item<%= i === 0 ? ' gallery__item--main' : '' %>" href="/anunturi/poze/<%= p.id %>/mare" data-gallery-open="<%= i %>" data-full="/anunturi/poze/<%= p.id %>/mare" data-width="<%= p.width %>" data-height="<%= p.height %>"><img src="/anunturi/poze/<%= p.id %>/<%= i === 0 ? 'mare' : 'mic' %>" alt="Poza <%= i + 1 %> din <%= ad.poze.length %>: <%= ad.titlu %>" width="<%= i === 0 ? p.width : p.mic.width %>" height="<%= i === 0 ? p.height : p.mic.height %>"<% if (i) { %> loading="lazy"<% } %> decoding="async"></a><% }) %>
+</div>
+<dialog class="lightbox" data-lightbox aria-label="Pozele anunțului">
+<div class="lightbox__track" data-lightbox-track></div>
+<div class="lightbox__bar"><button type="button" class="lightbox__btn" data-lightbox-prev aria-label="Poza anterioară">←</button><span class="lightbox__count" data-lightbox-count aria-live="polite"></span><button type="button" class="lightbox__btn" data-lightbox-next aria-label="Poza următoare">→</button><button type="button" class="lightbox__btn lightbox__close" data-lightbox-close aria-label="Închide">✕</button></div>
+</dialog>
+<% } %>
 <div class="prose prose--plain"><% String(ad.text || '').split(/\n{2,}/).filter(Boolean).forEach(paragraph => { %><p><%= paragraph %></p><% }) %></div>
 <% if (ad.pret) { %><dl><dt>Preț</dt><dd><%= ad.pret %></dd></dl><% } %>
 <% if (ad.hasPhone) { %><p><a class="btn btn--dark" href="<%= ad.url %>" data-phone="<%= ad.id %>" rel="nofollow">Arată telefonul</a></p><% } %>
 <% if (ad.expiraLa) { %><p class="byline">Anunț valabil până la <%= t.formatDate(ad.expiraLa) %>.</p><% } %>
 </article>
+<% if (ad.poze?.length) { %><script src="/anunt-galerie.js" defer></script><% } %>
 <%- include('partials/vl-bottom', { section: 'anunturi' }) %>

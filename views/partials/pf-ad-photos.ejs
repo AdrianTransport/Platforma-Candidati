@@ -1,0 +1,16 @@
+<% if (ad.poze?.length) { %>
+<div class="pf-photos" aria-label="Pozele anunțului">
+<% ad.poze.forEach((photo, index) => { %>
+<figure class="pf-photo">
+<a href="/anunturi/poze/<%= photo.id %>/mare" target="_blank" rel="noopener"><img src="/anunturi/poze/<%= photo.id %>/mic" alt="Poza <%= index + 1 %> din anunț" width="<%= photo.mic.width %>" height="<%= photo.mic.height %>" loading="lazy"></a>
+<figcaption><%= index === 0 ? 'Principală' : `Poza ${index + 1}` %> · <%= photo.width %>×<%= photo.height %></figcaption>
+<form method="POST" action="/admin/anunturi/<%= ad.id %>/poze/<%= photo.id %>/sterge" data-confirm="Ștergi această poză? Anunțul rămâne.">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<% if (typeof back !== 'undefined') { %><input type="hidden" name="inapoi" value="<%= back %>"><% } %>
+<button class="danger" type="submit">Șterge poza</button>
+</form>
+</figure>
+<% }) %>
+</div>
+<% } %>
+<script src="/form-confirmations.js" defer></script>

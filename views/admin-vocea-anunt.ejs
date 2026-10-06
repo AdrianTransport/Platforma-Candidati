@@ -15,8 +15,16 @@
 <p class="pf-hint pf-full">Verifică să nu existe date personale ale altor persoane fără acordul lor. Anunțurile cititorilor expiră după 30 de zile de la publicare.</p>
 <div class="pf-form-end pf-full"><button class="pf-btn--blue" type="submit"><%= ad && ad.status === 'in_asteptare' ? 'Aprobă și publică' : ad ? 'Salvează' : 'Publică anunțul' %></button></div>
 </form>
+<% if (ad && ad.poze?.length) { %>
+<div class="pf-photos-block">
+<h2 class="pf-photos-title">Pozele anunțului (<%= ad.poze.length %>)</h2>
+<p class="pf-hint">Șterge doar poza nepotrivită (persoane fără acord, documente cu date personale); anunțul rămâne.</p>
+<%- include('partials/pf-ad-photos', { ad }) %>
+</div>
+<% } %>
 </div>
 </section>
+<script src="/form-confirmations.js" defer></script>
 <%- include('partials/pf-admin-bottom') %>
 </body>
 </html>
