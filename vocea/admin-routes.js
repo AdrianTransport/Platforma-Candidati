@@ -2,6 +2,7 @@ import { clean, safeUrl, slugify, uniqueSlug } from './util.js';
 import { bucharestToDate, toBucharestInputs } from './time.js';
 import { STADII, LIVE_MODES, STATE_LABELS, nextTermen, liveState, sortDosare, featuredDosar, newId } from './dosare.js';
 import { ValidationError } from '../publication.js';
+import { deletePhotoFiles } from './poze.js';
 import { AD_TYPES, AD_STATUS, READER_AD_DAYS, adTypeName, readAdForm, newAdId } from './anunturi.js';
 
 const JUST_HOSTS = ['just.ro'];
@@ -77,7 +78,7 @@ function formValues(dosar, now) {
 const withMessage = (url, kind, text) => `${url}${url.includes('?') ? '&' : '?'}${kind}=${encodeURIComponent(text)}`;
 
 export function registerVoceaAdmin(app, ctx) {
-  const { voceaStore, now, safely, adminGuard, requireCsrf } = ctx;
+  const { voceaStore, now, safely, adminGuard, requireCsrf, photoStore, cleanupPhotos } = ctx;
   const find = (data, id) => data.dosare.find(d => d.id === id);
   const common = (req, t) => ({
     STADII, LIVE_MODES, STATE_LABELS, liveState: d => liveState(d, t), adminPath: req.path,
@@ -263,6 +264,7 @@ export function registerVoceaAdmin(app, ctx) {
   /* -------------------------------- anunțuri -------------------------------- */
 
   app.get('/admin/anunturi', ...adminGuard, safely(async (req, res) => {
+    await cleanupPhotos?.().catch(() => {});
     const data = await voceaStore.read();
     const t = now();
     const sorted = [...data.anunturi].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
@@ -320,7 +322,13 @@ export function registerVoceaAdmin(app, ctx) {
   }));
 
   app.post('/admin/anunturi/:id/sterge', ...adminGuard, requireCsrf, safely(async (req, res) => {
-    await voceaStore.update((data) => { data.anunturi = data.anunturi.filter(a => a.id !== req.params.id); });
+    const photos = await voceaStore.update((data) => {
+      const ad = data.anunturi.find(a => a.id === req.params.id);
+      data.anunturi = data.anunturi.filter(a => a.id !== req.params.id);
+      return ad?.poze || [];
+    });
+    // Pozele anunțului se șterg odată cu el.
+    await deletePhotoFiles(photoStore, photos);
     ok(res, '/admin/anunturi', 'Anunțul a fost șters definitiv.');
   }));
 }

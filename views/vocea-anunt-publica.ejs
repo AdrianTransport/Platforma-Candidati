@@ -18,9 +18,23 @@
 <label class="fld fld--full">Titlu<input type="text" name="titlu" value="<%= values.titlu || '' %>" required maxlength="140"></label>
 <label class="fld fld--full">Textul anunțului<textarea name="text" rows="4" required maxlength="1500"><%= values.text || '' %></textarea></label>
 <label class="fld">Preț <small>opțional</small><input type="text" name="pret" value="<%= values.pret || '' %>" maxlength="40"></label>
+<fieldset class="fld fld--full photos" data-photos data-max="5" hidden>
+<legend>Poze (opțional)</legend>
+<label class="photos__add btn btn--violet"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="4" fill="none" stroke="currentColor" stroke-width="2"/></svg><span>Adaugă poze</span><input type="file" accept="image/*" multiple data-photos-input></label>
+<p class="photos__drop" data-photos-drop>sau trage pozele aici · până la 5 poze</p>
+<p class="photos__note">Fără poze cu persoane fără acordul lor și fără documente cu date personale.</p>
+<ol class="photos__list" data-photos-list aria-live="polite">
+<% for (const photo of (typeof pending === 'undefined' ? [] : pending)) { %>
+<li class="photo is-done" data-photo data-server-id="<%= photo.id %>"><img src="/anunturi/poze/<%= photo.id %>/mic" alt="" width="<%= photo.mic.width %>" height="<%= photo.mic.height %>"><input type="hidden" name="poze" value="<%= photo.id %>"></li>
+<% } %>
+</ol>
+<p class="photos__status" data-photos-status aria-live="polite"></p>
+</fieldset>
+<noscript><p class="fld--full muted small">Pentru a adăuga poze, activează JavaScript în browser.</p></noscript>
 <label class="fld fld--full fld--check"><input type="checkbox" name="acord" value="da" required> <span>Anunțul este corect, iar datele din el pot fi publicate. Am citit <a href="/legal/confidentialitate">politica de confidențialitate</a>.</span></label>
 <button class="btn btn--violet fld--full" type="submit">Trimite spre verificare</button>
 </form>
+<script src="/anunt-poze.js" defer></script>
 <% } %>
 </section>
 <%- include('partials/vl-bottom', { section: 'anunturi' }) %>

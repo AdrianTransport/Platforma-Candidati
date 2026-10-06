@@ -7,6 +7,7 @@ import {
   activeAds, importantAd, adView, adTypeName, validAdType, isActive, readAdForm, newAdId, phoneDigits,
 } from './anunturi.js';
 import { PORTAL_SITE_NAME } from '../seo.js';
+import { claimPhotos, photoOwner } from './poze-routes.js';
 
 // Prima pagină și paginile de dosar: date calculate o singură dată pentru șabloane.
 export function homeProcese(data, now) {
@@ -131,7 +132,7 @@ export function registerVoceaPublic(app, ctx) {
     res.set('X-Robots-Tag', 'noindex, nofollow');
     res.render('vocea-anunt-publica', {
       section: 'anunturi', types: AD_TYPES.filter(type => READER_AD_TYPES.includes(type.slug)),
-      values: { tip: 'mica-publicitate' }, error: null, sent: req.query.trimis === '1',
+      values: { tip: 'mica-publicitate' }, error: null, sent: req.query.trimis === '1', pending: [],
       seo: pageSeo(req, { path: '/anunturi/publica', title: `Publică un anunț — ${PORTAL_SITE_NAME}`,
         description: 'Trimite un anunț de mica publicitate, deces sau loc de muncă. Redacția îl verifică înainte de publicare.', noindex: true }),
     });
@@ -140,11 +141,18 @@ export function registerVoceaPublic(app, ctx) {
   app.post('/anunturi/publica', requireCsrf, safely(async (req, res) => {
     res.set('Cache-Control', 'private, no-store');
     res.set('X-Robots-Tag', 'noindex, nofollow');
-    const render = (status, values, error) => res.status(status).render('vocea-anunt-publica', {
-      section: 'anunturi', types: AD_TYPES.filter(type => READER_AD_TYPES.includes(type.slug)), values, error, sent: false,
+    const render = async (status, values, error) => {
+      // Pozele deja încărcate rămân în formular când anunțul trebuie corectat.
+      const ids = [].concat(req.body.poze || []).map(String);
+      const owner = photoOwner(req);
+      const uploads = (await voceaStore.read()).poze_incarcate || [];
+      const pending = ids.map(id => uploads.find(item => item.id === id && item.owner === owner && item.mic)).filter(Boolean);
+      return res.status(status).render('vocea-anunt-publica', {
+      section: 'anunturi', types: AD_TYPES.filter(type => READER_AD_TYPES.includes(type.slug)), values, error, sent: false, pending,
       seo: pageSeo(req, { path: '/anunturi/publica', title: `Publică un anunț — ${PORTAL_SITE_NAME}`,
         description: 'Trimite un anunț spre verificare.', noindex: true }),
-    });
+      });
+    };
     // Câmpul ascuns e completat doar de roboți: răspundem ca și cum ar fi reușit.
     if (String(req.body.website || '').trim()) return res.redirect(303, '/anunturi/publica?trimis=1');
     const { values, error } = readAdForm(req.body, { reader: true });
@@ -161,6 +169,8 @@ export function registerVoceaPublic(app, ctx) {
       data.limite[key] = (data.limite[key] || 0) + 1;
       data.anunturi.push({
         id: newAdId(), ...values, status: 'in_asteptare', sursa: 'cititor',
+        // Pozele încărcate de această sesiune trec prin moderare împreună cu anunțul.
+        poze: claimPhotos(data, req.body.poze, photoOwner(req)),
         createdAt: new Date(t).toISOString(), publicatLa: null, expiraLa: null,
       });
       return false;

@@ -230,3 +230,12 @@ body.pf .pf-row-actions button{min-height:36px;padding:0 12px}
 .pf-confirm__post img.is-story{width:130px}
 .pf-confirm__post > div{flex:1 1 260px;min-width:0}
 .pf-confirm__text{margin:0;white-space:pre-wrap;font:inherit;font-size:15px;line-height:1.55;overflow-wrap:anywhere}
+/* pozele anunțurilor la moderare */
+.pf-photos{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
+.pf-photo{margin:0;width:150px;display:flex;flex-direction:column;gap:6px}
+.pf-photo img{width:150px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--pf-line);background:#eef1f6;display:block}
+.pf-photo figcaption{font-size:12px;color:var(--pf-muted)}
+.pf-photo form{margin:0}
+body.pf .pf-photo button{min-height:36px;width:100%;padding:0 8px;font-size:13px}
+.pf-photos-block{display:flex;flex-direction:column;gap:6px}
+body.pf .pf-photos-title{margin:0;font-size:17px}
