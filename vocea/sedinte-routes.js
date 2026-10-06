@@ -33,7 +33,7 @@ function findDoc(data, docId) {
 }
 
 export function registerSedinte(app, ctx) {
-  const { voceaStore, pdfStore, now, safely, setPublicCdnCache, requireCsrf, adminGuard, pageSeo, baseUrl, isActiveAdmin, defaultAuthor } = ctx;
+  const { voceaStore, pdfStore, now, safely, setPublicCdnCache, requireCsrf, adminGuard, pageSeo, baseUrl, isActiveAdmin, defaultAuthor, shareFor, withShare } = ctx;
 
   /* --------------------------------- public --------------------------------- */
 
@@ -73,14 +73,15 @@ export function registerSedinte(app, ctx) {
       res.set('X-Robots-Tag', 'noindex, nofollow');
     }
     const url = `${baseUrl(req)}${meetingUrl(meeting)}`;
+    const share = isPublished(meeting) ? await shareFor(req, 'sedinta', meeting.id) : null;
     res.render('vocea-sedinta', {
       ...helpers, section: 'primarie', meeting, state: meetingState(meeting, t), draft: !isPublished(meeting),
-      featured: featuredDoc(meeting), shareUrl: url, nowMs: t,
-      seo: pageSeo(req, {
+      featured: featuredDoc(meeting), shareUrl: url, nowMs: t, share,
+      seo: withShare(pageSeo(req, {
         path: meetingUrl(meeting), noindex: !isPublished(meeting),
         title: `${meetingTitle(meeting)} — Consiliul Local Lenauheim — ${PORTAL_SITE_NAME}`,
         description: meeting.rezumat || `${meetingTitle(meeting)}: ordinea de zi, voturile și documentele PDF ale Consiliului Local Lenauheim.`,
-      }),
+      }), share),
     });
   }));
 

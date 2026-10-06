@@ -18,7 +18,7 @@ export function homeProcese(data, now) {
 }
 
 export function registerVoceaPublic(app, ctx) {
-  const { voceaStore, now, safely, setPublicCdnCache, ensureCsrfToken, requireCsrf, pageSeo, baseUrl, clientIp } = ctx;
+  const { voceaStore, now, safely, setPublicCdnCache, ensureCsrfToken, requireCsrf, pageSeo, baseUrl, clientIp, shareFor, withShare } = ctx;
   const findDosar = (data, id) => data.dosare.find(d => d.id === id);
 
   app.get('/dosare', safely(async (req, res) => {
@@ -39,15 +39,16 @@ export function registerVoceaPublic(app, ctx) {
     if (!dosar) return next();
     const t = now();
     const view = dosarView(dosar, t);
+    const share = await shareFor(req, 'dosar', dosar.id);
     setPublicCdnCache(res, { maxAge: 20, stale: 60 });
     res.render('vocea-dosar', {
-      section: 'procese', view, nowMs: t, nextId: nextTermen(dosar, t)?.id,
+      section: 'procese', view, nowMs: t, nextId: nextTermen(dosar, t)?.id, share,
       terms: [...dosar.termene].sort((a, b) => Date.parse(a.at) - Date.parse(b.at)),
-      seo: pageSeo(req, {
+      seo: withShare(pageSeo(req, {
         path: `/dosare/${encodeURIComponent(dosar.id)}`,
         title: `${dosar.titlu}${dosar.numar ? ` — dosar ${dosar.numar}` : ''} — ${PORTAL_SITE_NAME}`,
         description: `${view.termenLabel.toLowerCase()}. ${dosar.obiect || ''} Stadiu: ${dosar.stadiu || '—'}.`,
-      }),
+      }), share),
     });
   }));
 
@@ -173,11 +174,12 @@ export function registerVoceaPublic(app, ctx) {
     const found = data.anunturi.find(a => a.id === req.params.id && isActive(a, now()) && validAdType(a.tip));
     if (!found) return next();
     const ad = adView(found);
+    const share = await shareFor(req, 'anunt', ad.id);
     setPublicCdnCache(res, { maxAge: 60, stale: 300 });
     res.render('vocea-anunt', {
-      section: 'anunturi', ad,
-      seo: pageSeo(req, { path: ad.url, title: `${ad.titlu} — ${ad.typeName} — ${PORTAL_SITE_NAME}`,
-        description: ad.summary || ad.titlu, noindex: ad.tip === 'decese' }),
+      section: 'anunturi', ad, share,
+      seo: withShare(pageSeo(req, { path: ad.url, title: `${ad.titlu} — ${ad.typeName} — ${PORTAL_SITE_NAME}`,
+        description: ad.summary || ad.titlu, noindex: ad.tip === 'decese' }), share),
     });
   }));
 

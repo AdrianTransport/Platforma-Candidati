@@ -25,6 +25,8 @@ import { registerVoceaAdmin } from './vocea/admin-routes.js';
 import { registerSedinte } from './vocea/sedinte-routes.js';
 import { defaultPdfStore } from './vocea/pdf-store.js';
 import { meetingUrl } from './vocea/sedinte.js';
+import { createPublications, imageUrl } from './social/publications.js';
+import { registerSocial } from './social/routes.js';
 import * as voceaTime from './vocea/time.js';
 import { PORTAL_SITE_NAME, portalPageSeo, portalArticleSeo, seoDate, jsonLd } from './seo.js';
 import {
@@ -390,6 +392,23 @@ export async function createApp({
     scoala: 'scoala', evenimente: 'evenimente', economie: 'economie', agricultura: 'economie' };
   app.locals.toneOf = category => CATEGORY_TONES[slugify(String(category || ''))] || 'general';
   app.locals.seoDateOf = post => seoDate(portalPublicationDate(post)) || '';
+  // Distribuirea pe rețele: imagini generate pentru fiecare publicație și panoul Super Admin.
+  const publications = createPublications({
+    db, voceaStore, editorial, baseDir, now, electoralMode, publicationDate, portalPublicationDate,
+    isPortalPostPublic: portalPostIsPublic, portalCandidate, canPublishSite: poatePublicaSite,
+    isArticlePublished: article => isPublished(article, now()) && article.moderation_status !== 'suspendat',
+  });
+  // Bara de distribuire și imaginile unei publicații publice (null dacă nu e publică).
+  async function shareFor(req, type, id) {
+    const publication = await publications.find(type, String(id)).catch(() => null);
+    if (!publication) return null;
+    const base = publicBaseUrl(req);
+    return {
+      title: publication.title, url: `${base}${publication.path}`,
+      ogUrl: `${base}${imageUrl(publication, 'og')}`, storyUrl: imageUrl(publication, 'story'),
+    };
+  }
+  const withShare = (seo, share) => (share ? { ...seo, shareImage: share.ogUrl } : seo);
   const voceaContext = {
     voceaStore, now, safely, setPublicCdnCache, ensureCsrfToken, requireCsrf,
     adminGuard: [requireRole('admin'), requireActiveAccount],
@@ -400,10 +419,12 @@ export async function createApp({
     // Previzualizarea ciornelor: doar un cont de Super Admin încă activ.
     isActiveAdmin: req => Boolean(db.data.users.find(user => user.id === req.session.userId && user.role === 'admin' && user.activ)),
     defaultAuthor: portalEditorialResponsible,
+    shareFor, withShare,
   };
   registerVoceaPublic(app, voceaContext);
   registerVoceaAdmin(app, voceaContext);
   registerSedinte(app, voceaContext);
+  registerSocial(app, { ...voceaContext, db, publications, baseDir });
 
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
 
@@ -589,8 +610,9 @@ export async function createApp({
     if (!post) return res.status(404).send('Materialul nu există.');
     post.vizualizari = (post.vizualizari || 0) + 1;
     await saveVisitStatistics();
+    const share = await shareFor(req, 'stire', post.slug);
     res.render('portal-post', { post, candidat: portalCandidate(post), postUrl: `${publicBaseUrl(req)}/actualitate/${encodeURIComponent(post.slug)}`,
-      seo: portalArticleSeo(publicBaseUrl(req), post) });
+      share, seo: withShare(portalArticleSeo(publicBaseUrl(req), post), share) });
   }));
 
   app.post('/actualitate/:slug/reactie', requireCsrf, safely(async (req, res) => {
@@ -1577,34 +1599,6 @@ export async function createApp({
     res.redirect('/admin/social?mesaj=TikTok%20a%20fost%20deconectat.');
   }));
 
-  app.post('/admin/social/publica/:id', requireRole('admin'), requireActiveAccount, requireCsrf, safely(async (req, res) => {
-    const user = db.data.users.find((item) => item.id === req.session.userId);
-    const post = db.data.portal_posts.find((item) => item.id === Number(req.params.id) && portalPostIsPublic(item));
-    const platforma = String(req.body.platforma || '').toLowerCase();
-    if (!post || !['facebook', 'instagram', 'tiktok'].includes(platforma)) return res.redirect('/admin/social?eroare=Materialul%20sau%20reteaua%20nu%20este%20valida.');
-    const postUrl = `${publicBaseUrl(req)}/actualitate/${encodeURIComponent(post.slug)}?utm_source=${platforma}`;
-    const textScurt = String(post.rezumat || post.continut || '').replace(/\s+/g, ' ').trim().slice(0, 450);
-    try {
-      const imaginePublica = internalImageId(post.imagine_url) ? new URL(post.imagine_url, publicBaseUrl(req)).toString() : post.imagine_url;
-      let rezultat;
-      if (platforma === 'facebook' || platforma === 'instagram') {
-        const meta = user.social_connections?.meta;
-        const page = meta?.pages?.find((item) => item.id === meta.selected_page_id);
-        if (!page) throw new Error('Conecteaza Meta si selecteaza o Pagina.');
-        rezultat = platforma === 'facebook' ? await publishFacebook(page, `${post.titlu}\n\n${textScurt}`, postUrl)
-          : await publishInstagram(page, `${post.titlu}\n\n${textScurt}\n\n${postUrl}`, imaginePublica);
-      } else {
-        const connection = user.social_connections?.tiktok;
-        if (!connection) throw new Error('Conecteaza contul TikTok.');
-        rezultat = await publishTikTokPhoto(connection, post.titlu, `${textScurt}\n\n${postUrl}`, imaginePublica);
-      }
-      post.distribuiri_sociale ||= [];
-      post.distribuiri_sociale.push({ platforma, data: new Date().toISOString(), id_extern: rezultat.id || rezultat.data?.publish_id || '', status: 'trimis' });
-      await db.write();
-      res.redirect(`/admin/social?mesaj=${encodeURIComponent(`Materialul a fost trimis catre ${platforma}.`)}`);
-    } catch (error) { res.redirect(`/admin/social?eroare=${encodeURIComponent(`${platforma}: ${error.message || 'publicarea a esuat.'}`)}`); }
-  }));
-
   app.get('/dashboard/social', requireRole('candidate'), (req, res) => {
     const user = db.data.users.find((u) => u.id === req.session.userId);
     if (!user?.module?.social) return res.redirect('/dashboard');
@@ -2058,7 +2052,8 @@ export async function createApp({
     ]);
     const bazaPublica = process.env.URL || `${req.protocol}://${req.get('host')}`;
     const articolUrl = new URL(`/site/${encodeURIComponent(user.subdomeniu)}/articol/${articol.id}`, bazaPublica).toString();
-    res.status(status).render('site-articol', { user, articol, articolUrl, transparenta: publicTransparency(user, articol), comentarii, commentsAvailable, commentError: error,
+    const share = await shareFor(req, 'articol', articol.id);
+    res.status(status).render('site-articol', { user, articol, articolUrl, share, transparenta: publicTransparency(user, articol), comentarii, commentsAvailable, commentError: error,
       activeSection: sectionSlugForCategory(articol.categorie),
       commentValues: values, commentSent: req.query.comentariu === 'trimis', preview: false });
   }
