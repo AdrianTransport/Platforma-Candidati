@@ -1,0 +1,32 @@
+<%- include('partials/pf-admin-head', { pageTitle: 'Ședințe de consiliu', active: 'sedinte' }) %>
+<div class="pf-head">
+<div><h1>Ședințe de consiliu</h1><p>Ordinea de zi, voturile, documentele PDF și comentariul redacției. Ciornele nu apar pe site.</p></div>
+<div class="pf-actions"><a class="btn secondary" href="/sedinte" target="_blank" rel="noopener">Pagina ședințelor ↗</a><a class="btn secondary" href="/admin/documente">Documente PDF</a></div>
+</div>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Ședință nouă</h2></div>
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="/admin/sedinte">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field">Tip<select name="tip"><% for (const [key, label] of Object.entries(MEETING_TYPES)) { %><option value="<%= key %>"><%= label %></option><% } %></select></label>
+<label class="pf-field">Data<input type="date" name="data" required></label>
+<label class="pf-field">Ora (ora României)<input type="time" name="ora" value="10:00"></label>
+<div class="pf-form-end pf-full"><button class="pf-btn--violet" type="submit">+ Creează ciorna</button></div>
+</form>
+</div>
+</section>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Toate ședințele (<%= sedinte.length %>)</h2></div>
+<div class="pf-section__body pf-list">
+<% for (const m of sedinte) { const counts = resultCounts(m); %>
+<div class="pf-item">
+<span class="pf-item__main"><span class="pf-item__meta"><%= m.at ? t.formatDate(m.at) + ' · ' + t.formatTime(m.at) : 'fără dată' %> · <%= MEETING_STATES[meetingState(m, nowMs)] %> · <%= m.puncte.length %> puncte · <%= m.documente.length %> PDF</span><a href="/admin/sedinte/<%= m.id %>"><b><%= meetingTitle(m) %></b></a><% if (m.puncte.length) { %><span class="pf-hint"><%= counts.adoptat %> adoptate · <%= counts.respins %> respinse · <%= counts.amanat %> amânate</span><% } %></span>
+<span class="pf-actions"><span class="pf-badge <%= m.status === 'publicat' ? 'pf-badge--ok' : 'pf-badge--draft' %>"><%= m.status === 'publicat' ? 'Publicată' : 'Ciornă' %></span><a class="btn secondary" href="/admin/sedinte/<%= m.id %>">Editează</a></span>
+</div>
+<% } %>
+<% if (!sedinte.length) { %><p class="pf-hint">Nicio ședință încă. Creează prima ședință mai sus.</p><% } %>
+</div>
+</section>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

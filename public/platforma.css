@@ -155,3 +155,55 @@ body.pf a{text-decoration:none}
 body.pf a:hover{text-decoration:underline;text-underline-offset:3px}
 body.pf .pf-nav a:hover,body.pf .pf-side__foot a:hover,body.pf a.btn:hover,body.pf .pf-filter a:hover,body.pf .pf-brand:hover{text-decoration:none}
 body.pf-solo .app-shell{max-width:1100px;margin:0 auto;padding:28px 20px 48px}
+
+/* --------------------- ședințe de consiliu (AdminSedinte.dc.html) --------------------- */
+body.pf .pf-btn--violet{background:#5b34ff;border-color:#5b34ff;color:#fff}
+body.pf .pf-btn--violet:hover{background:#4b2bd6;border-color:#4b2bd6;color:#fff}
+.pf-badge--draft{background:#fff1e0;color:#8a4b00}
+.pf-crumb{font-size:13px;color:var(--pf-muted)}
+.pf-head--sticky{position:sticky;top:0;z-index:20;background:var(--pf-bg);padding:10px 0;margin:-10px 0 0}
+.pf-drop{border:2px dashed #c9bdff;border-radius:18px;background:#f5f2ff;padding:28px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;color:#5b34ff;cursor:pointer}
+.pf-drop b{color:var(--pf-ink)}
+.pf-drop span{font-size:13px;color:var(--pf-muted)}
+.pf-drop.is-over{background:#ece7ff;border-color:#5b34ff}
+body.pf .pf-drop__pick{position:relative;overflow:hidden;cursor:pointer}
+.pf-drop__pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.pf-drop__log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--pf-ink);text-align:left;width:100%;max-width:560px}
+.pf-drop__log .is-ok{color:var(--pf-ok)}
+.pf-drop__log .is-error{color:var(--pf-danger);font-weight:600}
+.pf-docs{display:flex;flex-direction:column;gap:8px}
+.pf-doc{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--pf-line);border-radius:12px}
+.pf-pdf{width:34px;height:40px;flex:none;border-radius:6px;background:#ffe4ea;color:#be123c;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.pf-doc__name{flex:1 1 200px;min-width:0;display:flex;flex-direction:column;overflow-wrap:anywhere}
+.pf-doc__name small{color:var(--pf-muted)}
+body.pf .pf-doc select{min-height:40px;width:auto}
+.pf-points{display:flex;flex-direction:column;gap:10px}
+.pf-point{display:grid;grid-template-columns:40px minmax(0,1fr) 170px;gap:10px;align-items:start;padding:12px;border:1px solid var(--pf-line);border-radius:14px}
+.pf-point__nr{font-family:'JetBrains Mono',ui-monospace,monospace;color:#4b2bd6;padding-top:10px}
+.pf-point__body{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pf-point__votes{display:grid;grid-template-columns:repeat(3,minmax(70px,100px)) minmax(0,1fr);gap:8px}
+.pf-point__votes label{display:flex;flex-direction:column;gap:2px;font-size:12px;font-weight:600;color:var(--pf-muted)}
+body.pf .pf-point__votes input,body.pf .pf-point__votes select{min-height:40px;padding:6px 10px}
+.pf-opinion{background:#0b1220;color:#e6ebf3;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.pf-opinion__head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+body.pf .pf-opinion h2{margin:0;font-size:18px;color:#fff}
+.pf-opinion__tag{padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.1);font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.1em;color:#c9bdff}
+body.pf .pf-opinion label{color:#c9d1e0}
+body.pf .pf-opinion input:not([type=checkbox]),body.pf .pf-opinion textarea,body.pf .pf-opinion select{background:#111a2e;border-color:#263252;color:#fff}
+body.pf .pf-opinion textarea{line-height:1.6;min-height:200px}
+.pf-toolbar{display:flex;flex-wrap:wrap;gap:6px}
+body.pf .pf-toolbar button{min-width:40px;min-height:36px;padding:0 10px;border-radius:8px;border:1px solid #263252;background:#111a2e;color:#fff}
+body.pf .pf-toolbar select{min-height:36px;padding:0 8px;width:auto}
+.pf-opinion__help{margin:0;font-size:13px;color:#9fb0c2}
+.pf-opinion__check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500}
+.pf-row-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pf-row-actions form{margin:0}
+body.pf .pf-row-actions button{min-height:36px;padding:0 12px}
+@media (max-width:900px){
+  .pf-head--sticky{position:static}
+  .pf-point{grid-template-columns:32px minmax(0,1fr)}
+  .pf-point > select{grid-column:2}
+  .pf-point__votes{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pf-point__doc{grid-column:1/-1}
+  .pf-drop{padding:20px}
+}

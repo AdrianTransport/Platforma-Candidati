@@ -1,0 +1,31 @@
+<%- include('partials/pf-admin-head', { pageTitle: 'Documente PDF', active: 'documente' }) %>
+<div class="pf-head">
+<div><h1>Documente PDF</h1><p><%= docs.length %> fișiere · <%= total %> în total. PDF-urile se încarcă din pagina fiecărei ședințe.</p></div>
+<div class="pf-actions"><a class="btn" href="/admin/sedinte">Ședințe de consiliu</a></div>
+</div>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Toate PDF-urile</h2><label class="pf-search"><span class="pf-hidden">Caută document</span><input type="search" placeholder="Caută după nume sau ședință" data-pf-search="documente"></label></div>
+<div class="pf-table-wrap">
+<table class="pf-table" data-pf-table="documente">
+<thead><tr><th>Document</th><th>Tip</th><th>Ședința</th><th>Mărime</th><th>Încărcat</th><th>Pe site</th><th><span class="pf-hidden">Acțiuni</span></th></tr></thead>
+<tbody>
+<% for (const { doc, meeting } of docs) { %>
+<tr data-status="" data-search="<%= `${doc.nume} ${meetingTitle(meeting)} ${DOC_TYPES[doc.tip]}`.toLowerCase() %>">
+<td><a href="<%= docUrl(doc) %>" target="_blank" rel="noopener"><%= doc.nume %></a></td>
+<td><%= DOC_TYPES[doc.tip] %></td>
+<td><a href="/admin/sedinte/<%= meeting.id %>#documente"><%= meetingTitle(meeting) %></a></td>
+<td><%= formatSize(doc.marime) %></td>
+<td><%= t.formatDate(doc.createdAt) %></td>
+<td><span class="pf-badge <%= meeting.status === 'publicat' ? 'pf-badge--ok' : 'pf-badge--draft' %>"><%= meeting.status === 'publicat' ? 'Public' : 'Ciornă' %></span></td>
+<td class="pf-row-actions"><a href="<%= docUrl(doc) %>?descarca=1">Descarcă</a><form method="POST" action="/admin/documente/<%= doc.id %>/sterge" data-confirm="Ștergi definitiv „<%= doc.nume %>”? Dispare și de pe site."><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Șterge</button></form></td>
+</tr>
+<% } %>
+<% if (!docs.length) { %><tr><td colspan="7">Niciun PDF încărcat încă.</td></tr><% } %>
+</tbody>
+</table>
+</div>
+</section>
+<script src="/form-confirmations.js" defer></script>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>
