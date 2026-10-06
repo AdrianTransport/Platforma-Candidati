@@ -41,7 +41,8 @@ const h = (type, style, ...children) => ({ type, props: { style: { display: 'fle
 const img = (src, style) => ({ type: 'img', props: { src, style } });
 
 function fit(text, max) {
-  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  // Emoji și simbolurile lipsă din font ar apărea ca pătrățele: le scoatem.
+  const clean = String(text || '').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}\u{2600}-\u{27BF}]/gu, '').replace(/\s+/g, ' ').trim();
   if (clean.length <= max) return clean;
   const cut = clean.slice(0, max - 1);
   const space = cut.lastIndexOf(' ');
