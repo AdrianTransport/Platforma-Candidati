@@ -22,6 +22,9 @@ import { mailConfigured, sendMail } from './mail.js';
 import { createVoceaStore } from './vocea/store.js';
 import { registerVoceaPublic, homeProcese } from './vocea/public-routes.js';
 import { registerVoceaAdmin } from './vocea/admin-routes.js';
+import { registerSedinte } from './vocea/sedinte-routes.js';
+import { defaultPdfStore } from './vocea/pdf-store.js';
+import { meetingUrl } from './vocea/sedinte.js';
 import * as voceaTime from './vocea/time.js';
 import { PORTAL_SITE_NAME, portalPageSeo, portalArticleSeo, seoDate, jsonLd } from './seo.js';
 import {
@@ -166,6 +169,7 @@ export async function createApp({
   compliance = createCompliance({ now }),
   auth = productionAuth(),
   voceaStore = createVoceaStore(),
+  pdfStore = defaultPdfStore(),
 } = {}) {
   const sessionSecret = String(process.env.SESSION_SECRET || '').trim();
   const isNetlify = Boolean(
@@ -392,9 +396,14 @@ export async function createApp({
     baseUrl: publicBaseUrl,
     clientIp: requestIp,
     pageSeo: (req, options) => portalPageSeo(publicBaseUrl(req), options),
+    pdfStore,
+    // Previzualizarea ciornelor: doar un cont de Super Admin încă activ.
+    isActiveAdmin: req => Boolean(db.data.users.find(user => user.id === req.session.userId && user.role === 'admin' && user.activ)),
+    defaultAuthor: portalEditorialResponsible,
   };
   registerVoceaPublic(app, voceaContext);
   registerVoceaAdmin(app, voceaContext);
+  registerSedinte(app, voceaContext);
 
   /* ---------------------------- AUTENTIFICARE ---------------------------- */
 
@@ -461,8 +470,13 @@ export async function createApp({
     const urlIntrari = ['/', '/candidati', ...Object.keys(PORTAL_SECTIONS).map(slug => `/sectiune/${slug}`),
       '/statistici/apa', '/statistici/salubritate', '/dosare', '/anunturi', '/alerte'].map(route => ({ url: `${baza}${route}` }));
     try {
-      for (const dosar of (await voceaStore.read()).dosare) {
+      const vocea = await voceaStore.read();
+      for (const dosar of vocea.dosare) {
         urlIntrari.push({ url: `${baza}/dosare/${encodeURIComponent(dosar.id)}`, lastmod: seoDate(dosar.updatedAt || dosar.createdAt) });
+      }
+      urlIntrari.push({ url: `${baza}/sedinte` });
+      for (const sedinta of vocea.sedinte.filter(item => item.status === 'publicat')) {
+        urlIntrari.push({ url: `${baza}${meetingUrl(sedinta)}`, lastmod: seoDate(sedinta.updatedAt || sedinta.publicatLa) });
       }
     } catch (error) {
       console.error('Dosarele nu au putut fi citite pentru sitemap:', error.name);
@@ -2104,6 +2118,9 @@ export async function createApp({
     }
     if (['/dashboard/media', '/admin/portal/media'].includes(req.path) && error.type === 'entity.too.large') {
       return res.status(413).json({ eroare: 'Imagine prea mare. Încarcă un fișier de maximum 3 MB după redimensionare.' });
+    }
+    if (/^\/admin\/sedinte\/[^/]+\/documente$/.test(req.path) && error.type === 'entity.too.large') {
+      return res.status(413).json({ eroare: 'PDF-ul depășește 4 MB. Comprimă-l și încearcă din nou.' });
     }
     if (error instanceof ValidationError) return res.status(error.status).send(error.message);
     // Nu expunem stack-uri, secrete sau datele trimise de vizitatori.

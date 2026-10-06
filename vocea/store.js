@@ -8,13 +8,18 @@ import { StateConflictError } from '../state-conflict.js';
 // un document JSON mic în Netlify Blobs (store „vocea-db”), scris condiționat cu etag.
 // Local (și în teste) același document stă în data/vocea.json.
 export function emptyVocea() {
-  return { schema: 1, dosare: [], anunturi: [], settings: {}, limite: {} };
+  return { schema: 1, dosare: [], anunturi: [], sedinte: [], settings: {}, limite: {} };
 }
 
 function normalize(data) {
   const out = { ...emptyVocea(), ...(data || {}) };
-  for (const key of ['dosare', 'anunturi']) if (!Array.isArray(out[key])) out[key] = [];
+  for (const key of ['dosare', 'anunturi', 'sedinte']) if (!Array.isArray(out[key])) out[key] = [];
   for (const key of ['settings', 'limite']) if (!out[key] || typeof out[key] !== 'object' || Array.isArray(out[key])) out[key] = {};
+  for (const sedinta of out.sedinte) {
+    sedinta.puncte ||= [];
+    sedinta.documente ||= [];
+    sedinta.comentariu ||= { titlu: '', text: '', autor: '', notaReplica: true };
+  }
   for (const dosar of out.dosare) {
     dosar.termene ||= [];
     dosar.updates ||= [];

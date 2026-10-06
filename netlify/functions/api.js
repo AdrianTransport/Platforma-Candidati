@@ -67,7 +67,7 @@ async function initializeHandler(event) {
   });
   const editorial = createEditorial({ store, env: readEditorialEnv() });
   return createApp({ editorial }).then((app) => serverless(app, {
-    binary: ['image/png', 'image/jpeg', 'image/webp'],
+    binary: ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'],
   }));
 }
 
