@@ -16,7 +16,8 @@
 <% if (ads.length) { %>
 <section class="ads" aria-label="Anunțuri">
 <% for (const ad of ads) { %>
-<article class="ad<%= ad.tip === 'decese' ? ' ad--deces' : '' %>">
+<article class="ad<%= ad.tip === 'decese' ? ' ad--deces' : '' %><%= ad.poze?.length ? ' ad--photo' : '' %>">
+<% if (ad.poze?.length) { const p = ad.poze[0]; %><a class="ad__photo" href="<%= ad.url %>" tabindex="-1" aria-hidden="true"><img src="/anunturi/poze/<%= p.id %>/mic" alt="" width="<%= p.mic.width %>" height="<%= p.mic.height %>" loading="lazy" decoding="async"><% if (ad.poze.length > 1) { %><span class="ad__count"><%= ad.poze.length %> poze</span><% } %></a><% } %>
 <div class="ad__top"><span class="chip cat-<%= ad.tip %>"><%= ad.typeName %></span><time datetime="<%= ad.publicatLa %>"><%= t.formatDate(ad.publicatLa) %></time></div>
 <h2><a href="<%= ad.url %>"><%= ad.titlu %></a></h2>
 <% if (ad.summary) { %><p><%= ad.summary %><% if (ad.pret) { %> · <b><%= ad.pret %></b><% } %></p><% } else if (ad.pret) { %><p><b><%= ad.pret %></b></p><% } %>
