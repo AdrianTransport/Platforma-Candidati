@@ -4,7 +4,6 @@ import { clean, excerpt } from './util.js';
 // Avizierul comunei. Redacția publică direct; cititorii trimit spre verificare.
 export const AD_TYPES = [
   { slug: 'primarie', name: 'Primărie' },
-  { slug: 'biserica', name: 'Biserică' },
   { slug: 'decese', name: 'Decese' },
   { slug: 'mica-publicitate', name: 'Mica publicitate' },
   { slug: 'locuri-de-munca', name: 'Locuri de muncă' },
@@ -26,7 +25,7 @@ export function isActive(ad, now) {
 
 export function activeAds(data, now, tip = null) {
   return data.anunturi
-    .filter(a => isActive(a, now) && (!tip || a.tip === tip))
+    .filter(a => isActive(a, now) && validAdType(a.tip) && (!tip || a.tip === tip))
     .sort((a, b) => Date.parse(b.publicatLa) - Date.parse(a.publicatLa));
 }
 
