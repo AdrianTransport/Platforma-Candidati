@@ -231,6 +231,10 @@ export async function createApp({
   ));
   app.locals.asset = file => assetUrls[file] || `/${file}`;
   app.locals.legacyStylesheetUrl = assetUrls['legacy.css'];
+  // Designul public e inclus direct în pagină: un singur drum dus-întors până la primul conținut pe telefon.
+  app.locals.voceaCss = await readFile(path.join(baseDir, 'public', 'vocea.css'), 'utf8')
+    .then(css => css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s*\n\s*/g, '\n').trim())
+    .catch(error => { if (error.code === 'ENOENT') return ''; throw error; });
   app.locals.isPublished = article => isPublished(article, now());
   app.locals.publicationDate = publicationDate;
   app.locals.portalPublicationDate = portalPublicationDate;
@@ -447,15 +451,22 @@ export async function createApp({
 
   app.get('/robots.txt', (req, res) => {
     res.set('Content-Type', 'text/plain').set('Cache-Control', 'public, max-age=3600').send(
-      `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\n\nSitemap: ${publicBaseUrl(req)}/sitemap.xml\n`
+      `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /api/\nDisallow: /anunturi/publica\n\nSitemap: ${publicBaseUrl(req)}/sitemap.xml\n`
     );
   });
 
-  app.get('/sitemap.xml', (req, res) => {
+  app.get('/sitemap.xml', safely(async (req, res) => {
     const baza = publicBaseUrl(req);
     const candidati = db.data.users.filter(vizibilInPortal);
     const urlIntrari = ['/', '/candidati', ...Object.keys(PORTAL_SECTIONS).map(slug => `/sectiune/${slug}`),
-      '/statistici/apa', '/statistici/salubritate'].map(route => ({ url: `${baza}${route}` }));
+      '/statistici/apa', '/statistici/salubritate', '/dosare', '/anunturi', '/alerte'].map(route => ({ url: `${baza}${route}` }));
+    try {
+      for (const dosar of (await voceaStore.read()).dosare) {
+        urlIntrari.push({ url: `${baza}/dosare/${encodeURIComponent(dosar.id)}`, lastmod: seoDate(dosar.updatedAt || dosar.createdAt) });
+      }
+    } catch (error) {
+      console.error('Dosarele nu au putut fi citite pentru sitemap:', error.name);
+    }
     for (const post of db.data.portal_posts.filter(portalPostIsPublic)) {
       urlIntrari.push({ url: `${baza}/actualitate/${encodeURIComponent(post.slug)}`,
         lastmod: seoDate(post.updated_at || portalPublicationDate(post)) });
@@ -472,7 +483,7 @@ export async function createApp({
       urlIntrari.map(({ url, lastmod }) => `  <url><loc>${escapeXml(url)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>`).join('\n')
     }\n</urlset>`;
     res.set('Content-Type', 'application/xml').set('Cache-Control', 'public, max-age=3600').send(xml);
-  });
+  }));
 
   app.get('/site/:subdomeniu/rss.xml', (req, res) => {
     const user = publicCandidate(req.params.subdomeniu);

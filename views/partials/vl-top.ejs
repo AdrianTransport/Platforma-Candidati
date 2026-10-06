@@ -15,7 +15,7 @@
 <link rel="preload" href="/fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/instrument-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="<%= stylesheetUrl %>">
-<link rel="stylesheet" href="<%= asset('vocea.css') %>">
+<% if (voceaCss) { %><style><%- voceaCss %></style><% } else { %><link rel="stylesheet" href="<%= asset('vocea.css') %>"><% } %>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 </head>

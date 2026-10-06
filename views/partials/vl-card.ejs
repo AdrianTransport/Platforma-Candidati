@@ -1,5 +1,5 @@
 <% const href = `/actualitate/${encodeURIComponent(post.slug)}`; const kicker = post.tip === 'campanie' ? 'Campanie candidat' : (post.categorie || 'Actualitate'); %>
-<article class="card card--grid portal-news-card">
+<article class="card card--grid">
 <% if (post.imagine_url) { %><img class="card__img" src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>" width="640" height="400" loading="lazy" decoding="async">
 <% } else { %><div class="card__img ph" aria-hidden="true">vocea lenauheim</div><% } %>
 <div class="card__body">
