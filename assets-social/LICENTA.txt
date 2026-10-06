@@ -1,0 +1,2 @@
+Fonturi pentru imaginile de distribuire (Open Graph, Story), randate pe server.
+Bricolage Grotesque și Instrument Sans: SIL Open Font License 1.1, din Google Fonts.
