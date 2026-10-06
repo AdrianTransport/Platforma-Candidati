@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import satori from 'satori';
+import * as satoriModule from 'satori';
 import { initWasm, Resvg } from '@resvg/resvg-wasm';
 import jpeg from 'jpeg-js';
 
@@ -103,6 +103,8 @@ function storyTree(card) {
 export async function renderShareImage(card, format, { baseDir = process.cwd(), quality = 84 } = {}) {
   const fonts = await prepare(baseDir);
   const { width, height } = FORMATS[format];
+  // Ca modul ES, funcția e exportul implicit; încărcată prin require (funcția Netlify) e în .default.default.
+  const satori = typeof satoriModule.default === 'function' ? satoriModule.default : satoriModule.default.default;
   const svg = await satori(format === 'story' ? storyTree(card) : ogTree(card), { width, height, fonts });
   const rendered = new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render();
   const encoded = jpeg.encode({ data: rendered.pixels, width: rendered.width, height: rendered.height }, quality);

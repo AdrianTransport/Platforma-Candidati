@@ -52,7 +52,6 @@ export function registerSocial(app, ctx) {
       console.error('Imaginea de distribuire nu a putut fi generată:', error.name, error.code || '');
       res.set('Cache-Control', 'no-store');
       res.set('X-Share-Image', `fallback ${error.name}${error.code ? ` ${error.code}` : ''}`);
-      res.set('X-Share-Debug', encodeURIComponent(String(error.stack || error.message).slice(0, 600)));
       return res.redirect(302, '/img/og-default.jpg');
     }
     const isPublic = Boolean(await publications.find(req.params.type, req.params.id));
