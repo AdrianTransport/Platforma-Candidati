@@ -19,6 +19,13 @@ candidat are un site public în stil ziar local/tabloid modern.
   *Actualizări live* (`/admin/live`), *Anunțuri* (`/admin/anunturi`: publicare și verificarea anunțurilor
   trimise de cititori la `/anunturi/publica`; telefonul se afișează doar la apăsare).
 - Pagini publice noi: `/dosare`, `/dosare/:id`, `/anunturi`, `/anunturi/:id`, `/anunturi/publica`, `/alerte`.
+- **Ședințele Consiliului Local** (`/sedinte`, „Primărie” în meniu): ordinea de zi, rezultatul votului la fiecare
+  punct (cu note opționale ale redacției), „Comentariul redacției” afișat cu eticheta OPINIE și nota de drept la replică,
+  documente PDF cu vizualizator în pagină (pdf.js găzduit local în `public/pdfjs-6.4.299/`, licență Apache 2.0) și descărcare.
+  Super Admin → *Ședințe de consiliu*: ciornă / previzualizare / publicare; PDF-urile se încarcă prin drag & drop,
+  se verifică (antet PDF, fără JavaScript sau fișiere încorporate, fără parolă, **max. 4 MB** — limita unei funcții
+  Netlify) și se păstrează în Netlify Blobs, store `vocea-pdf` (local: `data/pdf/`). *Documente PDF* listează toate fișierele.
+- Categoria de anunțuri „Biserică” a fost scoasă.
 
 ## Funcțiile lotului „platformă publică”
 

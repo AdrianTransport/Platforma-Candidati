@@ -118,7 +118,7 @@ export function registerVoceaPublic(app, ctx) {
       seo: pageSeo(req, {
         path: query(page),
         title: `${tip ? `Anunțuri: ${adTypeName(tip)}` : 'Anunțuri — avizierul comunei'}${page > 1 ? ` — pagina ${page}` : ''} — ${PORTAL_SITE_NAME}`,
-        description: 'Avizierul comunei Lenauheim: anunțuri de la Primărie și Biserică, decese, mica publicitate și locuri de muncă din Lenauheim, Bulgăruș și Grabaț.',
+        description: 'Avizierul comunei Lenauheim: anunțuri de la Primărie, decese, mica publicitate și locuri de muncă din Lenauheim, Bulgăruș și Grabaț.',
       }),
     });
   }));
@@ -170,7 +170,7 @@ export function registerVoceaPublic(app, ctx) {
 
   app.get('/anunturi/:id', safely(async (req, res, next) => {
     const data = await voceaStore.read();
-    const found = data.anunturi.find(a => a.id === req.params.id && isActive(a, now()));
+    const found = data.anunturi.find(a => a.id === req.params.id && isActive(a, now()) && validAdType(a.tip));
     if (!found) return next();
     const ad = adView(found);
     setPublicCdnCache(res, { maxAge: 60, stale: 300 });
@@ -184,7 +184,7 @@ export function registerVoceaPublic(app, ctx) {
   // Telefonul nu apare în HTML (ca să nu fie cules de roboți); se cere la apăsarea butonului.
   app.get('/api/anunturi/:id/telefon', safely(async (req, res) => {
     const data = await voceaStore.read();
-    const ad = data.anunturi.find(a => a.id === req.params.id && isActive(a, now()));
+    const ad = data.anunturi.find(a => a.id === req.params.id && isActive(a, now()) && validAdType(a.tip));
     const tel = ad && phoneDigits(ad.telefon);
     res.set('Cache-Control', 'private, no-store');
     res.set('X-Robots-Tag', 'noindex, nofollow');

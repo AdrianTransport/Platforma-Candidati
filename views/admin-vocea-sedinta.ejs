@@ -1,0 +1,133 @@
+<%- include('partials/pf-admin-head', { pageTitle: meetingTitle(meeting), active: 'sedinte' }) %>
+<% const c = meeting.comentariu || {}; const published = meeting.status === 'publicat';
+   const rows = [...meeting.puncte, { id: '', titlu: '', nota: '', rezultat: 'nevotat' }]; %>
+<form id="sedinta-form" method="POST" action="/admin/sedinte/<%= meeting.id %>" data-sedinta-form>
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<div class="pf-head pf-head--sticky">
+<div><span class="pf-crumb"><a href="/admin/sedinte">Ședințe de consiliu</a> / Editează</span><h1><%= meetingTitle(meeting) %></h1></div>
+<div class="pf-actions">
+<span class="pf-badge <%= published ? 'pf-badge--ok' : 'pf-badge--draft' %>"><%= published ? 'Publicată' : 'Ciornă' %></span>
+<button class="secondary" type="submit" name="actiune" value="previzualizeaza" formtarget="_blank">Previzualizează</button>
+<button class="secondary" type="submit" name="actiune" value="salveaza">Salvează</button>
+<% if (published) { %><button class="secondary" type="submit" name="actiune" value="ciorna" data-confirm="Retragi ședința de pe site? Rămâne salvată ca ciornă.">Retrage (ciornă)</button><% } %>
+<button class="pf-btn--violet" type="submit" name="actiune" value="publica"><%= published ? 'Salvează și publică' : 'Publică' %></button>
+</div>
+</div>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>1 · Detaliile ședinței</h2><% if (published) { %><a href="<%= meetingUrl(meeting) %>" target="_blank" rel="noopener">Pagina publică ↗</a><% } %></div>
+<div class="pf-section__body pf-form">
+<label class="pf-field">Tip<select name="tip"><% for (const [key, label] of Object.entries(MEETING_TYPES)) { %><option value="<%= key %>"<% if (meeting.tip === key) { %> selected<% } %>><%= label %></option><% } %></select></label>
+<label class="pf-field">Data<input type="date" name="data" value="<%= inputs.date %>" required></label>
+<label class="pf-field">Ora (ora României)<input type="time" name="ora" value="<%= inputs.time %>"></label>
+<label class="pf-field">Stare<select name="stare"><% for (const [key, label] of Object.entries(MEETING_STATES)) { %><option value="<%= key %>"<% if (meeting.stare === key) { %> selected<% } %>><%= label %></option><% } %></select></label>
+<label class="pf-field pf-full">Locul<input type="text" name="loc" value="<%= meeting.loc || '' %>" maxlength="160"></label>
+<label class="pf-field pf-full">Pe scurt <small>relatarea redacției din lista de ședințe: ce s-a discutat și ce s-a hotărât (factual)</small><textarea name="rezumat" rows="2" maxlength="600"><%= meeting.rezumat || '' %></textarea></label>
+</div>
+</section>
+
+<section class="pf-section" id="documente">
+<div class="pf-section__head"><h2>2 · Documente PDF</h2><a href="/admin/documente">Toate PDF-urile →</a></div>
+<div class="pf-section__body">
+<div class="pf-drop" data-pdf-drop data-upload-url="/admin/sedinte/<%= meeting.id %>/documente" data-max-bytes="<%= maxPdfBytes %>">
+<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v4h16v-4"/></svg>
+<b>Trage PDF-urile aici sau apasă pentru a alege</b>
+<span>Convocator, proiecte de hotărâre, hotărâri adoptate, proces-verbal · doar PDF, max. <%= maxPdf %> / fișier</span>
+<label class="btn pf-btn--violet pf-drop__pick">Alege fișiere<input type="file" accept="application/pdf,.pdf" multiple data-pdf-input></label>
+<ul class="pf-drop__log" data-pdf-log aria-live="polite"></ul>
+</div>
+<div class="pf-docs">
+<% for (const doc of meeting.documente) { %>
+<div class="pf-doc">
+<span class="pf-pdf" aria-hidden="true">PDF</span>
+<span class="pf-doc__name"><b><%= doc.nume %></b><small><%= formatSize(doc.marime) %> · încărcat <%= t.formatDate(doc.createdAt) %> · <a href="<%= docUrl(doc) %>" target="_blank" rel="noopener">deschide</a></small></span>
+<select name="doc_tip_<%= doc.id %>" aria-label="Tip document"><% for (const [key, label] of Object.entries(DOC_TYPES)) { %><option value="<%= key %>"<% if (doc.tip === key) { %> selected<% } %>><%= label %></option><% } %></select>
+<button class="secondary" type="submit" formaction="/admin/sedinte/<%= meeting.id %>/documente/<%= doc.id %>/sterge" data-confirm="Ștergi definitiv PDF-ul „<%= doc.nume %>”?">Șterge</button>
+</div>
+<% } %>
+<% if (!meeting.documente.length) { %><p class="pf-hint">Niciun PDF încă.</p><% } %>
+</div>
+</div>
+</section>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>3 · Ordinea de zi și voturile</h2><button class="secondary" type="button" data-add-point>+ Punct</button></div>
+<div class="pf-section__body">
+<p class="pf-hint">Ca să scoți un punct, golește-i titlul și salvează. Numărul de voturi și nota redacției sunt opționale.</p>
+<div class="pf-points" data-points>
+<% rows.forEach((point, index) => { %>
+<div class="pf-point" data-point>
+<span class="pf-point__nr" data-point-nr><%= String(index + 1).padStart(2, '0') %></span>
+<div class="pf-point__body">
+<input type="hidden" name="punct_id" value="<%= point.id %>">
+<input type="text" name="punct_titlu" value="<%= point.titlu %>" aria-label="Titlul punctului" placeholder="Proiect de hotărâre privind ..." maxlength="400">
+<textarea name="punct_nota" rows="2" aria-label="Nota redacției" placeholder="Nota redacției la acest punct (opțional)" maxlength="1200"><%= point.nota || '' %></textarea>
+<div class="pf-point__votes">
+<label>Pentru<input type="number" name="punct_pentru" min="0" max="999" inputmode="numeric" value="<%= point.pentru ?? '' %>"></label>
+<label>Contra<input type="number" name="punct_contra" min="0" max="999" inputmode="numeric" value="<%= point.contra ?? '' %>"></label>
+<label>Abțineri<input type="number" name="punct_abtineri" min="0" max="999" inputmode="numeric" value="<%= point.abtineri ?? '' %>"></label>
+<label class="pf-point__doc">PDF<select name="punct_doc"><option value="">—</option><% for (const doc of meeting.documente) { %><option value="<%= doc.id %>"<% if (point.docId === doc.id) { %> selected<% } %>><%= doc.nume %></option><% } %></select></label>
+</div>
+</div>
+<select name="punct_rezultat" aria-label="Rezultat"><% for (const [key, label] of Object.entries(RESULTS)) { %><option value="<%= key %>"<% if ((point.rezultat || 'nevotat') === key) { %> selected<% } %>><%= label %></option><% } %></select>
+</div>
+<% }) %>
+</div>
+</div>
+</section>
+
+<section class="pf-opinion">
+<div class="pf-opinion__head"><h2>4 · Comentariul Super Admin-ului</h2><span class="pf-opinion__tag">APARE CA „OPINIE”</span></div>
+<label class="pf-field">Titlul comentariului<input type="text" name="comentariu_titlu" value="<%= c.titlu || '' %>" maxlength="160"></label>
+<div class="pf-toolbar" role="toolbar" aria-label="Formatare">
+<button type="button" data-format="bold" aria-label="Îngroșat"><b>B</b></button>
+<button type="button" data-format="italic" aria-label="Cursiv"><i>I</i></button>
+<button type="button" data-format="quote">„Citat”</button>
+<label class="pf-toolbar__pdf"><span class="pf-hidden">Link la PDF</span><select data-format-pdf><option value="">Link la PDF…</option><% for (const doc of meeting.documente) { %><option value="<%= docUrl(doc) %>" data-label="<%= DOC_TYPES[doc.tip] %>"><%= doc.nume %></option><% } %></select></label>
+</div>
+<textarea name="comentariu_text" rows="9" aria-label="Textul comentariului" placeholder="Scrie comentariul redacției despre ședință..." maxlength="12000" data-comment><%= c.text || '' %></textarea>
+<p class="pf-opinion__help">Paragrafele se despart printr-un rând gol. **îngroșat**, *cursiv*, rânduri care încep cu „&gt; ” devin citat, [text](link) devine link.</p>
+<label class="pf-field">Semnătura<input type="text" name="comentariu_autor" value="<%= c.autor || '' %>" maxlength="120"></label>
+<label class="pf-opinion__check"><input type="checkbox" name="comentariu_nota" value="da"<% if (c.notaReplica !== false) { %> checked<% } %>> Afișează nota „Opinie a redacției · drept la replică” sub comentariu</label>
+</section>
+
+<div class="pf-form-end">
+<button class="secondary" type="submit" name="actiune" value="previzualizeaza" formtarget="_blank">Previzualizează</button>
+<button class="secondary" type="submit" name="actiune" value="salveaza"><%= published ? 'Salvează' : 'Salvează ciorna' %></button>
+<button class="pf-btn--violet" type="submit" name="actiune" value="publica"><%= published ? 'Salvează și publică' : 'Publică' %></button>
+</div>
+</form>
+
+<template data-point-template>
+<div class="pf-point" data-point>
+<span class="pf-point__nr" data-point-nr></span>
+<div class="pf-point__body">
+<input type="hidden" name="punct_id" value="">
+<input type="text" name="punct_titlu" value="" aria-label="Titlul punctului" placeholder="Proiect de hotărâre privind ..." maxlength="400">
+<textarea name="punct_nota" rows="2" aria-label="Nota redacției" placeholder="Nota redacției la acest punct (opțional)" maxlength="1200"></textarea>
+<div class="pf-point__votes">
+<label>Pentru<input type="number" name="punct_pentru" min="0" max="999" inputmode="numeric"></label>
+<label>Contra<input type="number" name="punct_contra" min="0" max="999" inputmode="numeric"></label>
+<label>Abțineri<input type="number" name="punct_abtineri" min="0" max="999" inputmode="numeric"></label>
+<label class="pf-point__doc">PDF<select name="punct_doc"><option value="">—</option><% for (const doc of meeting.documente) { %><option value="<%= doc.id %>"><%= doc.nume %></option><% } %></select></label>
+</div>
+</div>
+<select name="punct_rezultat" aria-label="Rezultat"><% for (const [key, label] of Object.entries(RESULTS)) { %><option value="<%= key %>"<% if (key === 'nevotat') { %> selected<% } %>><%= label %></option><% } %></select>
+</div>
+</template>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>Șterge ședința</h2></div>
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="/admin/sedinte/<%= meeting.id %>/sterge" data-confirm="Ștergi definitiv ședința și toate PDF-urile ei?">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field">Scrie STERGE pentru confirmare<input type="text" name="confirmare" autocomplete="off"></label>
+<div class="pf-form-end pf-full"><button class="danger" type="submit">Șterge definitiv ședința și PDF-urile ei</button></div>
+</form>
+</div>
+</section>
+<script src="/form-confirmations.js" defer></script>
+<script src="/admin-sedinta.js" defer></script>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

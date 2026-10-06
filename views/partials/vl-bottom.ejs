@@ -12,9 +12,9 @@
 <% const tab = typeof section === 'undefined' ? '' : section; %>
 <nav class="tabbar" aria-label="Navigare rapidă">
 <a href="/"<% if (tab === 'procese') { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v18M5 7h14M7 7l-3 7h6zM17 7l-3 7h6z"/></svg>Procese</a>
+<a href="/sedinte"<% if (tab === 'primarie') { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg>Primărie</a>
 <a href="/sectiune/stiri"<% if (['stiri', 'administratie', 'comunitate', 'educatie', 'economie', 'evenimente'].includes(tab)) { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 4h14v16H5z"/><path d="M9 8h6M9 12h6"/></svg>Știri</a>
 <a href="/anunturi"<% if (tab === 'anunturi') { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h6"/></svg>Anunțuri</a>
-<a href="/alerte"<% if (tab === 'alerte') { %> aria-current="page"<% } %>><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/></svg>Alerte</a>
 </nav>
 <section class="cookie-notice" id="cookie-notice" aria-labelledby="cookie-notice-title" hidden>
 <div class="cookie-notice-copy">
@@ -29,5 +29,6 @@
 <% if (typeof live !== 'undefined' && live) { %><script src="/live.js" defer></script>
 <% } %><% if (typeof portalCards !== 'undefined' && portalCards) { %><script src="/portal-cards.js" defer></script>
 <% } %><% if (typeof share !== 'undefined' && share) { %><script src="/share-actions.js" defer></script>
+<% } %><% if (typeof pdfViewer !== 'undefined' && pdfViewer) { %><script type="module" src="/sedinta-pdf.js"></script>
 <% } %></body>
 </html>
