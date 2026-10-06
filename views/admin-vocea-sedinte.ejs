@@ -21,7 +21,7 @@
 <% for (const m of sedinte) { const counts = resultCounts(m); %>
 <div class="pf-item">
 <span class="pf-item__main"><span class="pf-item__meta"><%= m.at ? t.formatDate(m.at) + ' · ' + t.formatTime(m.at) : 'fără dată' %> · <%= MEETING_STATES[meetingState(m, nowMs)] %> · <%= m.puncte.length %> puncte · <%= m.documente.length %> PDF</span><a href="/admin/sedinte/<%= m.id %>"><b><%= meetingTitle(m) %></b></a><% if (m.puncte.length) { %><span class="pf-hint"><%= counts.adoptat %> adoptate · <%= counts.respins %> respinse · <%= counts.amanat %> amânate</span><% } %></span>
-<span class="pf-actions"><span class="pf-badge <%= m.status === 'publicat' ? 'pf-badge--ok' : 'pf-badge--draft' %>"><%= m.status === 'publicat' ? 'Publicată' : 'Ciornă' %></span><a class="btn secondary" href="/admin/sedinte/<%= m.id %>">Editează</a></span>
+<span class="pf-actions"><span class="pf-badge <%= m.status === 'publicat' ? 'pf-badge--ok' : 'pf-badge--draft' %>"><%= m.status === 'publicat' ? 'Publicată' : 'Ciornă' %></span><a class="btn secondary" href="/admin/sedinte/<%= m.id %>">Editează</a><% if (m.status === 'publicat') { %><a class="btn secondary" href="/admin/distribuie/sedinta/<%= m.id %>">Distribuie</a><% } %></span>
 </div>
 <% } %>
 <% if (!sedinte.length) { %><p class="pf-hint">Nicio ședință încă. Creează prima ședință mai sus.</p><% } %>

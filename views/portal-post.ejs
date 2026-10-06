@@ -18,7 +18,8 @@
 <h2><%= platform.name %></h2><p class="muted">Știre publicată și asumată editorial de <strong><%= portalEditorialResponsible %></strong>.<% if (isLenauheimCivicPortal) { %> Material al inițiativei civice personale.<% } %> <a href="/legal/continut">Politica editorială și dreptul la replică</a>.</p>
 <% } %>
 </aside>
-<%- include('partials/engagement', { item: post, publicUrl: postUrl, reactionAction: `/actualitate/${post.slug}/reactie` }) %>
+<% if (share) { %><%- include('partials/vl-share', { share }) %><% } %>
+<%- include('partials/engagement', { item: post, publicUrl: postUrl, reactionAction: `/actualitate/${post.slug}/reactie`, hideShare: Boolean(share) }) %>
 <% if (post.generat_de_ai) { %><p class="muted small">Text redactat cu ajutorul OpenAI și verificat de editor înainte de publicare.</p><% } %>
 </article>
 <%- include('partials/vl-bottom', { section: 'stiri' }) %>

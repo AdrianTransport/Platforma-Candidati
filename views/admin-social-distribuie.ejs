@@ -1,0 +1,31 @@
+<%- include('partials/pf-admin-head', { pageTitle: 'Distribuie pe rețele', active: 'distribuie' }) %>
+<div class="pf-head">
+<div><h1>Distribuie pe rețele</h1><p>Alege o publicație, verifică textele și imaginile, apoi confirmă postarea pe paginile tale.</p></div>
+</div>
+<%- include('partials/pf-social-status', { conn }) %>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Publicații recente</h2><label class="pf-search"><span class="pf-hidden">Caută publicație</span><input type="search" placeholder="Caută după titlu" data-pf-search="publicatii"></label></div>
+<div class="pf-table-wrap">
+<table class="pf-table" data-pf-table="publicatii">
+<thead><tr><th>Publicația</th><th>Tip</th><th>Distribuită pe</th><th><span class="pf-hidden">Acțiuni</span></th></tr></thead>
+<tbody>
+<% for (const item of items) { const done = shared[`${item.type}:${item.id}`] || []; %>
+<tr data-status="" data-search="<%= `${item.title} ${TYPES[item.type]}`.toLowerCase() %>">
+<td><a href="<%= item.path %>" target="_blank" rel="noopener"><%= item.title %></a><% if (item.political) { %><br><small class="pf-warn">Conținut politic: <%= item.political %></small><% } %></td>
+<td><%= TYPES[item.type] %></td>
+<td><%= done.length ? [...new Set(done)].map(network => NETWORKS[network].split(' ')[0]).join(', ') : '—' %></td>
+<td><a class="btn pf-btn--violet" href="/admin/distribuie/<%= item.type %>/<%= encodeURIComponent(item.id) %>">Distribuie</a></td>
+</tr>
+<% } %>
+<% if (!items.length) { %><tr><td colspan="4">Nicio publicație publică încă.</td></tr><% } %>
+</tbody>
+</table>
+</div>
+</section>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Jurnal de distribuire</h2></div>
+<div class="pf-section__body"><%- include('partials/pf-social-log', { entries: log, withTitle: true }) %></div>
+</section>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

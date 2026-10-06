@@ -8,4 +8,5 @@
 <% if (ad.hasPhone) { %><p><a class="btn btn--dark" href="<%= ad.url %>" data-phone="<%= ad.id %>" rel="nofollow">Arată telefonul</a></p><% } %>
 <% if (ad.expiraLa) { %><p class="byline">Anunț valabil până la <%= t.formatDate(ad.expiraLa) %>.</p><% } %>
 </article>
-<%- include('partials/vl-bottom', { section: 'anunturi' }) %>
+<% if (share) { %><%- include('partials/vl-share', { share }) %><% } %>
+<%- include('partials/vl-bottom', { section: 'anunturi', share: Boolean(share) }) %>

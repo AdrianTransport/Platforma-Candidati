@@ -45,6 +45,7 @@
 <% for (const d of dosare) { const n = nextTermen(d); %>
 <div class="pf-item">
 <span class="pf-item__main"><span class="pf-item__meta<%= d.featured ? ' pf-item__meta--violet' : '' %>"><%= d.numar || 'fără număr' %> · <%= n ? 'termen ' + t.formatDate(n.at) + ' ' + t.formatTime(n.at) : 'fără termen' %></span><a href="/admin/dosare/<%= encodeURIComponent(d.id) %>"><b><%= d.titlu %></b></a></span>
+<a class="btn secondary" href="/admin/distribuie/dosar/<%= encodeURIComponent(d.id) %>">Distribuie</a>
 <% if (d.featured) { %><span class="pf-badge pf-badge--violet">Evidențiat</span>
 <% } else { %><form method="POST" action="/admin/dosare/<%= encodeURIComponent(d.id) %>/evidentiaza"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="secondary" type="submit">Evidențiază</button></form><% } %>
 </div>

@@ -1,0 +1,52 @@
+<%- include('partials/pf-admin-head', { pageTitle: `Distribuie: ${publication.title}`, active: 'distribuie' }) %>
+<% const can = { facebook: conn.facebook, instagram: conn.instagram, tiktok: conn.tiktokConnected };
+   const why = { facebook: 'Conectează Pagina de Facebook în Setări.', instagram: conn.facebook ? 'Pagina selectată nu are un cont Instagram profesional legat.' : 'Conectează Pagina de Facebook (cu Instagram legat) în Setări.', tiktok: 'Conectează contul TikTok în Setări.' };
+   const limits = { facebook: 5000, instagram: 2200, tiktok: 2200 }; %>
+<div class="pf-head">
+<div><span class="pf-crumb"><a href="/admin/distribuie">Distribuie pe rețele</a> / <%= TYPES[publication.type] %></span><h1><%= publication.title %></h1><p><a href="<%= link %>" target="_blank" rel="noopener"><%= link %> ↗</a></p></div>
+</div>
+<%- include('partials/pf-social-status', { conn }) %>
+<% if (publication.political) { %><div class="pf-alert pf-alert--warn" role="note"><b>Conținut politic.</b> Marcajul „<%= publication.political %>” se adaugă automat la fiecare postare și nu poate fi scos.</div><% } %>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>Imaginile generate</h2></div>
+<div class="pf-section__body pf-previews">
+<figure class="pf-preview"><img src="<%= ogUrl %>" alt="Imaginea pentru Facebook, WhatsApp și Instagram" width="1200" height="630"><figcaption>Facebook · WhatsApp · Instagram (1200×630) · <a href="<%= ogUrl %>&amp;descarca=1" download>Descarcă</a></figcaption></figure>
+<figure class="pf-preview pf-preview--story"><img src="<%= storyUrl %>" alt="Imaginea verticală pentru Story și TikTok" width="1080" height="1920"><figcaption>Story · TikTok (1080×1920) · <a href="<%= storyUrl %>&amp;descarca=1" download>Descarcă</a></figcaption></figure>
+</div>
+</section>
+
+<form class="pf-share-form" method="POST" action="/admin/distribuie/<%= publication.type %>/<%= encodeURIComponent(publication.id) %>/confirma">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<% for (const [network, label] of Object.entries(NETWORKS)) { %>
+<fieldset class="pf-section pf-network<%= can[network] ? '' : ' is-disabled' %>">
+<legend class="pf-hidden"><%= label %></legend>
+<div class="pf-section__head">
+<label class="pf-check"><input type="checkbox" name="retea_<%= network %>" value="da"<% if (selected.includes(network)) { %> checked<% } %><% if (!can[network]) { %> disabled<% } %>> <b><%= label %></b></label>
+<span class="pf-hint"><%= network === 'facebook' ? 'Postare cu link spre site; imaginea vine automat din pagină.' : network === 'instagram' ? 'Postare cu imaginea 1200×630. Linkurile din text nu sunt active: textul trimite la linkul din bio.' : 'Postare foto cu imaginea verticală 1080×1920.' %></span>
+</div>
+<div class="pf-section__body">
+<% if (!can[network]) { %><p class="pf-hint"><%= why[network] %></p><% } %>
+<% if (network === 'tiktok') { %>
+<div class="pf-alert <%= conn.tiktokApproved ? 'pf-alert--info' : 'pf-alert--warn' %>">
+<% if (!conn.tiktokConfigured) { %><b>TikTok nu este configurat.</b> Până la aprobarea aplicației, descarcă imaginea Story și postează manual din aplicația TikTok (adaugă textul de mai jos).
+<% } else if (!conn.tiktokApproved) { %><b>Aplicația TikTok nu e încă aprobată de TikTok.</b> Până la aprobare, orice postare prin API rămâne <b>privată</b> („doar eu”); o poți face publică din aplicația TikTok. Variantă sigură: <a href="<%= storyUrl %>&amp;descarca=1" download>descarcă imaginea Story</a> și postează manual, cu textul de mai jos. Clipurile video nu se generează automat.
+<% } else { %>Postarea apare public în profil după procesarea de către TikTok (câteva minute).<% } %>
+</div>
+<% } %>
+<label class="pf-field">Text pentru <%= label.split(' ')[0] %> <small>max. <%= limits[network] %> caractere<%= network === 'facebook' ? '; linkul se adaugă separat' : '' %></small>
+<textarea name="text_<%= network %>" rows="6" maxlength="<%= limits[network] %>"><%= texts[network] %></textarea></label>
+</div>
+</fieldset>
+<% } %>
+<div class="pf-form-end"><button class="pf-btn--violet" type="submit">Previzualizează postarea</button></div>
+<p class="pf-hint">Nimic nu se postează la acest pas: urmează o pagină de confirmare.</p>
+</form>
+
+<section class="pf-section">
+<div class="pf-section__head"><h2>Jurnal pentru această publicație</h2></div>
+<div class="pf-section__body"><%- include('partials/pf-social-log', { entries: log, withTitle: false }) %></div>
+</section>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<div class="pf-net-status">
+<span class="pf-badge <%= conn.facebook ? 'pf-badge--ok' : 'pf-badge--off' %>">Facebook: <%= conn.facebook ? conn.page.name : 'neconectat' %></span>
+<span class="pf-badge <%= conn.instagram ? 'pf-badge--ok' : 'pf-badge--off' %>">Instagram: <%= conn.instagram ? '@' + (conn.page.instagram_username || 'cont profesional') : (conn.facebook ? 'nelegat de Pagină' : 'neconectat') %></span>
+<span class="pf-badge <%= conn.tiktokConnected ? (conn.tiktokApproved ? 'pf-badge--ok' : 'pf-badge--warn') : 'pf-badge--off' %>">TikTok: <%= conn.tiktokConnected ? (conn.tiktokApproved ? 'conectat' : 'conectat · aplicație neaprobată (postări private)') : 'neconectat' %></span>
+<a href="/admin/social">Setări conexiuni →</a>
+</div>

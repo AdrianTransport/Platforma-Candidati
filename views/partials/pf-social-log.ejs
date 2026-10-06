@@ -1,0 +1,19 @@
+<% const statusLabel = { publicat: ['pf-badge--ok', 'Publicat'], trimis: ['pf-badge--wait', 'Trimis'], eroare: ['pf-badge--danger', 'Eroare'] }; %>
+<% if (!entries.length) { %><p class="pf-hint">Nimic postat încă.</p><% } else { %>
+<div class="pf-table-wrap">
+<table class="pf-table pf-log-table">
+<thead><tr><th>Când</th><% if (withTitle) { %><th>Publicația</th><% } %><th>Rețea</th><th>Stare</th><th>Postarea / eroarea</th></tr></thead>
+<tbody>
+<% for (const entry of entries) { const [cls, label] = statusLabel[entry.status] || statusLabel.eroare; %>
+<tr>
+<td><%= t.formatDate(entry.at) %> <%= t.formatTime(entry.at) %></td>
+<% if (withTitle) { %><td><a href="/admin/distribuie/<%= entry.type %>/<%= encodeURIComponent(entry.pubId) %>"><%= entry.title %></a></td><% } %>
+<td><%= NETWORKS[entry.network] || entry.network %></td>
+<td><span class="pf-badge <%= cls %>"><%= label %></span></td>
+<td><% if (entry.status === 'eroare') { %><span class="pf-error-text"><%= entry.error %></span><% } else if (entry.url) { %><a href="<%= entry.url %>" target="_blank" rel="noopener">Deschide postarea ↗</a><% } else { %><span class="pf-hint">ID <%= entry.externalId || '—' %></span><% } %><% if (entry.note) { %><br><small class="pf-hint"><%= entry.note %></small><% } %></td>
+</tr>
+<% } %>
+</tbody>
+</table>
+</div>
+<% } %>

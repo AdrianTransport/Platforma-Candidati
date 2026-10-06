@@ -1,0 +1,11 @@
+<% const compact = typeof variant !== 'undefined' && variant === 'compact'; %>
+<section class="share-bar<%= compact ? ' share-bar--compact' : ' glass' %>" aria-label="Distribuie">
+<h2 class="share-bar__title">Distribuie</h2>
+<div class="share-bar__buttons">
+<a class="share-btn" href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(share.url) %>" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M14 8h3V4h-3a4 4 0 0 0-4 4v3H7v4h3v5h4v-5h3l1-4h-4V8z"/></svg>Facebook</a>
+<a class="share-btn" href="https://wa.me/?text=<%= encodeURIComponent(`${share.title} ${share.url}`) %>" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M4 20l1.5-4A8 8 0 1 1 9 19.5z"/></svg>WhatsApp</a>
+<button type="button" class="share-btn copy-share" data-share-url="<%= share.url %>"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg><span>Copiază link</span></button>
+<button type="button" class="share-btn share-btn--native native-share" data-share-title="<%= share.title %>" data-share-url="<%= share.url %>" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 3v12M7 8l5-5 5 5M5 13v7h14v-7"/></svg>Distribuie</button>
+</div>
+<a class="share-story" href="<%= share.storyUrl %>&amp;descarca=1" download data-story-share data-share-title="<%= share.title %>"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 8v7M9 12l3 3 3-3"/></svg>Descarcă imaginea pentru Story/TikTok</a>
+</section>

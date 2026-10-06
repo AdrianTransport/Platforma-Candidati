@@ -44,7 +44,7 @@
               <small><% if (post.candidat) { %>Candidat: <%= post.candidat.nume_candidat %> · <% } %><%= post.vizualizari || 0 %> citiri · actualizat <%= displayDate(post.updated_at || post.created_at) %></small>
             </div>
             <div class="portal-admin-actions">
-              <a class="btn secondary" href="/admin/portal/<%= post.id %>/edit">Editează</a>
+              <a class="btn secondary" href="/admin/portal/<%= post.id %>/edit">Editează</a><% if (post.status === 'publicat') { %><a class="btn secondary" href="/admin/distribuie/stire/<%= encodeURIComponent(post.slug) %>">Distribuie</a><% } %>
               <% if (post.status === 'publicat') { %><a class="btn secondary" href="/actualitate/<%= post.slug %>" target="_blank">Deschide</a><% } %>
               <form method="POST" action="/admin/portal/<%= post.id %>/sterge" data-confirm="Ștergi definitiv acest material?" style="display:inline">
                 <input type="hidden" name="csrf_token" value="<%= csrfToken %>">

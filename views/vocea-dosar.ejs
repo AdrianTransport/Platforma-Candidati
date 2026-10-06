@@ -22,4 +22,5 @@
 <p class="feed-empty">Sursa: portal.just.ro și ședința publică. Publicăm factual, fără date personale ale persoanelor fizice. <a href="/legal/continut">Drept la replică</a>.</p>
 </div>
 </section>
-<%- include('partials/vl-bottom', { section: 'procese', live: true }) %>
+<% if (share) { %><%- include('partials/vl-share', { share }) %><% } %>
+<%- include('partials/vl-bottom', { section: 'procese', live: true, share: Boolean(share) }) %>

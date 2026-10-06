@@ -8,10 +8,17 @@
 <meta property="og:url" content="<%= seo.canonical %>">
 <meta property="og:site_name" content="<%= seo.siteName %>">
 <meta property="og:locale" content="ro_RO">
+<% if (seo.shareImage) { %><meta property="og:image" content="<%= seo.shareImage %>">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="<%= seo.title %>">
+<% } %>
 <% if (seo.image) { %><meta property="og:image" content="<%= seo.image %>">
 <% if (seo.imageAlt) { %><meta property="og:image:alt" content="<%= seo.imageAlt %>"><% } %>
 <% } %>
-<meta name="twitter:card" content="<%= seo.image ? 'summary_large_image' : 'summary' %>">
+<meta name="twitter:card" content="<%= seo.image || seo.shareImage ? 'summary_large_image' : 'summary' %>">
+<% if (seo.shareImage) { %><meta name="twitter:image" content="<%= seo.shareImage %>"><% } %>
 <% if (seo.publishedAt) { %><meta property="article:published_time" content="<%= seo.publishedAt %>"><% } %>
 <% if (seo.modifiedAt) { %><meta property="article:modified_time" content="<%= seo.modifiedAt %>"><% } %>
 <% if (seo.structuredData) { %><script type="application/ld+json"><%- jsonLd(seo.structuredData) %></script><% } %>

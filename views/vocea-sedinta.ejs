@@ -60,14 +60,14 @@
 <% } %>
 <% if (meeting.at && state !== 'incheiata') { %><a class="btn btn--calendar" href="<%= meetingUrl(meeting) %>/calendar.ics" download>Adaugă în calendar</a><% } %>
 </div>
-<div class="panel glass">
+<% if (share) { %><%- include('partials/vl-share', { share, variant: 'compact' }) %><% } else { %><div class="panel glass">
 <h2 class="panel__small-title">Distribuie</h2>
 <div class="share-grid">
 <a href="https://www.facebook.com/sharer/sharer.php?u=<%= encodeURIComponent(shareUrl) %>" target="_blank" rel="noopener noreferrer">Facebook</a>
 <a href="https://wa.me/?text=<%= encodeURIComponent(`${meetingTitle(meeting)} ${shareUrl}`) %>" target="_blank" rel="noopener noreferrer">WhatsApp</a>
 <button type="button" class="copy-share" data-share-url="<%= shareUrl %>">Link</button>
 </div>
-</div>
+</div><% } %>
 </aside>
 </section>
 <%- include('partials/vl-bottom', { section: 'primarie', share: true, pdfViewer: Boolean(featured) }) %>

@@ -21,7 +21,7 @@
 <% for (const a of published) { %>
 <div class="pf-item">
 <span class="pf-item__main"><span class="pf-item__meta"><%= adTypeName(a.tip) %> · <%= t.formatDate(a.publicatLa) %><% if (a.expiraLa) { %> · <%= expired(a) ? 'expirat' : 'expiră ' + t.formatDate(a.expiraLa) %><% } %></span><a href="/admin/anunturi/<%= a.id %>"><b><%= a.titlu %></b></a></span>
-<span class="pf-actions"><% if (a.important) { %><span class="pf-badge pf-badge--live">IMPORTANT</span><% } %><form method="POST" action="/admin/anunturi/<%= a.id %>/sterge" data-confirm="Ștergi definitiv acest anunț?"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Șterge</button></form></span>
+<span class="pf-actions"><a class="btn secondary" href="/admin/distribuie/anunt/<%= a.id %>">Distribuie</a><% if (a.important) { %><span class="pf-badge pf-badge--live">IMPORTANT</span><% } %><form method="POST" action="/admin/anunturi/<%= a.id %>/sterge" data-confirm="Ștergi definitiv acest anunț?"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button class="danger" type="submit">Șterge</button></form></span>
 </div>
 <% } %>
 <% if (!published.length) { %><p class="pf-hint">Niciun anunț publicat.</p><% } %>

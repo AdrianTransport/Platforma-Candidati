@@ -207,3 +207,26 @@ body.pf .pf-row-actions button{min-height:36px;padding:0 12px}
   .pf-point__doc{grid-column:1/-1}
   .pf-drop{padding:20px}
 }
+
+/* ------------------------------ distribuire pe rețele ------------------------------ */
+.pf-net-status{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pf-badge--danger{background:var(--pf-danger-bg);color:var(--pf-danger)}
+.pf-alert--warn{background:var(--pf-warn-bg);color:#7a4a00}
+.pf-alert--info{background:var(--pf-blue-soft);color:var(--pf-ink)}
+.pf-error-text{color:var(--pf-danger);font-weight:600;overflow-wrap:anywhere}
+.pf-previews{display:flex;flex-direction:row;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.pf-preview{margin:0;flex:3 1 360px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pf-preview--story{flex:1 1 160px;max-width:220px}
+.pf-preview img{width:100%;height:auto;border-radius:12px;border:1px solid var(--pf-line);background:#eef1f6}
+.pf-preview figcaption{font-size:13px;color:var(--pf-muted)}
+.pf-share-form{display:flex;flex-direction:column;gap:14px}
+.pf-network{margin:0;padding:0;min-width:0}
+.pf-network.is-disabled .pf-section__body{opacity:.85}
+.pf-network textarea{min-height:150px;line-height:1.5}
+.pf-confirm{gap:18px}
+.pf-confirm__item h3{margin:0 0 8px;font-size:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pf-confirm__post{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;padding:14px;border:1px solid var(--pf-line);border-radius:14px;background:#fbfcfe}
+.pf-confirm__post img{width:240px;max-width:100%;height:auto;border-radius:10px;border:1px solid var(--pf-line)}
+.pf-confirm__post img.is-story{width:130px}
+.pf-confirm__post > div{flex:1 1 260px;min-width:0}
+.pf-confirm__text{margin:0;white-space:pre-wrap;font:inherit;font-size:15px;line-height:1.55;overflow-wrap:anywhere}
