@@ -6,7 +6,9 @@
 [functions]
   node_bundler = "esbuild"
   # pdf.js e servit doar static de CDN: nu îngreunează funcția.
-  included_files = ["views/**", "public/**", "!public/pdfjs-*/**"]
+  included_files = ["views/**", "public/**", "!public/pdfjs-*/**", "assets-social/**"]
+  # Imaginile de distribuire folosesc WebAssembly: modulele rămân întregi, cu fișierele .wasm lângă ele.
+  external_node_modules = ["satori", "@resvg/resvg-wasm", "@jsquash/webp"]
 
 [[headers]]
   for = "/*"

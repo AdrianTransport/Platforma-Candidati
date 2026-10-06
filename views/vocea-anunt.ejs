@@ -17,5 +17,6 @@
 <% if (ad.hasPhone) { %><p><a class="btn btn--dark" href="<%= ad.url %>" data-phone="<%= ad.id %>" rel="nofollow">Arată telefonul</a></p><% } %>
 <% if (ad.expiraLa) { %><p class="byline">Anunț valabil până la <%= t.formatDate(ad.expiraLa) %>.</p><% } %>
 </article>
+<% if (share) { %><%- include('partials/vl-share', { share }) %><% } %>
 <% if (ad.poze?.length) { %><script src="/anunt-galerie.js" defer></script><% } %>
-<%- include('partials/vl-bottom', { section: 'anunturi' }) %>
+<%- include('partials/vl-bottom', { section: 'anunturi', share: Boolean(share) }) %>

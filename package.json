@@ -9,12 +9,16 @@
     "dev": "node --watch local-server.js"
   },
   "dependencies": {
+    "@jsquash/webp": "^1.5.0",
     "@netlify/blobs": "10.7.13",
+    "@resvg/resvg-wasm": "^2.6.2",
     "bcryptjs": "^2.4.3",
     "cookie-session": "^2.1.0",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
+    "jpeg-js": "^0.4.4",
+    "satori": "^0.35.0",
     "serverless-http": "^3.2.0"
   }
 }

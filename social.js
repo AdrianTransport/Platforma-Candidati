@@ -140,6 +140,14 @@ export async function publishInstagram(page, caption, imageUrl) {
   }), 'Instagram publish');
 }
 
+// Linkul public al unei postări Instagram (API-ul de publicare întoarce doar ID-ul).
+export async function instagramPermalink(page, mediaId) {
+  if (!mediaId) return '';
+  const params = new URLSearchParams({ fields: 'permalink', access_token: decryptSecret(page.access_token_enc) });
+  const result = await responseJson(await fetch(`${META_GRAPH}/${encodeURIComponent(mediaId)}?${params}`), 'Instagram permalink');
+  return result.permalink || '';
+}
+
 export function tiktokAuthorizeUrl(redirectUri, state) {
   const params = new URLSearchParams({
     client_key: process.env.TIKTOK_CLIENT_KEY,

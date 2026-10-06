@@ -9,6 +9,7 @@
   <meta property="og:description" content="<%= articol.continut.slice(0, 155) %>">
   <meta property="og:url" content="<%= articolUrl %>">
   <% if (!preview) { %><link rel="canonical" href="<%= articolUrl %>"><% } %>
+  <% if (typeof share !== 'undefined' && share) { %><meta property="og:image" content="<%= share.ogUrl %>"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><% } %>
   <% if (articol.imagine_url) { %><meta property="og:image" content="<%= new URL(articol.imagine_url, pageUrl).toString() %>"><% } %>
   <meta name="twitter:card" content="summary_large_image">
   <title><%= articol.titlu %> — <%= user.nume_candidat %></title>

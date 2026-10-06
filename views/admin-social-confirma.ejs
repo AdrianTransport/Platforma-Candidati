@@ -1,0 +1,31 @@
+<%- include('partials/pf-admin-head', { pageTitle: 'Confirmă postarea', active: 'distribuie' }) %>
+<div class="pf-head">
+<div><span class="pf-crumb"><a href="/admin/distribuie">Distribuie pe rețele</a> / Confirmare</span><h1>Confirmă postarea</h1><p>Verifică exact ce se va posta. După confirmare, postările pleacă imediat.</p></div>
+</div>
+<section class="pf-section">
+<div class="pf-section__head"><h2><%= publication.title %></h2><a href="<%= link %>" target="_blank" rel="noopener">Pagina de pe site ↗</a></div>
+<div class="pf-section__body pf-confirm">
+<% for (const network of selected) { %>
+<article class="pf-confirm__item">
+<h3><%= NETWORKS[network] %><% if (network === 'tiktok' && !conn.tiktokApproved) { %> <span class="pf-badge pf-badge--warn">privat până la aprobarea aplicației</span><% } %></h3>
+<div class="pf-confirm__post">
+<img src="<%= network === 'tiktok' ? storyUrl : ogUrl %>" alt="" class="<%= network === 'tiktok' ? 'is-story' : '' %>" loading="lazy">
+<div><pre class="pf-confirm__text"><%= finals[network] %></pre><% if (network === 'facebook') { %><p class="pf-hint">Link atașat: <%= link %></p><% } %></div>
+</div>
+</article>
+<% } %>
+</div>
+</section>
+<form method="POST" action="/admin/distribuie/<%= publication.type %>/<%= encodeURIComponent(publication.id) %>/posteaza" class="pf-section pf-section__body">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<% for (const network of selected) { %><input type="hidden" name="retea_<%= network %>" value="da"><% } %>
+<% for (const [network, text] of Object.entries(texts)) { %><input type="hidden" name="text_<%= network %>" value="<%= text %>"><% } %>
+<label class="pf-check"><input type="checkbox" name="confirmare" value="da" required> Am verificat textele și imaginile. Postează acum pe: <b><%= selected.map(network => NETWORKS[network].split(' ')[0]).join(', ') %></b>.</label>
+<div class="pf-form-end">
+<button class="secondary" type="submit" formaction="/admin/distribuie/<%= publication.type %>/<%= encodeURIComponent(publication.id) %>" formnovalidate>← Modifică textele</button>
+<button class="pf-btn--violet" type="submit">Postează acum</button>
+</div>
+</form>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

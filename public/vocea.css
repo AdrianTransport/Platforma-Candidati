@@ -605,6 +605,36 @@ p a:not(.btn),li a:not(.btn),dd a,.byline a{text-decoration:underline;text-under
   .pdf-viewer__nav .mono{order:-1;flex-basis:100%;text-align:center}
 }
 
+/* ------------------------------ distribuire ------------------------------ */
+.share-bar{border-radius:24px;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.share-bar--compact{padding:0;background:none;border:0}
+.share-bar__title{margin:0;font-family:var(--display);font-weight:800;font-size:22px}
+.share-bar__buttons{display:flex;flex-wrap:wrap;gap:8px}
+.share-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:#fff;color:var(--ink);font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none}
+.share-btn:hover{border-color:var(--violet);color:var(--violet-d)}
+.share-btn svg,.share-story svg{width:18px;height:18px;flex:none}
+.share-btn--native{background:var(--ink);border-color:var(--ink);color:#fff}
+.share-btn--native:hover{background:#1d2a44;color:#fff}
+.share-btn[hidden]{display:none}
+.share-story{min-height:48px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 18px;border-radius:16px;border:1px dashed #c9bdff;background:#f5f2ff;color:var(--violet-d);font-weight:600;text-decoration:none;align-self:flex-start}
+.share-story:hover{background:#ece7ff;color:var(--violet-d)}
+.share-bar--compact .share-bar__title{font-family:var(--sans);font-size:18px;font-weight:700}
+.share-bar--compact .share-bar__buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.share-bar--compact .share-story{align-self:stretch}
+.meeting-layout__side .share-bar--compact{border-radius:26px;padding:22px;background:rgba(255,255,255,.8);border:1px solid var(--glass-b)}
+@media (max-width:760px){
+  .share-bar__buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .share-btn--native{grid-column:1/-1;order:-1;min-height:48px}
+  .share-story{align-self:stretch}
+}
+.share-btn{white-space:nowrap}
+.share-story{text-align:center}
+@media (max-width:760px){
+  .share-btn{padding:0 10px;font-size:14px;gap:6px}
+  .share-bar__buttons .copy-share{grid-column:1/-1}
+  .share-story{justify-content:center;font-size:14px}
+}
+.doc ~ .share-bar{max-width:820px;width:100%;margin:0 auto}
 /* --------------------------------- subsol --------------------------------- */
 /* Ordine: nume + localități, o frază despre independență, linkurile, apoi creditul. */
 .site-footer{display:flex;flex-direction:column;gap:10px;padding:20px 6px 0;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
