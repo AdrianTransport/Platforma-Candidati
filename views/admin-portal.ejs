@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Centrul editorial — Super Admin</title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>">
+  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"><link rel="stylesheet" href="<%= asset('platforma.css') %>">
 </head>
-<body>
+<body class="pf"><%- include('partials/pf-admin-top', { active: 'portal' }) %>
   <div class="app-shell app-shell-wide">
     <div class="topbar admin-topbar">
       <div><span class="eyebrow">Site principal</span><h1>Centrul editorial</h1></div>
@@ -56,5 +56,5 @@
       </div>
     <% } %>
   </div>
-<script src="/form-confirmations.js" defer></script></body>
+<script src="/form-confirmations.js" defer></script><%- include('partials/pf-admin-bottom') %></body>
 </html>

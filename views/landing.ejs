@@ -1,74 +1,102 @@
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <%- include('partials/seo-head', { seo }) %>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>">
-</head>
-<body class="public-body portal-public-body">
-  <header class="portal-modern-masthead">
-    <p>O comunitate mai informată,<br>mai puternică</p>
-    <a class="portal-modern-logo" href="/"><strong>Vocea Locală Lenauheim</strong><span>Bulgăruș · Lenauheim · Grabaț</span></a>
-    <div class="portal-masthead-side"><span class="portal-village-mark" aria-hidden="true">⌂♙</span><small>Știri locale.<br>Oameni. Idei. Viitor comun.</small><div class="public-social-icons"><% [['facebook','f',portalOwner?.facebook_url],['instagram','◎',portalOwner?.instagram_url],['tiktok','♪',portalOwner?.tiktok_url]].forEach(([network,icon,url])=>{ %><% if(url){ %><a class="social-icon <%= network %>" href="<%= url %>" target="_blank" rel="noopener noreferrer" aria-label="<%= network %>"><%= icon %></a><% } else { %><span class="social-icon <%= network %> is-unconfigured" title="Se configurează din Super Admin" aria-label="<%= network %> neconfigurat"><%= icon %></span><% } %><% }) %></div></div>
-  </header>
-  <nav class="portal-modern-nav" aria-label="Meniul principal"><a href="/">⌂</a><a href="/sectiune/stiri">Știri</a><a href="/sectiune/administratie">Administrație</a><a href="/sectiune/comunitate">Comunitate</a><a href="/sectiune/educatie">Educație</a><a href="/sectiune/economie">Economie</a><a href="/candidati">Oameni</a><a href="/sectiune/evenimente">Timp liber</a><a href="/statistici/apa">Costuri</a><a href="/login" class="portal-nav-login">Administrare</a></nav>
+<%- include('partials/vl-top', { seo, section: 'procese', blobs: 'home' }) %>
+<% if (hero) { %>
+<%- include('partials/vl-hero', { view: hero }) %>
+<section id="live" class="live-row" aria-label="Actualizări și dosare">
+<%- include('partials/vl-feed', { view: hero }) %>
+<%- include('partials/vl-cases', { cases }) %>
+</section>
+<% } else { %>
+<section class="hero hero--intro">
+<div class="hero__main">
+<div class="hero__meta"><span class="badge badge--upcoming"><span class="badge__dot" aria-hidden="true"></span>PROCESE CU PRIMĂRIA</span></div>
+<h1>Știrile comunei, procesele cu Primăria, urmărite live</h1>
+<p class="hero__lead">Vocea Locală Lenauheim: știri verificate, anunțuri și procesele în care e parte Primăria, din Bulgăruș, Lenauheim și Grabaț.</p>
+<div class="hero__actions"><a class="btn btn--dark" href="/sectiune/stiri">Citește știrile</a><a class="btn btn--light" href="/anunturi">Anunțuri</a></div>
+</div>
+</section>
+<% if (cases.length) { %><section id="live" class="live-row" aria-label="Dosare"><%- include('partials/vl-cases', { cases }) %></section><% } %>
+<% } %>
 
-  <main>
-    <% if (principal) { %>
-      <section class="portal-modern-lead">
-        <a class="portal-modern-lead-main" href="/actualitate/<%= principal.slug %>" <% if(principal.imagine_url){ %>style="background-image:linear-gradient(0deg,rgba(1,20,31,.88),rgba(1,20,31,0) 72%),url('<%= principal.imagine_url %>')"<% } %>><div><span><%= principal.tip === 'campanie' ? 'Campanie candidat' : (principal.categorie || 'Actualitate') %></span><h1><%= principal.titlu %></h1><p><%= principal.rezumat %></p><time><%= displayDate(portalPublicationDate(principal)) %></time></div></a>
-        <div class="portal-modern-side-news"><% stiri.slice(0,3).forEach(post=>{ %><a href="/actualitate/<%= post.slug %>"><% if(post.imagine_url){ %><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>" loading="lazy" decoding="async"><% } else { %><span class="portal-side-placeholder">VL</span><% } %><div><small><%= post.categorie %></small><strong><%= post.titlu %></strong><time><%= displayDate(portalPublicationDate(post)) %></time></div></a><% }) %><% if(!stiri.length){ [['Educație','Noutăți din școlile și comunitatea noastră','educatie'],['Infrastructură','Drumuri, utilități și proiecte locale','administratie'],['Oameni','Povești și inițiative din comună','comunitate']].forEach(item=>{ %><a href="/sectiune/<%= item[2] %>"><span class="portal-side-placeholder"><%= item[0].slice(0,1) %></span><div><small><%= item[0] %></small><strong><%= item[1] %></strong><time>Descoperă rubrica →</time></div></a><% }) } %></div>
-      </section>
-    <% } else { %>
-      <section class="marketing-hero portal-empty-hero"><div><span class="eyebrow">Platformă civică pentru comunitatea locală</span><h1>Știrile și ideile candidaților ajung mai ușor la comunitate.</h1><p>Un portal public administrat de Super Admin, publicații civice distincte pentru candidați și informații clare despre responsabilitatea editorială.</p><div class="hero-actions"><a class="btn btn-accent" href="#candidati">Vezi candidații</a><a class="btn secondary" href="/login">Intră în cont</a></div></div><div class="hero-preview"><div class="preview-head"><strong>COMUNITATEA</strong><span>EDIȚIE LOCALĂ</span></div><div class="preview-main"><span>ACTUALITATE</span><h2>Prima știre va apărea aici</h2><p>Super Adminul controlează integral conținutul site-ului principal.</p></div><div class="preview-grid"><i></i><i></i><i></i></div></div></section>
-    <% } %>
+<section class="stack" id="stiri" aria-labelledby="ultimele-stiri">
+<div class="section-head"><h2 class="section-title" id="ultimele-stiri">Ultimele știri</h2><a href="/sectiune/stiri">Toate știrile →</a></div>
+<% if (principal) { const side = stiri.slice(0, 2); %>
+<div class="lead-row">
+<article class="lead<%= principal.imagine_url ? "" : " lead--plain" %>">
+<% if (principal.imagine_url) { %><img class="lead__img" src="<%= principal.imagine_url %>" alt="<%= principal.imagine_alt || '' %>" width="1200" height="800" decoding="async"<% if (!hero) { %> fetchpriority="high"<% } else { %> loading="lazy"<% } %>><% } %>
+<div class="lead__box">
+<span class="chip <%= principal.tip === 'campanie' ? 'cat-campanie' : 'cat-' + toneOf(principal.categorie) %>"><%= principal.tip === 'campanie' ? 'Campanie candidat' : (principal.categorie || 'Actualitate') %></span>
+<h3 class="lead__title"><a href="/actualitate/<%= encodeURIComponent(principal.slug) %>"><%= principal.titlu %></a></h3>
+<% if (principal.rezumat) { %><p class="lead__summary"><%= principal.rezumat %></p><% } %>
+<span class="byline"><% if (principal.candidat) { %><%= principal.candidat.nume_candidat %> · <% } %><time datetime="<%= seoDateOf(principal) %>"><%= displayDate(portalPublicationDate(principal)) %></time> · <%= principal.vizualizari || 0 %> citiri</span>
+</div>
+</article>
+<% if (side.length) { %>
+<div class="side-list">
+<% for (const post of side) { %>
+<article class="side-card glass">
+<span class="chip cat-<%= toneOf(post.categorie) %>"><%= post.categorie || 'Actualitate' %></span>
+<h3><a href="/actualitate/<%= encodeURIComponent(post.slug) %>"><%= post.titlu %></a></h3>
+<time datetime="<%= seoDateOf(post) %>"><%= displayDate(portalPublicationDate(post)) %></time>
+</article>
+<% } %>
+</div>
+<% } %>
+</div>
+<% } %>
+<% const rest = [...stiri.slice(principal ? 2 : 0), ...campanii]; %>
+<% if (rest.length) { %>
+<div class="cards">
+<% for (const post of rest) { %><%- include('partials/vl-card', { post }) %><% } %>
+</div>
+<% } else if (!principal) { %>
+<div class="cards">
+<% [['Administrație', 'Decizii publice și proiecte din comună', 'administratie'], ['Comunitate', 'Oameni și inițiative din cele trei sate', 'comunitate'], ['Educație', 'Noutăți din școli și grădinițe', 'educatie']].forEach(([label, text, slug]) => { %>
+<article class="card card--grid"><div class="card__img ph" aria-hidden="true">vocea lenauheim</div><div class="card__body"><span class="card__kicker tone-<%= toneOf(label) %>"><%= label %></span><h3><a href="/sectiune/<%= slug %>"><%= text %></a></h3><span class="card__meta">Descoperă rubrica →</span></div></article>
+<% }) %>
+</div>
+<% } %>
+</section>
 
-    <section class="portal-community-row">
-      <div class="portal-community-poll"><% if (sondaj) { %><%- include('partials/poll', { poll: sondaj }) %><% } else { %><span class="eyebrow">Sondajul comunității</span><h2>Spune-ne ce contează pentru tine</h2><p>Super Adminul poate publica aici o întrebare pentru locuitorii comunei.</p><a href="/login">Administrare sondaj →</a><% } %></div>
-      <% /* Sectiunea "Cei mai activi candidati" e ascunsa temporar - decomenteaza mai jos ca sa o repui. */ %>
-      <% if (false) { %>
-      <div class="portal-active-people"><header><h2>Cei mai activi candidați în comunitate</h2><a href="/candidati">Vezi toți candidații →</a></header><div><% candidatiPublici.slice(0,4).forEach(c=>{ %><a href="/site/<%= c.subdomeniu %>"><span class="portal-person-photo"><% if(c.fotografie_profil_url){ %><img src="<%= c.fotografie_profil_url %>" alt="<%= c.nume_candidat %>" loading="lazy" decoding="async"><% } else { %><b><%= c.nume_candidat.split(' ').map(p=>p[0]).slice(0,2).join('') %></b><% } %></span><strong><%= c.nume_candidat %></strong><small><%= c.zona || c.judet %></small><em>Vezi profilul →</em></a><% }) %></div></div>
-      <% } %>
-    </section>
+<section class="community-row" aria-label="Comunitate">
+<div class="panel glass community-poll" id="sondaj">
+<% if (sondaj) { %><%- include('partials/poll', { poll: sondaj }) %>
+<% } else { %><span class="eyebrow">SONDAJUL COMUNITĂȚII</span><h2>Spune-ne ce contează pentru tine</h2><p class="muted">Aici apare întrebarea săptămânii pentru locuitorii comunei. Votul este anonim.</p><a class="btn btn--light" href="/anunturi">Între timp, vezi anunțurile →</a><% } %>
+</div>
+<div class="community-card">
+<img class="portal-community-photo" src="/assets/lenauheim-panorama-v1-640.webp" srcset="/assets/lenauheim-panorama-v1-640.webp 640w, /assets/lenauheim-panorama-v1.webp 1000w" sizes="(max-width: 760px) 92vw, 600px" alt="Panoramă a comunității Lenauheim" width="1000" height="417" loading="lazy" decoding="async">
+<div class="community-card__text">
+<p class="community-card__quote">Trei localități.<br><strong>O singură comunitate.</strong></p>
+<p>Bulgăruș · Lenauheim · Grabaț. Oameni care construiesc împreună o comunitate mai bună.</p>
+</div>
+</div>
+</section>
 
-    <section class="portal-community-signature"><div class="portal-community-photo" role="img" aria-label="Panoramă a comunității Lenauheim"></div><blockquote>Trei localități.<br><strong>O singură comunitate.</strong></blockquote><span class="portal-village-mark" aria-hidden="true">⌂♙</span><p><strong>Bulgăruș · Lenauheim · Grabaț.</strong><br>Oameni care construiesc împreună o comunitate mai bună.</p></section>
+<section class="costs glass" aria-labelledby="costuri-titlu">
+<div><span class="eyebrow">RAPORTARE CETĂȚENEASCĂ</span><h2 id="costuri-titlu">Cât plătești pe apă și salubritate?</h2><p class="muted">Raportezi anonim în mai puțin de un minut. Publicăm doar intervale, pe localități.</p></div>
+<div class="costs__actions"><a class="btn btn--dark" href="/statistici/apa">Rezultate apă</a><a class="btn btn--light" href="/statistici/salubritate">Rezultate salubritate</a></div>
+</section>
 
-    <section class="portal-news-section" id="stiri">
-      <div class="portal-section-head"><div><span class="eyebrow">Actualitate</span><h2>Ultimele știri</h2></div><p>Informații publicate sub responsabilitatea editorială a lui Droc Cristian Dan.</p></div>
-      <% if (!stiri.length) { %><div class="empty-public">Nu există încă alte știri publicate.</div><% } else { %><div class="portal-card-grid"><% stiri.forEach(post => { %><article class="portal-news-card"><a class="portal-card-image" href="/actualitate/<%= post.slug %>"><% if (post.imagine_url) { %><img src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>" loading="lazy" decoding="async"><% } else { %><span>ȘTIRE</span><% } %></a><div><span class="portal-section-label"><%= post.categorie %></span><h3><a href="/actualitate/<%= post.slug %>"><%= post.titlu %></a></h3><p><%= post.rezumat %></p><small><%= displayDate(portalPublicationDate(post)) %> · <%= post.vizualizari || 0 %> citiri</small></div></article><% }) %></div><% } %>
-    </section>
+<section class="stack" id="candidati" aria-labelledby="candidati-titlu">
+<div class="section-head"><h2 class="section-title" id="candidati-titlu">Site-urile candidaților</h2><% if (candidatiPublici.length) { %><a href="/candidati">Toți candidații →</a><% } %></div>
+<p class="muted">Publicații independente: fiecare candidat își administrează și își asumă propriul site.</p>
+<% if (!candidatiPublici.length) { %><p class="empty glass">Site-urile candidaților apar aici când Super Adminul activează afișarea în portal.</p>
+<% } else { %>
+<div class="people">
+<% candidatiPublici.forEach(c => { %><a class="person glass" href="/site/<%= c.subdomeniu %>"><span class="person__role"><%= c.functie_candidatura || 'Candidat' %></span><b><%= c.nume_candidat %></b><span class="person__place"><%= [c.zona, c.judet].filter(Boolean).join(', ') %></span><span class="person__more">Deschide publicația →</span></a><% }) %>
+</div>
+<% } %>
+</section>
 
-    <section class="published-section" id="candidati">
-      <div class="portal-section-head"><div><span class="eyebrow">Publicații independente</span><h2>Site-urile candidaților</h2></div><p>Fiecare candidat își administrează și își asumă propria publicație.</p></div>
-      <% if (!candidatiPublici.length) { %><div class="empty-public">Site-urile candidaților vor apărea aici când Super Adminul activează afișarea în portal.</div><% } else { %><div class="candidate-showcase"><% candidatiPublici.forEach(c => { %><a href="/site/<%= c.subdomeniu %>"><span><%= c.functie_candidatura || 'Candidat' %></span><strong><%= c.nume_candidat %></strong><small><%= [c.zona, c.judet].filter(Boolean).join(', ') %></small><em>Deschide publicația →</em></a><% }) %></div><p class="showcase-all"><a class="btn secondary" href="/candidati">Vezi și filtrează toți candidații</a></p><% } %>
-    </section>
+<% const portalSocial = [['Facebook', portalOwner?.facebook_url], ['Instagram', portalOwner?.instagram_url], ['TikTok', portalOwner?.tiktok_url]].filter(([, url]) => url); %>
+<% if (portalSocial.length) { %><section class="social-strip" aria-label="Rețelele sociale Vocea Locală"><b>Urmărește Vocea Locală Lenauheim</b><div><% portalSocial.forEach(([network, url]) => { %><a class="btn btn--light" href="<%= url %>" target="_blank" rel="noopener noreferrer"><%= network %></a><% }) %></div></section><% } %>
 
-    <% const portalSocial = [['facebook', portalOwner?.facebook_url], ['instagram', portalOwner?.instagram_url], ['tiktok', portalOwner?.tiktok_url]].filter(([, url]) => url); %>
-    <% if (portalSocial.length) { %><section class="portal-social-strip" aria-label="Rețelele sociale Vocea Locală"><strong>Urmărește Vocea Locală Lenauheim</strong><div><% portalSocial.forEach(([network, url]) => { %><a href="<%= url %>" target="_blank" rel="noopener noreferrer"><%= network %></a><% }) %></div></section><% } %>
-
-    <section class="marketing-section" id="despre">
-      <div class="section-heading"><span class="eyebrow">Platformă completă</span><h2>Comunicare civică organizată, simplă și transparentă.</h2></div>
-      <div class="feature-grid">
-        <article><img src="/assets/lenauheim-centru-v1.webp" alt="Centrul comunității Lenauheim" width="680" height="425" loading="lazy" decoding="async"><div><span>01</span><h3>Portal administrat</h3><p>Super Adminul publică știri, inițiative și articolul principal.</p></div></article>
-        <article><img src="/assets/lenauheim-panorama-v1.webp" alt="Panoramă asupra comunității Lenauheim" width="1000" height="417" loading="lazy" decoding="async"><div><span>02</span><h3>Site tip ziar</h3><p>Fiecare candidat are propriul site cu program, proiecte și articole.</p></div></article>
-        <article><img src="/assets/lenauheim-centru-v1.webp" alt="Spațiu public din centrul localității" width="680" height="425" loading="lazy" decoding="async"><div><span>03</span><h3>Text și imagini</h3><p>Editor manual și instrumente OpenAI disponibile după activarea administratorului.</p></div></article>
-        <article><img src="/assets/lenauheim-panorama-v1.webp" alt="Localitățile comunității văzute panoramic" width="1000" height="417" loading="lazy" decoding="async"><div><span>04</span><h3>Statistici clare</h3><p>Citiri și surse generale de trafic, fără profilarea politică a vizitatorilor.</p></div></article>
-      </div>
-    </section>
-  </main>
-
-  <footer class="marketing-footer"><strong>Vocea Locală Lenauheim</strong><span>Inițiativă civică independentă a persoanei fizice Droc Cristian Dan. Publicația nu este afiliată Primăriei Comunei Lenauheim.</span><nav class="legal-links"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Politica de cookies</a><button class="cookie-notice-reopen" type="button" data-cookie-reopen aria-controls="cookie-notice" aria-expanded="false" hidden>Informații despre cookies</button><a href="/legal/raportare">Raportare</a><a href="/login">Administrare</a></nav></footer>
-  <section class="cookie-notice" id="cookie-notice" aria-labelledby="cookie-notice-title" hidden>
-    <div class="cookie-notice-copy">
-      <h2 id="cookie-notice-title" tabindex="-1">Cookie-uri pe acest site</h2>
-      <p>Folosim cookie-uri strict necesare pentru autentificare, securitate și funcționarea formularelor. Nu folosim cookie-uri de publicitate sau analiză a comportamentului.</p>
-      <div class="cookie-notice-links"><a href="/legal/cookies">Citește politica de cookies</a><a href="/legal/confidentialitate">Confidențialitate</a></div>
-    </div>
-    <button type="button" class="cookie-notice-acknowledge" data-cookie-acknowledge>Am înțeles</button>
-  </section>
-  <script src="/cookie-notice.js" defer></script>
-<script src="/portal-cards.js" defer></script>
-<%- include('partials/cristianweb-credit') %>
-</body>
-</html>
+<section class="stack" id="despre" aria-labelledby="despre-titlu">
+<div class="section-head"><h2 class="section-title" id="despre-titlu">Comunicare civică, simplă și transparentă</h2></div>
+<div class="features">
+<article class="feature glass"><span class="mono">01</span><h3>Portal administrat</h3><p>Redacția publică știri, inițiative, anunțuri și urmărește procesele cu Primăria.</p></article>
+<article class="feature glass"><span class="mono">02</span><h3>Site tip ziar</h3><p>Fiecare candidat are propriul site, cu program, proiecte și articole.</p></article>
+<article class="feature glass"><span class="mono">03</span><h3>Text și imagini</h3><p>Editor manual și instrumente OpenAI, disponibile după activarea administratorului.</p></article>
+<article class="feature glass"><span class="mono">04</span><h3>Statistici clare</h3><p>Citiri și surse generale de trafic, fără profilarea politică a vizitatorilor.</p></article>
+</div>
+</section>
+<%- include('partials/vl-bottom', { section: 'procese', live: Boolean(hero), portalCards: true }) %>

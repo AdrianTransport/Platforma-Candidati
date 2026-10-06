@@ -1,0 +1,25 @@
+<%- include('partials/vl-top', { seo, section: 'procese' }) %>
+<nav class="crumbs" aria-label="Cale"><a href="/">Prima pagină</a> / <a href="/dosare">Dosare</a> / <%= view.dosar.numar || view.dosar.titlu %></nav>
+<%- include('partials/vl-hero', { view, onDosarPage: true }) %>
+<section id="live" class="live-row" aria-label="Actualizări și termene">
+<%- include('partials/vl-feed', { view }) %>
+<div class="live-feed panel glass">
+<h2>Toate termenele</h2>
+<% if (terms.length) { %>
+<ol class="terms">
+<% for (const term of terms) { const past = Date.parse(term.at) < nowMs && term.id !== nextId; %>
+<li class="term<%= term.id === nextId ? ' term--next' : past ? ' term--past' : '' %>">
+<time class="term__when" datetime="<%= term.at %>"><%= t.formatDate(term.at) %> · ora <%= t.formatTime(term.at) %></time>
+<div class="term__body"><b><%= [term.sala, term.complet].filter(Boolean).join(' · ') || 'Sala urmează să fie anunțată' %></b><% if (term.rezultat) { %><span><%= term.rezultat %></span><% } else if (term.id === nextId) { %><span>Următorul termen</span><% } %></div>
+</li>
+<% } %>
+</ol>
+<% } else { %><p class="feed-empty">Primul termen nu a fost stabilit încă.</p><% } %>
+<div class="facts">
+<div class="fact"><span>Instanța</span><b><%= view.dosar.instanta || '—' %></b></div>
+<div class="fact"><span>Înregistrat</span><b><%= view.dosar.dataInregistrare ? t.formatDate(view.dosar.dataInregistrare) : '—' %></b></div>
+</div>
+<p class="feed-empty">Sursa: portal.just.ro și ședința publică. Publicăm factual, fără date personale ale persoanelor fizice. <a href="/legal/continut">Drept la replică</a>.</p>
+</div>
+</section>
+<%- include('partials/vl-bottom', { section: 'procese', live: true }) %>

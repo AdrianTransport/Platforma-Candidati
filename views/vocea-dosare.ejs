@@ -1,0 +1,16 @@
+<%- include('partials/vl-top', { seo, section: 'procese' }) %>
+<div class="page-head"><div><span class="eyebrow">PROCESE CU PRIMĂRIA</span><h1>Dosare</h1></div></div>
+<% if (cases.length) { %>
+<section class="ads" aria-label="Dosare">
+<% for (const { dosar, tag, view } of cases) { %>
+<article class="ad">
+<div class="ad__top"><span class="chip <%= tag.kind === 'stadiu' ? 'cat-decese' : 'cat-campanie' %>"><%= tag.text %></span><span class="mono small"><%= dosar.numar || '' %></span></div>
+<h2><a href="/dosare/<%= encodeURIComponent(dosar.id) %>"><%= dosar.titlu %></a></h2>
+<% if (dosar.obiect) { %><p><%= dosar.obiect %></p><% } %>
+<p class="mono small"><%= view.termenLabel %></p>
+<a class="ad__more" href="/dosare/<%= encodeURIComponent(dosar.id) %>">Termene și actualizări →</a>
+</article>
+<% } %>
+</section>
+<% } else { %><p class="empty glass">Încă nu am publicat niciun dosar.</p><% } %>
+<%- include('partials/vl-bottom', { section: 'procese' }) %>

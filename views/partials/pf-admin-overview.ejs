@@ -1,0 +1,47 @@
+<% const auditLabels = { terms_accepted: 'a acceptat termenii', candidate_created: 'cont de candidat creat', candidate_status_changed: 'starea contului schimbată', candidate_portal_visibility_changed: 'afișarea în portal schimbată', candidate_configuration_changed: 'configurarea contractuală schimbată', candidate_profile_changed: 'profilul public schimbat', article_created: 'articol creat', article_updated: 'articol actualizat', article_deleted: 'articol șters', report_submitted: 'sesizare primită', report_in_analiza: 'sesizare în analiză', report_continut_suspendat: 'conținut suspendat', report_respinsa: 'sesizare respinsă', report_inchisa: 'sesizare închisă' };
+   const statusBadge = { activ: ['pf-badge--ok', 'Activ'], in_asteptare: ['pf-badge--wait', 'În așteptare'], suspendat: ['pf-badge--off', 'Suspendat'], expirat: ['pf-badge--off', 'Expirat'] };
+   const faraConformitate = candidati.filter(c => complianceMissing[c.id].length).length; %>
+<div class="pf-head">
+<div><h1>Candidați</h1><p><%= sumar.total %> candidați · <%= sumar.activi %> activi · <%= sumar.asteptare %> în așteptare</p></div>
+<div class="pf-actions"><a class="btn" href="#adauga-candidat">+ Adaugă candidat</a></div>
+</div>
+<div class="pf-stats">
+<div class="pf-stat"><span>Candidați activi</span><strong><%= sumar.activi %></strong></div>
+<div class="pf-stat<%= faraConformitate ? ' pf-stat--warn' : '' %>"><span>Fără date de conformitate</span><strong><%= faraConformitate %></strong></div>
+<div class="pf-stat"><span>Articole publicate azi</span><strong><%= articoleAzi %></strong></div>
+<div class="pf-stat pf-stat--blue"><span>Suspendați</span><strong><%= sumar.suspendati %></strong></div>
+</div>
+<section class="pf-section" aria-labelledby="lista-candidati">
+<div class="pf-section__head">
+<h2 id="lista-candidati">Toți candidații</h2>
+<label class="pf-search"><span class="pf-hidden">Caută candidat</span><input type="search" placeholder="Caută după nume sau localitate" data-pf-search="candidati"></label>
+<div class="pf-filter" role="group" aria-label="Filtru"><a href="#lista-candidati" data-pf-filter="" aria-current="page">Toți</a><a href="#lista-candidati" data-pf-filter="activ">Activi</a><a href="#lista-candidati" data-pf-filter="suspendat">Suspendați</a></div>
+</div>
+<div class="pf-table-wrap">
+<table class="pf-table" data-pf-table="candidati">
+<thead><tr><th>Candidat</th><th>Localitate</th><th>Stare</th><th>Conformitate</th><th>Articole</th><th>Ultima activitate</th><th><span class="pf-hidden">Acțiuni</span></th></tr></thead>
+<tbody>
+<% candidati.forEach(c => { const [cls, label] = statusBadge[c.status_cont] || ['pf-badge--off', c.status_cont]; const lipsa = complianceMissing[c.id]; %>
+<tr data-status="<%= c.status_cont %>" data-search="<%= [c.nume_candidat, c.zona, c.judet, c.email].filter(Boolean).join(' ').toLowerCase() %>">
+<td><%= c.nume_candidat %></td><td><%= [c.zona, c.judet].filter(Boolean).join(', ') || '—' %></td>
+<td><span class="pf-badge <%= cls %>"><%= label %></span></td>
+<td class="<%= lipsa.length ? 'pf-warn' : 'pf-ok' %>"><%= lipsa.length ? (lipsa.length === 1 ? lipsa[0] : `Lipsesc ${lipsa.length} date`) : 'Complet' %></td>
+<td><%= articoleCandidat[c.id] || 0 %></td>
+<td><%= c.last_login_at ? displayDate(c.last_login_at) : '—' %></td>
+<td><a href="#candidat-<%= c.id %>">Gestionează</a></td>
+</tr>
+<% }) %>
+<% if (!candidati.length) { %><tr><td colspan="7">Nu există încă niciun candidat.</td></tr><% } %>
+</tbody>
+</table>
+</div>
+</section>
+<section class="pf-section">
+<div class="pf-section__head"><h2>Jurnal de conformitate (ultimele evenimente)</h2><a href="/admin/jurnal">Tot jurnalul →</a></div>
+<div class="pf-section__body pf-log">
+<% jurnal.forEach(event => { const actor = candidati.find(c => c.id === event.actor_id); %>
+<div class="pf-log__row"><time datetime="<%= event.created_at %>"><%= displayDate(event.created_at) %></time><span><%= event.actor_role === 'admin' ? 'Super Admin' : (actor?.nume_candidat || 'Candidat') %>: <%= auditLabels[event.action] || event.action %></span></div>
+<% }) %>
+<% if (!jurnal.length) { %><p class="pf-hint">Nu există încă evenimente în jurnal.</p><% } %>
+</div>
+</section>

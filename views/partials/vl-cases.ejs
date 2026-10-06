@@ -1,0 +1,8 @@
+<div class="cases">
+<h2>Toate dosarele cu Primăria</h2>
+<% for (const { dosar, tag } of cases) { %>
+<a class="case-link" href="/dosare/<%= encodeURIComponent(dosar.id) %>"><span class="case-link__top"><span class="case-link__nr"><%= dosar.numar || 'nr. —' %></span><span class="case-link__tag<%= tag.kind === 'stadiu' ? '' : ' case-link__tag--' + tag.kind %>"><%= tag.text %></span></span><b><%= dosar.titlu %></b></a>
+<% } %>
+<% if (!cases.length) { %><p class="cases__note">Încă nu am publicat niciun dosar.</p><% } %>
+<p class="cases__note">Sursa: portal.just.ro. Publicăm factual, fără date personale ale persoanelor fizice. <a href="/legal/continut">Drept la replică</a> oricând.</p>
+</div>

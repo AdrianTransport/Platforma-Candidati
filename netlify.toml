@@ -17,6 +17,16 @@
     Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), clipboard-write=(self), web-share=(self)"
 
 [[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=86400"

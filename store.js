@@ -4,7 +4,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readSupabaseSnapshot, useSupabase, writeSupabaseState } from './supabase-store.js';
 import { StateConflictError } from './state-conflict.js';
 
-const LOCAL_FILE = path.join(process.cwd(), 'data', 'db.json');
+// Calculat la fiecare folosire: directorul de lucru poate fi stabilit după importul modulului (teste).
+const localFile = () => path.join(process.cwd(), 'data', 'db.json');
 const DEFAULT_DATA = {
   users: [], articole: [], portal_posts: [], polls: [], raportari_costuri: [], raportari_costuri_arhiva: [],
   nextUserId: 1, nextArticolId: 1, nextPortalPostId: 1, nextPollId: 1, nextRaportareId: 1,
@@ -22,6 +23,10 @@ export function configureBlobsCredentials(credentials) {
   blobsCredentials = credentials;
 }
 
+export function getBlobsCredentials() {
+  return blobsCredentials;
+}
+
 async function getBlobsStore() {
   const { getStore } = await import('@netlify/blobs');
   // Adaptor nou pentru tokenul invocării curente. Credențialele explicite folosesc
@@ -33,7 +38,7 @@ async function getBlobsStore() {
 
 async function readLocalSnapshot() {
   try {
-    const raw = await fs.readFile(LOCAL_FILE, 'utf-8');
+    const raw = await fs.readFile(localFile(), 'utf-8');
     return { data: JSON.parse(raw), version: createHash('sha256').update(raw).digest('hex') };
   } catch (error) {
     if (error.code === 'ENOENT') return { data: structuredClone(DEFAULT_DATA), version: null };
@@ -73,19 +78,19 @@ export async function writeData(data, expectedVersion) {
     if (result?.modified !== true || !result.etag) throw new Error('Salvarea condiționată nu a fost confirmată de Blobs.');
     return result.etag;
   }
-  await fs.mkdir(path.dirname(LOCAL_FILE), { recursive: true });
+  await fs.mkdir(path.dirname(localFile()), { recursive: true });
   // Lacăt exclusiv între procese, ținut doar pe durata comparației și înlocuirii.
   // Nu eliminăm automat un lacăt al altui proces pe baza unui timeout.
-  const lockFile = `${LOCAL_FILE}.lock`;
+  const lockFile = `${localFile()}.lock`;
   let lock;
   try { lock = await fs.open(lockFile, 'wx', 0o600); }
   catch (error) { if (error.code === 'EEXIST') throw new StateConflictError(); throw error; }
-  const temporaryFile = `${LOCAL_FILE}.${randomUUID()}.tmp`;
+  const temporaryFile = `${localFile()}.${randomUUID()}.tmp`;
   try {
     if ((await readLocalSnapshot()).version !== expectedVersion) throw new StateConflictError();
     const raw = JSON.stringify(data, null, 2);
     await fs.writeFile(temporaryFile, raw, { flag: 'wx', mode: 0o600 });
-    await fs.rename(temporaryFile, LOCAL_FILE);
+    await fs.rename(temporaryFile, localFile());
     return createHash('sha256').update(raw).digest('hex');
   } finally {
     try { await fs.rm(temporaryFile, { force: true }); }

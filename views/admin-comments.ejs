@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ro">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Moderare comentarii — Super Admin</title><link rel="stylesheet" href="<%= stylesheetUrl %>"></head>
-<body><main class="app-shell app-shell-wide">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Moderare comentarii — Super Admin</title><link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"><link rel="stylesheet" href="<%= asset('platforma.css') %>"></head>
+<body class="pf"><%- include('partials/pf-admin-top', { active: 'comentarii' }) %><main class="app-shell app-shell-wide">
   <% const labels = { in_asteptare: 'În așteptare', aprobat: 'Aprobate', respins: 'Respinse', sters: 'Șterse logic' }; %>
   <div class="topbar"><div><span class="eyebrow">Super Admin</span><h1>Moderare comentarii</h1></div><a class="btn secondary" href="/admin">Înapoi la administrare</a></div>
   <p class="note">Comentariile sunt ascunse implicit. Ștergerea logică le ascunde definitiv; păstrează textul și istoricul pentru verificarea deciziei, nu este ștergere definitivă a datelor.</p>
@@ -19,4 +19,4 @@
     <% if (c.history.length) { %><details class="moderation-history"><summary>Istoric moderare (<%= c.history.length %>)</summary><ul><% c.history.forEach(e => { %><li><%= displayDate(e.created_at) %> · Admin #<%= e.admin_id %> · <%= labels[e.status] %></li><% }) %></ul></details><% } %>
   </article><% }) %>
   <nav class="moderation-tabs" aria-label="Paginare"><% if (page > 1) { %><a class="btn secondary" href="/admin/comentarii?status=<%= status %>&pagina=<%= page - 1 %>">← Pagina anterioară</a><% } %><% if (page < pages) { %><a class="btn secondary" href="/admin/comentarii?status=<%= status %>&pagina=<%= page + 1 %>">Pagina următoare →</a><% } %></nav>
-</main><script src="/form-confirmations.js" defer></script></body></html>
+</main><script src="/form-confirmations.js" defer></script><%- include('partials/pf-admin-bottom') %></body></html>

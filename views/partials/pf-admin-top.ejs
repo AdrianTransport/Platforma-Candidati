@@ -1,0 +1,25 @@
+<% const current = typeof active === 'undefined' ? '' : active; const navLink = (key, href, label, extra) => `<a href="${href}"${key === current ? ' aria-current="page"' : ''}>${label}${extra || ''}</a>`; %>
+<div class="pf-shell">
+<aside class="pf-side" data-pf-side>
+<a class="pf-brand" href="/admin"><span class="pf-brand__mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg></span><span><b>Super Admin</b><small>Vocea Locală Lenauheim</small></span></a>
+<button type="button" class="pf-menu" aria-expanded="false" aria-controls="pf-nav" data-pf-menu>Meniu</button>
+<nav class="pf-nav" id="pf-nav" aria-label="Meniu admin">
+<span class="pf-nav__group">Vocea Lenauheim</span>
+<%- navLink('dosare', '/admin/dosare', 'Procese cu Primăria') %>
+<%- navLink('live', '/admin/live', 'Actualizări live', '<span class="pf-tag">LIVE</span>') %>
+<%- navLink('portal', '/admin/portal', 'Articole (site principal)') %>
+<%- navLink('anunturi', '/admin/anunturi', 'Anunțuri') %>
+<%- navLink('social', '/admin/social', 'Rețele sociale') %>
+<span class="pf-nav__group">Platformă</span>
+<%- navLink('candidati', '/admin', 'Candidați') %>
+<%- navLink('comentarii', '/admin/comentarii', 'Moderare comentarii') %>
+<%- navLink('sesizari', '/admin/sesizari', 'Sesizări') %>
+<%- navLink('jurnal', '/admin/jurnal', 'Jurnal de conformitate') %>
+<%- navLink('costuri', '/admin/raportari-costuri', 'Raportări costuri') %>
+</nav>
+<div class="pf-side__foot">
+<a href="/" target="_blank" rel="noopener">Vezi site-ul ↗</a>
+<form method="POST" action="/logout"><input type="hidden" name="csrf_token" value="<%= csrfToken %>"><button type="submit">Ieșire</button></form>
+</div>
+</aside>
+<div class="pf-main">

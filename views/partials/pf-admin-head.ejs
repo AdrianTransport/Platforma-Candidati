@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title><%= pageTitle %> — Super Admin</title>
+<link rel="stylesheet" href="<%= stylesheetUrl %>">
+<link rel="stylesheet" href="<%= asset('platforma.css') %>">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body class="pf">
+<%- include('pf-admin-top', { active }) %>
+<% if (typeof mesaj !== 'undefined' && mesaj) { %><div class="pf-alert pf-alert--ok" role="status"><%= mesaj %></div><% } %>
+<% if (typeof eroare !== 'undefined' && eroare) { %><div class="pf-alert pf-alert--error" role="alert"><%= eroare %></div><% } %>

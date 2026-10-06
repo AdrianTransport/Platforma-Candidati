@@ -4,6 +4,22 @@ Prototip funcțional: Super Admin creează conturi de candidat, fiecare candidat
 dashboard unde publică idei/program/anunțuri (cu ajutor de la un asistent AI), iar fiecare
 candidat are un site public în stil ziar local/tabloid modern.
 
+## vocealenauheim.ro: procese cu Primăria, LIVE, anunțuri (redesign)
+
+- **Design:** partea publică urmează `design-vocealenauheim/` (`public/vocea.css`, inclus direct în pagină,
+  plus `views/partials/vl-*.ejs`). Super Admin și dashboard-ul candidatului urmează `design-platforma/`
+  (`public/platforma.css`, `public/candidate-ui.css`). Site-urile candidaților (`/site/...`) își păstrează
+  designul propriu (`legacy.css`, `candidate-site.css`). Toate fonturile sunt locale, în `public/fonts/`.
+- **Dosare și LIVE** (`vocea/`): datele stau separat de restul platformei, în Netlify Blobs, store `vocea-db`
+  (local: `data/vocea.json`), cu salvări condiționate. Toate orele sunt **Europe/Bucharest**.
+  Prima pagină: numărătoare inversă până la termen, apoi **LIVE automat** la ora termenului (6 ore) sau
+  manual din Super Admin → *Actualizări live*. Fluxul `/api/dosare/:id/live` e reîncărcat de pagină la 30 s
+  și ținut 10 s în CDN. „Adaugă în calendar” descarcă `/dosare/:id/termen.ics` (memento cu 1 zi și 1 oră înainte).
+- **Super Admin:** *Procese cu Primăria* (`/admin/dosare`: dosar evidențiat, termene, link WhatsApp),
+  *Actualizări live* (`/admin/live`), *Anunțuri* (`/admin/anunturi`: publicare și verificarea anunțurilor
+  trimise de cititori la `/anunturi/publica`; telefonul se afișează doar la apăsare).
+- Pagini publice noi: `/dosare`, `/dosare/:id`, `/anunturi`, `/anunturi/:id`, `/anunturi/publica`, `/alerte`.
+
 ## Funcțiile lotului „platformă publică”
 
 - `/` este pagina publică de prezentare a platformei; autentificarea este separată la

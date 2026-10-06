@@ -1,0 +1,11 @@
+<% const href = `/actualitate/${encodeURIComponent(post.slug)}`; const kicker = post.tip === 'campanie' ? 'Campanie candidat' : (post.categorie || 'Actualitate'); %>
+<article class="card card--grid">
+<% if (post.imagine_url) { %><img class="card__img" src="<%= post.imagine_url %>" alt="<%= post.imagine_alt || '' %>" width="640" height="400" loading="lazy" decoding="async">
+<% } else { %><div class="card__img ph" aria-hidden="true">vocea lenauheim</div><% } %>
+<div class="card__body">
+<span class="card__kicker <%= post.tip === 'campanie' ? 'tone-campanie' : 'tone-' + toneOf(post.categorie) %>"><%= kicker %> · <time datetime="<%= seoDateOf(post) %>"><%= displayDate(portalPublicationDate(post)) %></time></span>
+<h3><a href="<%= href %>"><%= post.titlu %></a></h3>
+<% if (typeof withSummary !== 'undefined' && withSummary && post.rezumat) { %><p class="card__summary"><%= post.rezumat %></p><% } %>
+<span class="card__meta"><%= post.vizualizari || 0 %> citiri<% if (post.reactii?.like) { %> · <%= post.reactii.like %> aprecieri<% } %></span>
+</div>
+</article>

@@ -1,0 +1,22 @@
+<%- include('partials/pf-admin-head', { pageTitle: ad ? ad.titlu : 'Anunț nou', active: 'anunturi' }) %>
+<div class="pf-head">
+<div><h1><%= ad ? (ad.status === 'in_asteptare' ? 'Verifică anunțul' : 'Editează anunțul') : 'Anunț nou' %></h1><p><a href="/admin/anunturi">← Anunțuri</a><% if (ad && ad.sursa === 'cititor') { %> · trimis de un cititor<% } %></p></div>
+</div>
+<section class="pf-section">
+<div class="pf-section__body">
+<form class="pf-form" method="POST" action="<%= ad ? '/admin/anunturi/' + ad.id : '/admin/anunturi' %>">
+<input type="hidden" name="csrf_token" value="<%= csrfToken %>">
+<label class="pf-field">Tip<select name="tip" required><% for (const ty of types) { %><option value="<%= ty.slug %>"<% if (values.tip === ty.slug) { %> selected<% } %>><%= ty.name %></option><% } %></select></label>
+<label class="pf-field">Telefon <small>se afișează doar la apăsare</small><input type="tel" name="telefon" value="<%= values.telefon || '' %>" maxlength="30"></label>
+<label class="pf-field">Preț <small>opțional</small><input type="text" name="pret" value="<%= values.pret || '' %>" maxlength="40"></label>
+<label class="pf-field pf-full">Titlu<input type="text" name="titlu" value="<%= values.titlu || '' %>" required maxlength="140"></label>
+<label class="pf-field pf-full">Text<textarea name="text" rows="6" maxlength="5000"><%= values.text || '' %></textarea></label>
+<div class="pf-full pf-checks"><label class="pf-check"><input type="checkbox" name="important" value="da"<% if (values.important) { %> checked<% } %>> Bandă „IMPORTANT” pe pagina de anunțuri</label></div>
+<p class="pf-hint pf-full">Verifică să nu existe date personale ale altor persoane fără acordul lor. Anunțurile cititorilor expiră după 30 de zile de la publicare.</p>
+<div class="pf-form-end pf-full"><button class="pf-btn--blue" type="submit"><%= ad && ad.status === 'in_asteptare' ? 'Aprobă și publică' : ad ? 'Salvează' : 'Publică anunțul' %></button></div>
+</form>
+</div>
+</section>
+<%- include('partials/pf-admin-bottom') %>
+</body>
+</html>

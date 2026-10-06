@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<% if (seo.private) { %><title><%= seo.title %></title>
+<meta name="robots" content="noindex, nofollow">
+<% } else { %><%- include('seo-head', { seo }) %><% } %>
+<% if (!seo.private && !seo.image) { %><meta property="og:image" content="<%= new URL('/img/og-default.jpg', seo.canonical).href %>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="vocea lenauheim — știri și procese din comuna Lenauheim">
+<% } %>
+<meta name="theme-color" content="#f3f6fb">
+<link rel="preload" href="/fonts/bricolage-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/instrument-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="<%= stylesheetUrl %>">
+<% if (voceaCss) { %><style><%- voceaCss %></style><% } else { %><link rel="stylesheet" href="<%= asset('vocea.css') %>"><% } %>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+</head>
+<body class="vl">
+<a class="skip" href="#continut">Sari la conținut</a>
+<div class="page">
+<% const blobSet = typeof blobs === 'undefined' ? 'home' : blobs; %>
+<% if (blobSet === 'stiri') { %><div class="blob blob--cyan blob--tr" aria-hidden="true"></div><div class="blob blob--violet blob--low" aria-hidden="true"></div>
+<% } else if (blobSet === 'anunturi') { %><div class="blob blob--mint blob--1" aria-hidden="true"></div><div class="blob blob--violet blob--2" aria-hidden="true"></div>
+<% } else { %><div class="blob blob--violet blob--1" aria-hidden="true"></div><div class="blob blob--pink blob--2" aria-hidden="true"></div><div class="blob blob--cyan blob--3" aria-hidden="true"></div><% } %>
+<div class="wrap">
+<%- include('vl-header') %>
+<main id="continut" class="wrap-main">

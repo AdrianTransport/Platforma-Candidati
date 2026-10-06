@@ -1,0 +1,19 @@
+<%- include('partials/vl-top', { seo, section: 'alerte' }) %>
+<article class="doc glass">
+<span class="eyebrow">ALERTE</span>
+<h1>Află primul când începe ședința</h1>
+<p>Te anunțăm când începe un termen în procesele cu Primăria și când apar actualizări importante.</p>
+<h2>WhatsApp</h2>
+<% if (whatsappUrl) { %>
+<p>Intră pe canalul nostru de WhatsApp. Acolo trimitem mesaj când începe ședința și când se pronunță instanța.</p>
+<p><a class="btn btn--violet" href="<%= whatsappUrl %>" rel="noopener" target="_blank">Alertă pe WhatsApp</a></p>
+<% } else { %><p>Canalul de WhatsApp se deschide în curând.</p><% } %>
+<h2>În calendarul tău</h2>
+<% if (featured && termen) { %>
+<p>Pune termenul din <b><%= featured.titlu %></b> (<%= t.formatDateTime(termen.at) %>) în calendarul telefonului. Primești memento cu o zi și cu o oră înainte.</p>
+<p><a class="btn btn--calendar" href="/dosare/<%= encodeURIComponent(featured.id) %>/termen.ics" download>Adaugă în calendar</a></p>
+<% } else { %><p>Când se stabilește următorul termen, îl poți adăuga de aici în calendar.</p><% } %>
+<h2>Pe site</h2>
+<p>Prima pagină trece singură pe <b>LIVE</b> la ora termenului, iar fluxul „Actualizări live” se reîncarcă la fiecare 30 de secunde, fără să reîncarci pagina. <a href="/#live">Urmărește live</a>.</p>
+</article>
+<%- include('partials/vl-bottom', { section: 'alerte' }) %>

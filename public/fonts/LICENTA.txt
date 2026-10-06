@@ -1,0 +1,3 @@
+Fonturile din acest director sunt licențiate SIL Open Font License 1.1 (Bricolage Grotesque, Instrument Sans,
+JetBrains Mono, Source Serif 4, Public Sans, Inter, Archivo Black).
+Sursa: Google Fonts, subseturile latin + latin-ext (diacritice românești). Servite local, fără cereri către Google.

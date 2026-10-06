@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cont candidat creat — Super Admin</title>
-  <link rel="stylesheet" href="<%= stylesheetUrl %>">
+  <link rel="stylesheet" href="<%= stylesheetUrl %>"><link rel="stylesheet" href="<%= legacyStylesheetUrl %>"><link rel="stylesheet" href="<%= asset('platforma.css') %>">
 </head>
-<body>
+<body class="pf"><%- include('partials/pf-admin-top', { active: 'candidati' }) %>
   <main class="app-shell">
     <section class="card credential-card">
       <span class="eyebrow">Cont în așteptare</span>
@@ -20,5 +20,5 @@
       <p><a class="btn" href="/admin">Înapoi la administrare</a></p>
     </section>
   </main>
-</body>
+<%- include('partials/pf-admin-bottom') %></body>
 </html>
