@@ -8,9 +8,10 @@
 <div class="table-wrap"><table class="table"><thead><tr><th>Nume</th><th>Scop</th><th>Durată</th><th>Categorie</th></tr></thead><tbody>
 <% page.cookies.forEach(([name, purpose, duration, category]) => { %><tr><td><code><%= name %></code></td><td><%= purpose %></td><td><%= duration %></td><td><%= category %></td></tr><% }) %>
 </tbody></table></div>
+<p><button class="btn btn--light cookie-notice-reopen" type="button" data-cookie-reopen aria-controls="cookie-notice" aria-expanded="false" hidden>Redeschide informarea despre cookies</button></p>
 <% } %>
-<% page.sections.forEach(([title, text]) => { %><h2><%= title %></h2><p><%= text %></p><% }) %>
-<h2>Responsabil și contact</h2>
+<% page.sections.forEach(([title, text]) => { %><h2 id="<%= anchorOf(title) %>"><%= title %></h2><p><%= text %></p><% }) %>
+<h2 id="contact">Responsabil și contact</h2>
 <p><strong>Droc Cristian Dan</strong><% if (platform.legalEmail) { %><br>Email: <a href="mailto:<%= platform.legalEmail %>"><%= platform.legalEmail %></a><% } %><% if (platform.legalAddress) { %><br>Adresă: <%= platform.legalAddress %><% } %></p>
 <nav class="legal-links" aria-label="Alte documente"><a href="/legal/statut">Statut editorial</a><a href="/legal/termeni">Termeni</a><a href="/legal/continut">Conținut</a><a href="/legal/confidentialitate">Confidențialitate</a><a href="/legal/cookies">Cookies</a><a href="/legal/raportare">Raportare</a></nav>
 </article>
